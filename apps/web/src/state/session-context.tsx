@@ -11,9 +11,11 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import useWebSocket, { ReadyState } from "react-use-websocket";
 
 type SessionContextValue = {
   token: string | null;
@@ -33,6 +35,8 @@ type SessionContextValue = {
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 const TOKEN_KEY = "agent-monitor-token";
+const HEALTH_INTERVAL_MS = 15000;
+const HEALTH_TIMEOUT_MS = 45000;
 
 const readTokenFromUrl = () => {
   const params = new URLSearchParams(window.location.search);
@@ -61,14 +65,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     return localStorage.getItem(TOKEN_KEY);
   });
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [connected, setConnected] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const ensureServerReadyRef = useRef<() => void>(() => {});
-  const readyRef = useRef(false);
-  const connectingRef = useRef(false);
-  const readyAttemptRef = useRef(0);
-  const readyTimerRef = useRef<number | null>(null);
   const pending = useRef(
     new Map<
       string,
@@ -78,7 +75,9 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       }
     >(),
   );
-  const reconnectAttempt = useRef(0);
+  const lastHealthAtRef = useRef<number | null>(null);
+
+  const wsUrl = useMemo(() => (token ? buildWsUrl(token) : null), [token]);
 
   useEffect(() => {
     const urlToken = readTokenFromUrl();
@@ -117,6 +116,10 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
 
   const handleWsMessage = useCallback(
     (message: WsServerMessage) => {
+      lastHealthAtRef.current = Date.now();
+      if (message.type === "server.health") {
+        return;
+      }
       if (message.type === "sessions.snapshot") {
         setSessions(message.data.sessions);
         return;
@@ -143,121 +146,122 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     [removeSession, updateSession],
   );
 
-  const connectWs = useCallback(() => {
-    if (!token) return;
-    if (connectingRef.current) return;
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
-    connectingRef.current = true;
-    const ws = new WebSocket(buildWsUrl(token));
-    wsRef.current = ws;
+  const { sendJsonMessage, lastMessage, readyState, getWebSocket } = useWebSocket(
+    wsUrl,
+    {
+      share: true,
+      shouldReconnect: () => true,
+      reconnectAttempts: Infinity,
+      reconnectInterval: (attempt) => Math.min(10000, 500 * 2 ** attempt + Math.random() * 300),
+      retryOnError: true,
+      onOpen: () => {
+        lastHealthAtRef.current = Date.now();
+      },
+      onClose: () => {
+        pending.current.forEach(({ reject }) => {
+          reject(new Error("WebSocket disconnected"));
+        });
+        pending.current.clear();
+      },
+    },
+    Boolean(token),
+  );
 
-    ws.addEventListener("open", () => {
-      setConnected(true);
-      reconnectAttempt.current = 0;
-      connectingRef.current = false;
-    });
+  const connected = readyState === ReadyState.OPEN;
 
-    ws.addEventListener("close", () => {
-      setConnected(false);
-      connectingRef.current = false;
-      readyRef.current = false;
-      pending.current.forEach(({ reject }) => {
-        reject(new Error("WebSocket disconnected"));
-      });
-      pending.current.clear();
-      const attempt = reconnectAttempt.current + 1;
-      reconnectAttempt.current = attempt;
-      const delay = Math.min(10000, 500 * 2 ** attempt + Math.random() * 300);
-      window.setTimeout(() => {
-        ensureServerReadyRef.current();
-      }, delay);
-    });
-
-    ws.addEventListener("message", (event) => {
-      try {
-        const parsed = JSON.parse(event.data) as WsServerMessage;
-        handleWsMessage(parsed);
-      } catch {
-        // ignore invalid messages
-      }
-    });
-  }, [handleWsMessage, token]);
-
-  const ensureServerReady = useCallback(async () => {
-    if (!token) return;
-    if (readyRef.current) {
-      connectWs();
+  const sendPing = useCallback(() => {
+    if (!connected) {
       return;
     }
-    const attempt = readyAttemptRef.current + 1;
-    readyAttemptRef.current = attempt;
-    try {
-      const res = await fetch("/api/sessions", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok || res.status === 401 || res.status === 403) {
-        readyRef.current = true;
-        readyAttemptRef.current = 0;
-        await refreshSessions();
-        connectWs();
-        return;
-      }
-    } catch {
-      // ignore
-    }
-    const delay = Math.min(5000, 300 * 2 ** attempt + Math.random() * 200);
-    readyTimerRef.current = window.setTimeout(() => {
-      ensureServerReady();
-    }, delay);
-  }, [connectWs, refreshSessions, token]);
+    sendJsonMessage({ type: "client.ping", ts: new Date().toISOString(), data: {} });
+  }, [connected, sendJsonMessage]);
 
   useEffect(() => {
-    ensureServerReadyRef.current = ensureServerReady;
-  }, [ensureServerReady]);
+    if (!lastMessage) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(lastMessage.data) as WsServerMessage;
+      handleWsMessage(parsed);
+    } catch {
+      // ignore invalid messages
+    }
+  }, [handleWsMessage, lastMessage]);
+
+  useEffect(() => {
+    if (connected) {
+      refreshSessions();
+    }
+  }, [connected, refreshSessions]);
+
+  const ensureFreshConnection = useCallback(() => {
+    if (!connected) {
+      return;
+    }
+    const lastHealth = lastHealthAtRef.current;
+    if (lastHealth && Date.now() - lastHealth > HEALTH_TIMEOUT_MS) {
+      getWebSocket()?.close();
+      return;
+    }
+    sendPing();
+  }, [connected, getWebSocket, sendPing]);
 
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        ensureServerReady();
+        ensureFreshConnection();
       }
     };
     const handleFocus = () => {
-      ensureServerReady();
+      ensureFreshConnection();
     };
     const handleOnline = () => {
-      ensureServerReady();
+      ensureFreshConnection();
+    };
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted || document.visibilityState === "visible") {
+        ensureFreshConnection();
+      }
     };
 
     window.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("focus", handleFocus);
     window.addEventListener("online", handleOnline);
+    window.addEventListener("pageshow", handlePageShow);
 
     return () => {
       window.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("online", handleOnline);
+      window.removeEventListener("pageshow", handlePageShow);
     };
-  }, [ensureServerReady]);
+  }, [ensureFreshConnection]);
 
   useEffect(() => {
-    if (!token) return;
-    readyRef.current = false;
-    ensureServerReady();
-    return () => {
-      if (readyTimerRef.current !== null) {
-        window.clearTimeout(readyTimerRef.current);
-        readyTimerRef.current = null;
+    if (!connected) return;
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      const lastHealth = lastHealthAtRef.current;
+      if (lastHealth && Date.now() - lastHealth > HEALTH_TIMEOUT_MS) {
+        getWebSocket()?.close();
+        return;
       }
-      wsRef.current?.close();
+      sendPing();
+    }, HEALTH_INTERVAL_MS);
+    return () => {
+      window.clearInterval(intervalId);
     };
-  }, [ensureServerReady, token]);
+  }, [connected, getWebSocket, sendPing]);
 
-  const sendWs = useCallback((payload: Record<string, unknown>) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      throw new Error("WebSocket not connected");
-    }
-    wsRef.current.send(JSON.stringify(payload));
-  }, []);
+  const sendWs = useCallback(
+    (payload: Record<string, unknown>) => {
+      if (!connected) {
+        throw new Error("WebSocket not connected");
+      }
+      sendJsonMessage(payload);
+    },
+    [connected, sendJsonMessage],
+  );
 
   const sendRequest = useCallback(
     (payload: Record<string, unknown>) => {
