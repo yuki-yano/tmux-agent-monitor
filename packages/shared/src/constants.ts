@@ -89,7 +89,7 @@ export const defaultConfig: AgentMonitorConfig = {
     altScreen: "auto",
     image: {
       enabled: true,
-      backend: "alacritty",
+      backend: "auto",
       format: "png",
       cropPane: true,
       timeoutMs: 5000,

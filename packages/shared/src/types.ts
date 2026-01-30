@@ -172,7 +172,7 @@ export type AgentMonitorConfig = {
     altScreen: "auto" | "on" | "off";
     image: {
       enabled: boolean;
-      backend: "alacritty";
+      backend: "auto" | "alacritty" | "terminal" | "iterm" | "wezterm" | "ghostty";
       format: "png";
       cropPane: boolean;
       timeoutMs: number;

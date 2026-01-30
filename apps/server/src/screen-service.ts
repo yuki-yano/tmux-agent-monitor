@@ -37,26 +37,10 @@ const runAppleScript = async (script: string) => {
   }
 };
 
-const buildAlacrittyBoundsScript = (titleTag: string) => `
+const buildTerminalBoundsScript = (appName: string) => `
 tell application "System Events"
-  if not (exists process "Alacritty") then return ""
-  tell process "Alacritty"
-    repeat with w in windows
-      try
-        if (name of w) contains "${titleTag}" then
-          set pos to position of w
-          set sz to size of w
-          set contentPos to pos
-          set contentSize to sz
-          try
-            set scrollArea to first UI element of w whose role is "AXScrollArea"
-            set contentPos to position of scrollArea
-            set contentSize to size of scrollArea
-          end try
-          return (item 1 of contentPos as text) & ", " & (item 2 of contentPos as text) & ", " & (item 1 of contentSize as text) & ", " & (item 2 of contentSize as text) & "|" & (item 1 of pos as text) & ", " & (item 2 of pos as text) & ", " & (item 1 of sz as text) & ", " & (item 2 of sz as text)
-        end if
-      end try
-    end repeat
+  if not (exists process "${appName}") then return ""
+  tell process "${appName}"
     try
       set pos to position of front window
       set sz to size of front window
@@ -74,8 +58,8 @@ end tell
 return ""
 `;
 
-const focusAlacritty = async () => {
-  await runAppleScript('tell application "Alacritty" to activate');
+const focusTerminalApp = async (appName: string) => {
+  await runAppleScript(`tell application "${appName}" to activate`);
 };
 
 const captureRegion = async (bounds: { x: number; y: number; width: number; height: number }) => {
@@ -111,6 +95,7 @@ type CaptureOptions = {
   paneId?: string;
   tmux?: TmuxOptions;
   cropPane?: boolean;
+  backend?: "auto" | "alacritty" | "terminal" | "iterm" | "wezterm" | "ghostty";
 };
 
 const parsePaneGeometry = (input: string): PaneGeometry | null => {
@@ -238,19 +223,66 @@ const cropPaneBounds = (
   return { x, y, width, height };
 };
 
-export const captureAlacrittyScreen = async (tty: string, options: CaptureOptions = {}) => {
+export const captureTerminalScreen = async (tty: string, options: CaptureOptions = {}) => {
   if (!isMacOS() || !isValidTty(tty)) {
     return null;
   }
-  const titleTag = `am:${tty.replace("/dev/", "").replace(/\//g, "-")}`;
-  await focusAlacritty();
+  const backend = options.backend ?? "auto";
+  const candidates = [
+    { key: "alacritty", appName: "Alacritty" },
+    { key: "terminal", appName: "Terminal" },
+    { key: "iterm", appName: "iTerm2" },
+    { key: "wezterm", appName: "WezTerm" },
+    { key: "ghostty", appName: "Ghostty" },
+  ] as const;
+
+  const getFrontmostApp = async () => {
+    const result = await runAppleScript(
+      'tell application "System Events" to get name of first application process whose frontmost is true',
+    );
+    return result.trim();
+  };
+
+  const isRunning = async (appName: string) => {
+    const result = await runAppleScript(
+      `tell application "System Events" to (exists process "${appName}")`,
+    );
+    return result.trim() === "true";
+  };
+
+  const resolveApp = async () => {
+    if (backend !== "auto") {
+      return candidates.find((candidate) => candidate.key === backend) ?? null;
+    }
+    const frontmost = await getFrontmostApp();
+    const frontCandidate = candidates.find((candidate) => candidate.appName === frontmost);
+    if (frontCandidate) {
+      return frontCandidate;
+    }
+    const running = [];
+    for (const candidate of candidates) {
+      if (await isRunning(candidate.appName)) {
+        running.push(candidate);
+      }
+    }
+    if (running.length === 1) {
+      return running[0] ?? null;
+    }
+    return running[0] ?? null;
+  };
+
+  const app = await resolveApp();
+  if (!app) {
+    return null;
+  }
+  await focusTerminalApp(app.appName);
   await wait(150);
   if (options.paneId) {
     await focusTmuxPane(options.paneId, options.tmux);
     await wait(120);
   }
 
-  const boundsRaw = await runAppleScript(buildAlacrittyBoundsScript(titleTag));
+  const boundsRaw = await runAppleScript(buildTerminalBoundsScript(app.appName));
   const boundsSet = boundsRaw ? parseBoundsSet(boundsRaw) : { content: null, window: null };
   const bounds = boundsSet.content ?? boundsSet.window;
   const paneGeometry =

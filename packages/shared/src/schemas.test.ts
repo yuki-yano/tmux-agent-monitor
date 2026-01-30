@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { defaultConfig } from "./constants.js";
 import {
   claudeHookEventSchema,
+  configSchema,
   screenResponseSchema,
   sessionStateSchema,
   wsClientMessageSchema,
@@ -314,6 +316,33 @@ describe("claudeHookEventSchema", () => {
       notification_type: "other",
       session_id: "session",
       payload: { raw: "{}" },
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("configSchema", () => {
+  it("accepts supported image backends", () => {
+    const backends = ["auto", "alacritty", "terminal", "iterm", "wezterm", "ghostty"] as const;
+    for (const backend of backends) {
+      const result = configSchema.safeParse({
+        ...defaultConfig,
+        screen: {
+          ...defaultConfig.screen,
+          image: { ...defaultConfig.screen.image, backend },
+        },
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects unsupported image backend", () => {
+    const result = configSchema.safeParse({
+      ...defaultConfig,
+      screen: {
+        ...defaultConfig.screen,
+        image: { ...defaultConfig.screen.image, backend: "kitty" },
+      },
     });
     expect(result.success).toBe(false);
   });

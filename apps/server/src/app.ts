@@ -19,7 +19,7 @@ import type { WSContext } from "hono/ws";
 
 import { rotateToken } from "./config.js";
 import type { createSessionMonitor } from "./monitor.js";
-import { captureAlacrittyScreen } from "./screen-service.js";
+import { captureTerminalScreen } from "./screen-service.js";
 import type { createTmuxActions } from "./tmux-actions.js";
 
 type Monitor = ReturnType<typeof createSessionMonitor>;
@@ -307,10 +307,11 @@ export const createApp = ({ config, monitor, tmuxActions }: AppContext) => {
             }
           }
           const imageResult = target.paneTty
-            ? await captureAlacrittyScreen(target.paneTty, {
+            ? await captureTerminalScreen(target.paneTty, {
                 paneId: message.data.paneId,
                 tmux: config.tmux,
                 cropPane: config.screen.image.cropPane,
+                backend: config.screen.image.backend,
               })
             : null;
           if (imageResult) {

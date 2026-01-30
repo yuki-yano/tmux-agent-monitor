@@ -75,6 +75,22 @@ export const ensureConfig = (overrides?: Partial<AgentMonitorConfig>) => {
       };
       migrated = true;
     }
+    if (
+      existing.screen?.image?.backend === "alacritty" &&
+      defaultConfig.screen.image.backend === "auto"
+    ) {
+      next = {
+        ...next,
+        screen: {
+          ...next.screen,
+          image: {
+            ...next.screen.image,
+            backend: defaultConfig.screen.image.backend,
+          },
+        },
+      };
+      migrated = true;
+    }
     if (migrated) {
       saveConfig(next);
     }
