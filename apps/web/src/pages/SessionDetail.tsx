@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { renderAnsi } from "@/lib/ansi";
+import { isNearBottom } from "@/lib/scroll";
 import { useSessions } from "@/state/session-context";
 
 const stateTone = (state: string) => {
@@ -83,6 +84,7 @@ export const SessionDetailPage = () => {
   const [ctrlHeld, setCtrlHeld] = React.useState(false);
   const screenRef = React.useRef<HTMLDivElement | null>(null);
   const refreshInFlightRef = React.useRef(false);
+  const autoScrollRef = React.useRef(true);
   const renderedScreen = React.useMemo(() => renderAnsi(screen || "No screen data"), [screen]);
 
   const refreshScreen = React.useCallback(async () => {
@@ -138,8 +140,24 @@ export const SessionDetailPage = () => {
     if (mode !== "text") return;
     const el = screenRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    if (autoScrollRef.current) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [mode, screen]);
+
+  React.useEffect(() => {
+    if (mode !== "text") return;
+    const el = screenRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      autoScrollRef.current = isNearBottom(el.scrollHeight, el.scrollTop, el.clientHeight);
+    };
+    handleScroll();
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+    };
+  }, [mode]);
 
   const mapKeyWithModifiers = React.useCallback(
     (key: string) => {
