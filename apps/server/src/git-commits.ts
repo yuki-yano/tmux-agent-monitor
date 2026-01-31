@@ -357,9 +357,16 @@ export const fetchCommitFile = async (
   }
   let patch = "";
   try {
-    patch = await runGit(repoRoot, ["show", "--find-renames", hash, "--", file.path]);
+    patch = await runGit(repoRoot, ["show", "--find-renames", "--format=", hash, "--", file.path]);
     if (!patch && file.renamedFrom) {
-      patch = await runGit(repoRoot, ["show", "--find-renames", hash, "--", file.renamedFrom]);
+      patch = await runGit(repoRoot, [
+        "show",
+        "--find-renames",
+        "--format=",
+        hash,
+        "--",
+        file.renamedFrom,
+      ]);
     }
   } catch {
     patch = "";
