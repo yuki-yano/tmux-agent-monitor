@@ -1,4 +1,7 @@
 import {
+  type CommitDetail,
+  type CommitFileDiff,
+  type CommitLog,
   defaultDangerCommandPatterns,
   defaultDangerKeys,
   type DiffFile,
@@ -9,8 +12,10 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  Check,
   ChevronDown,
   ChevronUp,
+  Copy,
   CornerDownLeft,
 } from "lucide-react";
 import {
@@ -105,6 +110,15 @@ const diffStatusClass = (status: string) => {
   }
 };
 
+const formatTimestamp = (value: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
+};
+
 const buildDiffSummarySignature = (summary: DiffSummary) => {
   const files = summary.files
     .map((file) => ({
@@ -131,6 +145,14 @@ const buildDiffSummarySignature = (summary: DiffSummary) => {
     files,
   });
 };
+
+const buildCommitLogSignature = (log: CommitLog) =>
+  JSON.stringify({
+    repoRoot: log.repoRoot ?? null,
+    rev: log.rev ?? null,
+    reason: log.reason ?? null,
+    commits: log.commits.map((commit) => commit.hash),
+  });
 
 const KeyButton = ({
   label,
@@ -163,6 +185,9 @@ export const SessionDetailPage = () => {
   const {
     connected,
     getSessionDetail,
+    requestCommitDetail,
+    requestCommitFile,
+    requestCommitLog,
     requestDiffFile,
     requestDiffSummary,
     requestScreen,
@@ -192,13 +217,29 @@ export const SessionDetailPage = () => {
   const [diffFiles, setDiffFiles] = useState<Record<string, DiffFile>>({});
   const [diffOpen, setDiffOpen] = useState<Record<string, boolean>>({});
   const [diffLoadingFiles, setDiffLoadingFiles] = useState<Record<string, boolean>>({});
+  const [commitLog, setCommitLog] = useState<CommitLog | null>(null);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [commitLoading, setCommitLoading] = useState(false);
+  const [commitLoadingMore, setCommitLoadingMore] = useState(false);
+  const [commitHasMore, setCommitHasMore] = useState(true);
+  const [commitDetails, setCommitDetails] = useState<Record<string, CommitDetail>>({});
+  const [commitFileDetails, setCommitFileDetails] = useState<Record<string, CommitFileDiff>>({});
+  const [commitFileOpen, setCommitFileOpen] = useState<Record<string, boolean>>({});
+  const [commitFileLoading, setCommitFileLoading] = useState<Record<string, boolean>>({});
+  const [commitOpen, setCommitOpen] = useState<Record<string, boolean>>({});
+  const [commitLoadingDetails, setCommitLoadingDetails] = useState<Record<string, boolean>>({});
+  const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const diffOpenRef = useRef<Record<string, boolean>>({});
   const diffSignatureRef = useRef<string | null>(null);
+  const commitLogRef = useRef<CommitLog | null>(null);
+  const commitSignatureRef = useRef<string | null>(null);
+  const commitCopyTimeoutRef = useRef<number | null>(null);
   const modeLoadedRef = useRef(modeLoaded);
   const modeSwitchRef = useRef<ScreenMode | null>(null);
   const refreshInFlightRef = useRef<null | { id: number; mode: ScreenMode }>(null);
   const refreshRequestIdRef = useRef(0);
   const renderedScreen = useMemo(() => renderAnsi(screen || "No screen data"), [screen]);
+  const commitPageSize = 10;
   const { scrollRef, contentRef, stopScroll } = useStickToBottom({
     initial: "instant",
     resize: "instant",
@@ -382,6 +423,170 @@ export const SessionDetailPage = () => {
     [diffLoadingFiles, diffSummary?.rev, paneId, requestDiffFile],
   );
 
+  const applyCommitLog = useCallback(
+    (log: CommitLog, options: { append: boolean; updateSignature: boolean }) => {
+      setCommitLog((prev) => {
+        const prevCommits = options.append && prev ? prev.commits : [];
+        const merged = options.append ? [...prevCommits, ...log.commits] : log.commits;
+        const unique = new Map<string, (typeof merged)[number]>();
+        merged.forEach((commit) => {
+          if (!unique.has(commit.hash)) {
+            unique.set(commit.hash, commit);
+          }
+        });
+        return {
+          ...log,
+          commits: Array.from(unique.values()),
+        };
+      });
+      if (!options.append) {
+        const commitSet = new Set(log.commits.map((commit) => commit.hash));
+        setCommitDetails((prev) => {
+          const next: Record<string, CommitDetail> = {};
+          Object.entries(prev).forEach(([hash, detail]) => {
+            if (commitSet.has(hash)) {
+              next[hash] = detail;
+            }
+          });
+          return next;
+        });
+        setCommitFileDetails((prev) => {
+          const next: Record<string, CommitFileDiff> = {};
+          Object.entries(prev).forEach(([key, detail]) => {
+            const [hash] = key.split(":");
+            if (hash && commitSet.has(hash)) {
+              next[key] = detail;
+            }
+          });
+          return next;
+        });
+        setCommitFileOpen((prev) => {
+          const next: Record<string, boolean> = {};
+          Object.entries(prev).forEach(([key, value]) => {
+            const [hash] = key.split(":");
+            if (hash && commitSet.has(hash)) {
+              next[key] = value;
+            }
+          });
+          return next;
+        });
+        setCommitFileLoading((prev) => {
+          const next: Record<string, boolean> = {};
+          Object.entries(prev).forEach(([key, value]) => {
+            const [hash] = key.split(":");
+            if (hash && commitSet.has(hash)) {
+              next[key] = value;
+            }
+          });
+          return next;
+        });
+        setCommitOpen((prev) => {
+          if (!log.commits.length) {
+            return {};
+          }
+          const next: Record<string, boolean> = {};
+          Object.entries(prev).forEach(([hash, value]) => {
+            if (commitSet.has(hash)) {
+              next[hash] = value;
+            }
+          });
+          return next;
+        });
+      }
+      setCommitHasMore(log.commits.length === commitPageSize);
+      if (options.updateSignature) {
+        commitSignatureRef.current = buildCommitLogSignature(log);
+      }
+    },
+    [commitPageSize],
+  );
+
+  const loadCommitLog = useCallback(
+    async (options?: { append?: boolean; force?: boolean }) => {
+      if (!paneId) return;
+      const append = options?.append ?? false;
+      if (append) {
+        setCommitLoadingMore(true);
+      } else {
+        setCommitLoading(true);
+      }
+      setCommitError(null);
+      try {
+        const skip = append ? (commitLogRef.current?.commits.length ?? 0) : 0;
+        const log = await requestCommitLog(paneId, {
+          limit: commitPageSize,
+          skip,
+          force: options?.force,
+        });
+        applyCommitLog(log, { append, updateSignature: !append });
+      } catch (err) {
+        if (!append) {
+          setCommitError(err instanceof Error ? err.message : "Failed to load commit log");
+        }
+      } finally {
+        if (append) {
+          setCommitLoadingMore(false);
+        } else {
+          setCommitLoading(false);
+        }
+      }
+    },
+    [applyCommitLog, commitPageSize, paneId, requestCommitLog],
+  );
+
+  const loadCommitDetail = useCallback(
+    async (hash: string) => {
+      if (!paneId || commitLoadingDetails[hash]) return;
+      setCommitLoadingDetails((prev) => ({ ...prev, [hash]: true }));
+      try {
+        const detail = await requestCommitDetail(paneId, hash, { force: true });
+        setCommitDetails((prev) => ({ ...prev, [hash]: detail }));
+      } catch (err) {
+        setCommitError(err instanceof Error ? err.message : "Failed to load commit detail");
+      } finally {
+        setCommitLoadingDetails((prev) => ({ ...prev, [hash]: false }));
+      }
+    },
+    [commitLoadingDetails, paneId, requestCommitDetail],
+  );
+
+  const loadCommitFile = useCallback(
+    async (hash: string, path: string) => {
+      if (!paneId) return;
+      const key = `${hash}:${path}`;
+      if (commitFileLoading[key]) return;
+      setCommitFileLoading((prev) => ({ ...prev, [key]: true }));
+      try {
+        const file = await requestCommitFile(paneId, hash, path, { force: true });
+        setCommitFileDetails((prev) => ({ ...prev, [key]: file }));
+      } catch (err) {
+        setCommitError(err instanceof Error ? err.message : "Failed to load commit file");
+      } finally {
+        setCommitFileLoading((prev) => ({ ...prev, [key]: false }));
+      }
+    },
+    [commitFileLoading, paneId, requestCommitFile],
+  );
+
+  const pollCommitLog = useCallback(async () => {
+    if (!paneId) return;
+    try {
+      const log = await requestCommitLog(paneId, {
+        limit: commitPageSize,
+        skip: 0,
+        force: true,
+      });
+      const signature = buildCommitLogSignature(log);
+      if (signature === commitSignatureRef.current) {
+        return;
+      }
+      setCommitError(null);
+      applyCommitLog(log, { append: false, updateSignature: true });
+    } catch {
+      return;
+    }
+  }, [applyCommitLog, commitPageSize, paneId, requestCommitLog]);
+
   useEffect(() => {
     loadDiffSummary();
   }, [loadDiffSummary]);
@@ -414,6 +619,56 @@ export const SessionDetailPage = () => {
   useEffect(() => {
     diffSignatureRef.current = diffSummary ? buildDiffSummarySignature(diffSummary) : null;
   }, [diffSummary]);
+
+  useEffect(() => {
+    commitLogRef.current = commitLog;
+  }, [commitLog]);
+
+  useEffect(() => {
+    setCommitLog(null);
+    setCommitDetails({});
+    setCommitFileDetails({});
+    setCommitFileOpen({});
+    setCommitFileLoading({});
+    setCommitOpen({});
+    setCommitError(null);
+    setCommitHasMore(true);
+    setCommitLoading(false);
+    setCommitLoadingMore(false);
+    setCommitLoadingDetails({});
+    setCopiedHash(null);
+    commitSignatureRef.current = null;
+    commitLogRef.current = null;
+    if (commitCopyTimeoutRef.current) {
+      window.clearTimeout(commitCopyTimeoutRef.current);
+      commitCopyTimeoutRef.current = null;
+    }
+  }, [paneId]);
+
+  useEffect(() => {
+    loadCommitLog({ force: true });
+  }, [loadCommitLog]);
+
+  useEffect(() => {
+    if (!paneId || !connected) {
+      return;
+    }
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      void pollCommitLog();
+    }, 60_000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [connected, paneId, pollCommitLog]);
+
+  useEffect(() => {
+    return () => {
+      if (commitCopyTimeoutRef.current) {
+        window.clearTimeout(commitCopyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     modeLoadedRef.current = modeLoaded;
@@ -491,6 +746,58 @@ export const SessionDetailPage = () => {
       return { ...prev, [path]: nextOpen };
     });
   };
+
+  const handleToggleCommit = (hash: string) => {
+    setCommitOpen((prev) => {
+      const nextOpen = !prev[hash];
+      if (nextOpen && !commitDetails[hash]) {
+        void loadCommitDetail(hash);
+      }
+      return { ...prev, [hash]: nextOpen };
+    });
+  };
+
+  const handleToggleCommitFile = (hash: string, path: string) => {
+    const key = `${hash}:${path}`;
+    setCommitFileOpen((prev) => {
+      const nextOpen = !prev[key];
+      if (nextOpen && !commitFileDetails[key]) {
+        void loadCommitFile(hash, path);
+      }
+      return { ...prev, [key]: nextOpen };
+    });
+  };
+
+  const handleCopyHash = useCallback(async (hash: string) => {
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(hash);
+      copied = true;
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = hash;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+    if (!copied) return;
+    setCopiedHash(hash);
+    if (commitCopyTimeoutRef.current) {
+      window.clearTimeout(commitCopyTimeoutRef.current);
+    }
+    commitCopyTimeoutRef.current = window.setTimeout(() => {
+      setCopiedHash((prev) => (prev === hash ? null : prev));
+    }, 1200);
+  }, []);
 
   const renderDiffPatch = (patch: string) =>
     patch.split("\n").map((line, index) => (
@@ -872,6 +1179,218 @@ export const SessionDetailPage = () => {
             );
           })}
         </div>
+      </Card>
+
+      <Card className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-latte-subtext0 text-xs uppercase tracking-[0.3em]">Commit Log</p>
+            <p className="text-latte-text text-sm">
+              {commitLog?.commits.length ?? 0} commit
+              {(commitLog?.commits.length ?? 0) === 1 ? "" : "s"}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => loadCommitLog({ force: true })}
+            disabled={commitLoading}
+          >
+            Refresh
+          </Button>
+        </div>
+        {commitLog?.repoRoot && (
+          <p className="text-latte-subtext0 text-xs">Repo: {formatPath(commitLog.repoRoot)}</p>
+        )}
+        {commitLoading && <p className="text-latte-subtext0 text-sm">Loading commits…</p>}
+        {commitLog?.reason === "cwd_unknown" && (
+          <div className="border-latte-peach/40 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-xs">
+            Working directory is unknown for this session.
+          </div>
+        )}
+        {commitLog?.reason === "not_git" && (
+          <div className="border-latte-peach/40 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-xs">
+            Current directory is not a git repository.
+          </div>
+        )}
+        {commitLog?.reason === "error" && (
+          <div className="border-latte-red/40 bg-latte-red/10 text-latte-red rounded-2xl border px-4 py-2 text-xs">
+            Failed to load commit log.
+          </div>
+        )}
+        {commitError && (
+          <div className="border-latte-red/40 bg-latte-red/10 text-latte-red rounded-2xl border px-4 py-2 text-xs">
+            {commitError}
+          </div>
+        )}
+        {!commitLoading && commitLog && commitLog.commits.length === 0 && !commitLog.reason && (
+          <p className="text-latte-subtext0 text-sm">No commits found.</p>
+        )}
+        <div className="flex flex-col gap-2">
+          {commitLog?.commits.map((commit) => {
+            const isOpen = Boolean(commitOpen[commit.hash]);
+            const detail = commitDetails[commit.hash];
+            const loadingDetail = Boolean(commitLoadingDetails[commit.hash]);
+            const commitBody = detail?.body ?? commit.body;
+            return (
+              <div
+                key={commit.hash}
+                className="border-latte-surface2/70 rounded-2xl border bg-white/70"
+              >
+                <div className="flex w-full flex-wrap items-start justify-between gap-3 px-4 py-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyHash(commit.hash)}
+                      className="border-latte-surface2/70 text-latte-subtext0 hover:text-latte-text flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold tracking-[0.2em] transition"
+                      aria-label={`Copy commit hash ${commit.shortHash}`}
+                    >
+                      <span className="font-mono">{commit.shortHash}</span>
+                      {copiedHash === commit.hash ? (
+                        <Check className="text-latte-green h-3.5 w-3.5" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <div className="min-w-0">
+                      <p className="text-latte-text text-sm">{commit.subject}</p>
+                      <p className="text-latte-subtext0 text-xs">
+                        {commit.authorName} · {formatTimestamp(commit.authoredAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleCommit(commit.hash)}
+                    className="flex items-center gap-1 text-xs"
+                  >
+                    {isOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    {isOpen ? "Hide" : "Show"}
+                  </Button>
+                </div>
+                {isOpen && (
+                  <div className="border-latte-surface2/70 border-t px-4 py-3">
+                    {loadingDetail && (
+                      <p className="text-latte-subtext0 text-xs">Loading commit…</p>
+                    )}
+                    {!loadingDetail && commitBody && (
+                      <pre className="text-latte-subtext0 mb-3 whitespace-pre-wrap text-xs">
+                        {commitBody}
+                      </pre>
+                    )}
+                    {!loadingDetail && detail?.files && detail.files.length > 0 && (
+                      <div className="flex flex-col gap-2 text-xs">
+                        {detail.files.map((file) => {
+                          const statusLabel = file.status === "?" ? "U" : file.status;
+                          const fileKey = `${commit.hash}:${file.path}`;
+                          const fileOpen = Boolean(commitFileOpen[fileKey]);
+                          const fileDetail = commitFileDetails[fileKey];
+                          const loadingFile = Boolean(commitFileLoading[fileKey]);
+                          const additions =
+                            file.additions === null || typeof file.additions === "undefined"
+                              ? "—"
+                              : String(file.additions);
+                          const deletions =
+                            file.deletions === null || typeof file.deletions === "undefined"
+                              ? "—"
+                              : String(file.deletions);
+                          const pathLabel = file.renamedFrom
+                            ? `${file.renamedFrom} → ${file.path}`
+                            : file.path;
+                          return (
+                            <div
+                              key={`${file.path}-${file.status}`}
+                              className="flex flex-col gap-2"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span
+                                    className={`${diffStatusClass(
+                                      statusLabel,
+                                    )} text-[10px] font-semibold uppercase tracking-[0.25em]`}
+                                  >
+                                    {statusLabel}
+                                  </span>
+                                  <span className="text-latte-text break-all">{pathLabel}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs">
+                                  <span className="text-latte-green">+{additions}</span>
+                                  <span className="text-latte-red">-{deletions}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCommitFile(commit.hash, file.path)}
+                                    className="text-latte-subtext0 hover:text-latte-text inline-flex items-center gap-1"
+                                  >
+                                    {fileOpen ? (
+                                      <ChevronUp className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <ChevronDown className="h-3.5 w-3.5" />
+                                    )}
+                                    {fileOpen ? "Hide" : "Show"}
+                                  </button>
+                                </div>
+                              </div>
+                              {fileOpen && (
+                                <div className="border-latte-surface2/70 rounded-xl border bg-white/60 px-3 py-2">
+                                  {loadingFile && (
+                                    <p className="text-latte-subtext0 text-xs">Loading diff…</p>
+                                  )}
+                                  {!loadingFile && fileDetail?.binary && (
+                                    <p className="text-latte-subtext0 text-xs">
+                                      Binary file (no diff).
+                                    </p>
+                                  )}
+                                  {!loadingFile && !fileDetail?.binary && fileDetail?.patch && (
+                                    <div className="max-h-[240px] overflow-auto">
+                                      <pre className="whitespace-pre font-mono text-xs">
+                                        {renderDiffPatch(fileDetail.patch)}
+                                      </pre>
+                                      {fileDetail.truncated && (
+                                        <p className="text-latte-subtext0 mt-2 text-xs">
+                                          Diff truncated.
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {!loadingFile && !fileDetail?.binary && !fileDetail?.patch && (
+                                    <p className="text-latte-subtext0 text-xs">
+                                      No diff available.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {!loadingDetail && detail?.files && detail.files.length === 0 && (
+                      <p className="text-latte-subtext0 text-xs">No files changed.</p>
+                    )}
+                    {!loadingDetail && !detail && (
+                      <p className="text-latte-subtext0 text-xs">No commit details.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {commitLog && commitHasMore && !commitLog.reason && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => loadCommitLog({ append: true, force: true })}
+            disabled={commitLoadingMore}
+          >
+            {commitLoadingMore ? "Loading…" : "Load more"}
+          </Button>
+        )}
       </Card>
     </div>
   );

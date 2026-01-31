@@ -90,6 +90,52 @@ export type DiffSummary = {
   reason?: "not_git" | "cwd_unknown" | "error";
 };
 
+export type CommitSummary = {
+  hash: string;
+  shortHash: string;
+  subject: string;
+  body: string | null;
+  authorName: string;
+  authorEmail: string | null;
+  authoredAt: string;
+};
+
+export type CommitLog = {
+  repoRoot: string | null;
+  rev: string | null;
+  generatedAt: string;
+  commits: CommitSummary[];
+  truncated?: boolean;
+  reason?: "not_git" | "cwd_unknown" | "error";
+};
+
+export type CommitFile = {
+  path: string;
+  status: DiffFileStatus;
+  additions: number | null;
+  deletions: number | null;
+  renamedFrom?: string;
+};
+
+export type CommitFileDiff = {
+  path: string;
+  status: DiffFileStatus;
+  patch: string | null;
+  binary: boolean;
+  truncated?: boolean;
+};
+
+export type CommitDetail = {
+  hash: string;
+  shortHash: string;
+  subject: string;
+  body: string | null;
+  authorName: string;
+  authorEmail: string | null;
+  authoredAt: string;
+  files: CommitFile[];
+};
+
 export type DiffFile = {
   path: string;
   status: DiffFileStatus;

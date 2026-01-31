@@ -18,6 +18,7 @@ import { Hono } from "hono";
 import type { WSContext } from "hono/ws";
 
 import { rotateToken } from "./config.js";
+import { fetchCommitDetail, fetchCommitFile, fetchCommitLog } from "./git-commits.js";
 import { fetchDiffFile, fetchDiffSummary } from "./git-diff.js";
 import type { createSessionMonitor } from "./monitor.js";
 import { captureTerminalScreen } from "./screen-service.js";
@@ -195,6 +196,92 @@ export const createApp = ({ config, monitor, tmuxActions }: AppContext) => {
       return c.json({ error: buildError("NOT_FOUND", "file not found") }, 404);
     }
     const file = await fetchDiffFile(summary.repoRoot, target, summary.rev, { force });
+    return c.json({ file });
+  });
+
+  app.get("/api/sessions/:paneId/commits", async (c) => {
+    let paneId: string;
+    try {
+      paneId = decodePaneId(c.req.param("paneId"));
+    } catch {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "invalid pane id") }, 400);
+    }
+    const detail = monitor.registry.getDetail(paneId);
+    if (!detail) {
+      return c.json({ error: buildError("NOT_FOUND", "pane not found") }, 404);
+    }
+    const limit = Number.parseInt(c.req.query("limit") ?? "10", 10);
+    const skip = Number.parseInt(c.req.query("skip") ?? "0", 10);
+    const force = c.req.query("force") === "1";
+    const log = await fetchCommitLog(detail.currentPath, {
+      limit: Number.isFinite(limit) ? limit : 10,
+      skip: Number.isFinite(skip) ? skip : 0,
+      force,
+    });
+    return c.json({ log });
+  });
+
+  app.get("/api/sessions/:paneId/commits/:hash", async (c) => {
+    let paneId: string;
+    try {
+      paneId = decodePaneId(c.req.param("paneId"));
+    } catch {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "invalid pane id") }, 400);
+    }
+    const detail = monitor.registry.getDetail(paneId);
+    if (!detail) {
+      return c.json({ error: buildError("NOT_FOUND", "pane not found") }, 404);
+    }
+    const hash = c.req.param("hash");
+    if (!hash) {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "missing hash") }, 400);
+    }
+    const log = await fetchCommitLog(detail.currentPath, { limit: 1, skip: 0 });
+    if (!log.repoRoot || log.reason) {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "commit log unavailable") }, 400);
+    }
+    const commit = await fetchCommitDetail(log.repoRoot, hash, {
+      force: c.req.query("force") === "1",
+    });
+    if (!commit) {
+      return c.json({ error: buildError("NOT_FOUND", "commit not found") }, 404);
+    }
+    return c.json({ commit });
+  });
+
+  app.get("/api/sessions/:paneId/commits/:hash/file", async (c) => {
+    let paneId: string;
+    try {
+      paneId = decodePaneId(c.req.param("paneId"));
+    } catch {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "invalid pane id") }, 400);
+    }
+    const detail = monitor.registry.getDetail(paneId);
+    if (!detail) {
+      return c.json({ error: buildError("NOT_FOUND", "pane not found") }, 404);
+    }
+    const hash = c.req.param("hash");
+    const pathParam = c.req.query("path");
+    if (!hash || !pathParam) {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "missing hash or path") }, 400);
+    }
+    const log = await fetchCommitLog(detail.currentPath, { limit: 1, skip: 0 });
+    if (!log.repoRoot || log.reason) {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "commit log unavailable") }, 400);
+    }
+    const commit = await fetchCommitDetail(log.repoRoot, hash, { force: true });
+    if (!commit) {
+      return c.json({ error: buildError("NOT_FOUND", "commit not found") }, 404);
+    }
+    const target =
+      commit.files.find((file) => file.path === pathParam) ??
+      commit.files.find((file) => file.renamedFrom === pathParam);
+    if (!target) {
+      return c.json({ error: buildError("NOT_FOUND", "file not found") }, 404);
+    }
+    const file = await fetchCommitFile(log.repoRoot, hash, target, {
+      force: c.req.query("force") === "1",
+    });
     return c.json({ file });
   });
 

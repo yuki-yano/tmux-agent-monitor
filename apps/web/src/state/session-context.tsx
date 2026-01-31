@@ -1,5 +1,8 @@
 import type {
   CommandResponse,
+  CommitDetail,
+  CommitFileDiff,
+  CommitLog,
   DiffFile,
   DiffSummary,
   ScreenResponse,
@@ -33,6 +36,21 @@ type SessionContextValue = {
     rev?: string | null,
     options?: { force?: boolean },
   ) => Promise<DiffFile>;
+  requestCommitLog: (
+    paneId: string,
+    options?: { limit?: number; skip?: number; force?: boolean },
+  ) => Promise<CommitLog>;
+  requestCommitDetail: (
+    paneId: string,
+    hash: string,
+    options?: { force?: boolean },
+  ) => Promise<CommitDetail>;
+  requestCommitFile: (
+    paneId: string,
+    hash: string,
+    path: string,
+    options?: { force?: boolean },
+  ) => Promise<CommitFileDiff>;
   requestScreen: (
     paneId: string,
     options: { lines?: number; mode?: "text" | "image" },
@@ -158,6 +176,85 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       const data = (await res.json()) as { file?: DiffFile; error?: { message?: string } };
       if (!res.ok || !data.file) {
         throw new Error(data.error?.message ?? "Failed to load diff file");
+      }
+      return data.file;
+    },
+    [token],
+  );
+
+  const requestCommitLog = useCallback(
+    async (paneId: string, options?: { limit?: number; skip?: number; force?: boolean }) => {
+      if (!token) {
+        throw new Error("Missing token");
+      }
+      const params = new URLSearchParams();
+      if (options?.limit) {
+        params.set("limit", String(options.limit));
+      }
+      if (options?.skip) {
+        params.set("skip", String(options.skip));
+      }
+      if (options?.force) {
+        params.set("force", "1");
+      }
+      const url = `/api/sessions/${encodePaneId(paneId)}/commits${
+        params.toString() ? `?${params.toString()}` : ""
+      }`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as { log?: CommitLog; error?: { message?: string } };
+      if (!res.ok || !data.log) {
+        throw new Error(data.error?.message ?? "Failed to load commit log");
+      }
+      return data.log;
+    },
+    [token],
+  );
+
+  const requestCommitDetail = useCallback(
+    async (paneId: string, hash: string, options?: { force?: boolean }) => {
+      if (!token) {
+        throw new Error("Missing token");
+      }
+      const params = new URLSearchParams();
+      if (options?.force) {
+        params.set("force", "1");
+      }
+      const url = `/api/sessions/${encodePaneId(paneId)}/commits/${encodeURIComponent(hash)}${
+        params.toString() ? `?${params.toString()}` : ""
+      }`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as { commit?: CommitDetail; error?: { message?: string } };
+      if (!res.ok || !data.commit) {
+        throw new Error(data.error?.message ?? "Failed to load commit detail");
+      }
+      return data.commit;
+    },
+    [token],
+  );
+
+  const requestCommitFile = useCallback(
+    async (paneId: string, hash: string, path: string, options?: { force?: boolean }) => {
+      if (!token) {
+        throw new Error("Missing token");
+      }
+      const params = new URLSearchParams({ path });
+      if (options?.force) {
+        params.set("force", "1");
+      }
+      const url = `/api/sessions/${encodePaneId(paneId)}/commits/${encodeURIComponent(hash)}/file?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as {
+        file?: CommitFileDiff;
+        error?: { message?: string };
+      };
+      if (!res.ok || !data.file) {
+        throw new Error(data.error?.message ?? "Failed to load commit file");
       }
       return data.file;
     },
@@ -388,6 +485,9 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         refreshSessions,
         requestDiffSummary,
         requestDiffFile,
+        requestCommitLog,
+        requestCommitDetail,
+        requestCommitFile,
         requestScreen,
         sendText,
         sendKeys,
