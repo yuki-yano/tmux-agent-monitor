@@ -176,7 +176,7 @@ export const SessionDetailPage = () => {
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [textInput, setTextInput] = useState("");
+  const textInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [autoEnter, setAutoEnter] = useState(true);
   const [shiftHeld, setShiftHeld] = useState(false);
   const [ctrlHeld, setCtrlHeld] = useState(false);
@@ -466,17 +466,20 @@ export const SessionDetailPage = () => {
 
   const handleSendText = async () => {
     if (readOnly) return;
-    if (!textInput.trim()) return;
-    if (isDangerousText(textInput)) {
+    const currentValue = textInputRef.current?.value ?? "";
+    if (!currentValue.trim()) return;
+    if (isDangerousText(currentValue)) {
       const confirmed = window.confirm("Dangerous command detected. Send anyway?");
       if (!confirmed) return;
     }
-    const result = await sendText(paneId, textInput, autoEnter);
+    const result = await sendText(paneId, currentValue, autoEnter);
     if (!result.ok) {
       setError(result.error?.message ?? "Failed to send text");
       return;
     }
-    setTextInput("");
+    if (textInputRef.current) {
+      textInputRef.current.value = "";
+    }
   };
 
   const handleToggleDiff = (path: string) => {
@@ -624,9 +627,8 @@ export const SessionDetailPage = () => {
             <Card className="space-y-3">
               <div className="flex items-start gap-3">
                 <textarea
-                  value={textInput}
                   placeholder="Type a command…"
-                  onChange={(event) => setTextInput(event.target.value)}
+                  ref={textInputRef}
                   rows={2}
                   className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 min-h-[64px] min-w-0 flex-1 resize-y rounded-2xl border bg-white/70 px-4 py-2 text-sm shadow-sm outline-none transition focus:ring-2"
                 />
