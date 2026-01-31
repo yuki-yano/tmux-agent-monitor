@@ -1,4 +1,4 @@
-import type { HookStateSignal, SessionStateValue, StateSignals } from "@agent-monitor/shared";
+import type { HookStateSignal, SessionStateValue, StateSignals } from "@tmux-agent-monitor/shared";
 
 const toTimestamp = (value: string | null): number | null => {
   if (!value) {

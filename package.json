@@ -1,17 +1,35 @@
 {
-  "name": "agent-monitor",
+  "name": "tmux-agent-monitor",
+  "description": "Monitor tmux sessions with a web UI.",
   "author": "Yuki Yano",
-  "private": true,
-  "version": "0.0.1",
+  "license": "MIT",
+  "version": "0.0.2",
   "type": "module",
   "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "tmux-agent-monitor": "dist/index.js",
+    "tmux-agent-monitor-hook": "dist/tmux-agent-monitor-hook.js"
+  },
+  "files": [
+    "dist/**",
+    "LICENSE",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "scripts": {
+    "build": "tsx scripts/build-package.ts",
+    "build:web": "pnpm --filter @tmux-agent-monitor/web build",
+    "build:bundle": "tsdown --config tsdown.config.ts",
+    "prepack": "pnpm build",
     "dev": "tsx scripts/dev.ts",
     "dev:public": "tsx scripts/dev.ts --public",
-    "dev:server": "pnpm --filter @agent-monitor/server dev",
-    "dev:server:public": "pnpm --filter @agent-monitor/server dev -- --public",
-    "dev:web": "pnpm --filter @agent-monitor/web dev",
-    "dev:web:public": "pnpm --filter @agent-monitor/web dev:public",
+    "dev:server": "pnpm --filter @tmux-agent-monitor/server dev",
+    "dev:server:public": "pnpm --filter @tmux-agent-monitor/server dev -- --public",
+    "dev:web": "pnpm --filter @tmux-agent-monitor/web dev",
+    "dev:web:public": "pnpm --filter @tmux-agent-monitor/web dev:public",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
@@ -21,6 +39,16 @@
     "test:run": "vitest run",
     "ci": "concurrently -n format,typecheck,lint,test -p \"{name}\" --pad-prefix --kill-others-on-fail \"pnpm run format:check\" \"pnpm run typecheck\" \"pnpm run lint\" \"pnpm run test\"",
     "ci:fix": "pnpm run format && pnpm run typecheck && pnpm run lint:fix && pnpm run test"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.4",
+    "@hono/node-ws": "^1.2.0",
+    "@hono/zod-validator": "^0.7.6",
+    "execa": "^9.6.0",
+    "hono": "^4.11.4",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.18.1",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
@@ -36,6 +64,7 @@
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^3.4.19",
+    "tsdown": "^0.20.1",
     "tsx": "^4.20.5",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.35.1",

@@ -9,8 +9,8 @@ import type {
   SessionDetail,
   SessionSummary,
   WsServerMessage,
-} from "@agent-monitor/shared";
-import { encodePaneId } from "@agent-monitor/shared";
+} from "@tmux-agent-monitor/shared";
+import { encodePaneId } from "@tmux-agent-monitor/shared";
 import {
   createContext,
   type ReactNode,
@@ -62,7 +62,7 @@ type SessionContextValue = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-const TOKEN_KEY = "agent-monitor-token";
+const TOKEN_KEY = "tmux-agent-monitor-token";
 const HEALTH_INTERVAL_MS = 15000;
 const HEALTH_TIMEOUT_MS = 45000;
 

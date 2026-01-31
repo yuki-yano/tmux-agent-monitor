@@ -6,7 +6,11 @@ export const encodePaneId = (paneId: string): string => {
 
 export const decodePaneId = (paneIdEncoded: string): string => {
   try {
-    return decodeURIComponent(paneIdEncoded);
+    const decoded = decodeURIComponent(paneIdEncoded);
+    if (/[\x00-\x1F\x7F]/.test(decoded)) {
+      return paneIdEncoded;
+    }
+    return decoded;
   } catch {
     return paneIdEncoded;
   }

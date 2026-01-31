@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { createTmuxAdapter } from "@agent-monitor/tmux";
 import { serve } from "@hono/node-server";
+import { createTmuxAdapter } from "@tmux-agent-monitor/tmux";
 import qrcode from "qrcode-terminal";
 
 import { createApp } from "./app.js";
@@ -43,15 +43,23 @@ const printHooksSnippet = () => {
   const snippet = {
     hooks: {
       PreToolUse: [
-        { matcher: "*", hooks: [{ type: "command", command: "agent-monitor-hook PreToolUse" }] },
+        {
+          matcher: "*",
+          hooks: [{ type: "command", command: "tmux-agent-monitor-hook PreToolUse" }],
+        },
       ],
       PostToolUse: [
-        { matcher: "*", hooks: [{ type: "command", command: "agent-monitor-hook PostToolUse" }] },
+        {
+          matcher: "*",
+          hooks: [{ type: "command", command: "tmux-agent-monitor-hook PostToolUse" }],
+        },
       ],
-      Notification: [{ hooks: [{ type: "command", command: "agent-monitor-hook Notification" }] }],
-      Stop: [{ hooks: [{ type: "command", command: "agent-monitor-hook Stop" }] }],
+      Notification: [
+        { hooks: [{ type: "command", command: "tmux-agent-monitor-hook Notification" }] },
+      ],
+      Stop: [{ hooks: [{ type: "command", command: "tmux-agent-monitor-hook Stop" }] }],
       UserPromptSubmit: [
-        { hooks: [{ type: "command", command: "agent-monitor-hook UserPromptSubmit" }] },
+        { hooks: [{ type: "command", command: "tmux-agent-monitor-hook UserPromptSubmit" }] },
       ],
     },
   };
@@ -133,7 +141,7 @@ const runServe = async (flags: Map<string, string | boolean>) => {
       : "localhost";
   const displayPort = parsePort(webPortFlag) ?? port;
   const url = `http://${ip}:${displayPort}/?token=${config.token}`;
-  console.log(`agent-monitor: ${url}`);
+  console.log(`tmux-agent-monitor: ${url}`);
 
   qrcode.generate(url, { small: true });
 

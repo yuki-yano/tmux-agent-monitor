@@ -3,9 +3,9 @@ import {
   type ApiError,
   compileDangerPatterns,
   isDangerousCommand,
-} from "@agent-monitor/shared";
-import { allowedKeys } from "@agent-monitor/shared";
-import type { TmuxAdapter } from "@agent-monitor/tmux";
+} from "@tmux-agent-monitor/shared";
+import { allowedKeys } from "@tmux-agent-monitor/shared";
+import type { TmuxAdapter } from "@tmux-agent-monitor/tmux";
 
 const buildError = (code: ApiError["code"], message: string): ApiError => ({
   code,

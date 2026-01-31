@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { resolveServerKey } from "@agent-monitor/shared";
+import { resolveServerKey } from "@tmux-agent-monitor/shared";
 
 const readStdin = (): string => {
   try {
@@ -29,7 +29,7 @@ const resolveTranscriptPath = (
 };
 
 const loadConfig = () => {
-  const configPath = path.join(os.homedir(), ".agent-monitor", "config.json");
+  const configPath = path.join(os.homedir(), ".tmux-agent-monitor", "config.json");
   try {
     const raw = fs.readFileSync(configPath, "utf8");
     return JSON.parse(raw) as { tmux?: { socketName?: string | null; socketPath?: string | null } };
@@ -45,7 +45,7 @@ const ensureDir = (dir: string) => {
 const main = () => {
   const hookEventName = process.argv[2];
   if (!hookEventName) {
-    console.error("Usage: agent-monitor-hook <HookEventName>");
+    console.error("Usage: tmux-agent-monitor-hook <HookEventName>");
     process.exit(1);
   }
 
@@ -100,7 +100,7 @@ const main = () => {
     config?.tmux?.socketName ?? null,
     config?.tmux?.socketPath ?? null,
   );
-  const baseDir = path.join(os.homedir(), ".agent-monitor");
+  const baseDir = path.join(os.homedir(), ".tmux-agent-monitor");
   const eventsDir = path.join(baseDir, "events", serverKey);
   const eventsPath = path.join(eventsDir, "claude.jsonl");
 

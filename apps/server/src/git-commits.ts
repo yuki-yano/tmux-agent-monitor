@@ -8,7 +8,7 @@ import type {
   CommitLog,
   CommitSummary,
   DiffFileStatus,
-} from "@agent-monitor/shared";
+} from "@tmux-agent-monitor/shared";
 
 const execFileAsync = promisify(execFile);
 

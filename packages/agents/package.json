@@ -1,5 +1,5 @@
 {
-  "name": "@agent-monitor/agents",
+  "name": "@tmux-agent-monitor/agents",
   "private": true,
   "version": "0.0.1",
   "type": "module",

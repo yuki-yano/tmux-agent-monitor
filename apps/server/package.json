@@ -1,5 +1,5 @@
 {
-  "name": "@agent-monitor/server",
+  "name": "@tmux-agent-monitor/server",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -8,12 +8,12 @@
     "start": "tsx src/index.ts"
   },
   "bin": {
-    "agent-monitor": "./src/index.ts"
+    "tmux-agent-monitor": "./src/index.ts"
   },
   "dependencies": {
-    "@agent-monitor/agents": "workspace:*",
-    "@agent-monitor/shared": "workspace:*",
-    "@agent-monitor/tmux": "workspace:*",
+    "@tmux-agent-monitor/agents": "workspace:*",
+    "@tmux-agent-monitor/shared": "workspace:*",
+    "@tmux-agent-monitor/tmux": "workspace:*",
     "@hono/node-server": "^1.19.4",
     "@hono/node-ws": "^1.2.0",
     "@hono/zod-validator": "^0.7.6",

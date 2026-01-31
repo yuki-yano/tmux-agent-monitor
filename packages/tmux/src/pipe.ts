@@ -35,7 +35,7 @@ export const createPipeManager = (adapter: TmuxAdapter) => {
       return { attached: false, conflict: false };
     }
 
-    await adapter.run(["set-option", "-t", paneId, "@agent-monitor_pipe", "1"]);
+    await adapter.run(["set-option", "-t", paneId, "@tmux-agent-monitor_pipe", "1"]);
     return { attached: true, conflict: false };
   };
 

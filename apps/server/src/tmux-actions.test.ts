@@ -1,4 +1,4 @@
-import { defaultConfig } from "@agent-monitor/shared";
+import { defaultConfig } from "@tmux-agent-monitor/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createTmuxActions } from "./tmux-actions.js";

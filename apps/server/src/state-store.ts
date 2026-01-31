@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { SessionDetail, SessionStateValue } from "@agent-monitor/shared";
+import type { SessionDetail, SessionStateValue } from "@tmux-agent-monitor/shared";
 
 type PersistedSession = {
   paneId: string;
@@ -20,7 +20,7 @@ type PersistedState = {
 };
 
 const getStatePath = () => {
-  return path.join(os.homedir(), ".agent-monitor", "state.json");
+  return path.join(os.homedir(), ".tmux-agent-monitor", "state.json");
 };
 
 export const loadState = (): PersistedState | null => {

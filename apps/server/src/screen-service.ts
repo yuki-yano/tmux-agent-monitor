@@ -69,7 +69,7 @@ const focusTerminalApp = async (appName: string) => {
 };
 
 const captureRegion = async (bounds: { x: number; y: number; width: number; height: number }) => {
-  const tempPath = `/tmp/agent-monitor-${randomUUID()}.png`;
+  const tempPath = `/tmp/tmux-agent-monitor-${randomUUID()}.png`;
   const region = `${bounds.x},${bounds.y},${bounds.width},${bounds.height}`;
   try {
     await execFileAsync("screencapture", ["-R", region, "-x", tempPath], { timeout: 10000 });

@@ -6,7 +6,7 @@ import {
   defaultDangerKeys,
   type DiffFile,
   type DiffSummary,
-} from "@agent-monitor/shared";
+} from "@tmux-agent-monitor/shared";
 import {
   ArrowDown,
   ArrowLeft,

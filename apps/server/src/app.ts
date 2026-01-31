@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { serveStatic } from "@hono/node-server/serve-static";
+import { createNodeWebSocket } from "@hono/node-ws";
 import {
   type AgentMonitorConfig,
   type ApiError,
@@ -10,10 +12,8 @@ import {
   wsClientMessageSchema,
   type WsEnvelope,
   type WsServerMessage,
-} from "@agent-monitor/shared";
-import { decodePaneId } from "@agent-monitor/shared";
-import { serveStatic } from "@hono/node-server/serve-static";
-import { createNodeWebSocket } from "@hono/node-ws";
+} from "@tmux-agent-monitor/shared";
+import { decodePaneId } from "@tmux-agent-monitor/shared";
 import { Hono } from "hono";
 import type { WSContext } from "hono/ws";
 
@@ -615,7 +615,10 @@ export const createApp = ({ config, monitor, tmuxActions }: AppContext) => {
 
   app.get("/ws", wsHandler);
 
-  const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../web/dist");
+  const distRoot = path.dirname(fileURLToPath(import.meta.url));
+  const bundledDistDir = path.resolve(distRoot, "web");
+  const workspaceDistDir = path.resolve(distRoot, "../../web/dist");
+  const distDir = fs.existsSync(bundledDistDir) ? bundledDistDir : workspaceDistDir;
 
   if (fs.existsSync(distDir)) {
     app.use("/*", async (c, next) => {

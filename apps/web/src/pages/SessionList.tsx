@@ -51,7 +51,9 @@ export const SessionListPage = () => {
       <header className="shadow-glass flex flex-col gap-4 rounded-[32px] border border-white/60 bg-white/80 p-6 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-latte-subtext0 text-xs uppercase tracking-[0.5em]">agent-monitor</p>
+            <p className="text-latte-subtext0 text-xs uppercase tracking-[0.5em]">
+              tmux-agent-monitor
+            </p>
             <h1 className="font-display text-latte-text text-3xl">Live Sessions</h1>
           </div>
           <div className="flex flex-col items-end gap-2">

@@ -37,7 +37,7 @@ describe("createPipeManager", () => {
       "set-option",
       "-t",
       "%2",
-      "@agent-monitor_pipe",
+      "@tmux-agent-monitor_pipe",
       "1",
     ]);
   });

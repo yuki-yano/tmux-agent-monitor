@@ -1,15 +1,15 @@
 {
-  "name": "@agent-monitor/hooks",
+  "name": "@tmux-agent-monitor/hooks",
   "private": true,
   "version": "0.0.1",
   "type": "module",
   "bin": {
-    "agent-monitor-hook": "./src/cli.ts"
+    "tmux-agent-monitor-hook": "./src/cli.ts"
   },
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@agent-monitor/shared": "workspace:*"
+    "@tmux-agent-monitor/shared": "workspace:*"
   }
 }

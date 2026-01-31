@@ -1,4 +1,4 @@
-import type { PaneMeta } from "@agent-monitor/shared";
+import type { PaneMeta } from "@tmux-agent-monitor/shared";
 
 import type { TmuxAdapter } from "./adapter.js";
 
@@ -18,7 +18,7 @@ const format = [
   "#{pane_pid}",
   "#{pane_title}",
   "#{pane_start_command}",
-  "#{@agent-monitor_pipe}",
+  "#{@tmux-agent-monitor_pipe}",
 ].join("\t");
 
 const toNullable = (value: string | undefined): string | null => {

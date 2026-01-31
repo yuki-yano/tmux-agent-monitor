@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { estimateState } from "@agent-monitor/agents";
+import { estimateState } from "@tmux-agent-monitor/agents";
 import {
   type AgentMonitorConfig,
   claudeHookEventSchema,
@@ -13,13 +13,13 @@ import {
   resolveServerKey,
   type SessionDetail,
   type SessionStateValue,
-} from "@agent-monitor/shared";
+} from "@tmux-agent-monitor/shared";
 import {
   createInspector,
   createPipeManager,
   createScreenCapture,
   type TmuxAdapter,
-} from "@agent-monitor/tmux";
+} from "@tmux-agent-monitor/tmux";
 
 import { shouldSuppressActivity } from "./activity-suppressor.js";
 import {
@@ -36,7 +36,7 @@ type HookEventContext = {
   hookState: HookStateSignal;
 };
 
-const baseDir = path.join(os.homedir(), ".agent-monitor");
+const baseDir = path.join(os.homedir(), ".tmux-agent-monitor");
 
 const execFileAsync = promisify(execFile);
 
@@ -75,11 +75,7 @@ const normalizeTitle = (value: string | null | undefined) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const buildDefaultTitle = (
-  currentPath: string | null,
-  paneId: string,
-  sessionName: string,
-) => {
+const buildDefaultTitle = (currentPath: string | null, paneId: string, sessionName: string) => {
   if (!currentPath) {
     return `${sessionName}:${paneId}`;
   }
@@ -328,7 +324,7 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
 
     for (const pane of panes) {
       if (pane.pipeTagValue === null) {
-        const fallback = await inspector.readUserOption(pane.paneId, "@agent-monitor_pipe");
+        const fallback = await inspector.readUserOption(pane.paneId, "@tmux-agent-monitor_pipe");
         pane.pipeTagValue = fallback;
       }
 
@@ -446,8 +442,7 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
 
       const paneTitle = normalizeTitle(pane.paneTitle);
       const defaultTitle = buildDefaultTitle(pane.currentPath, pane.paneId, pane.sessionName);
-      const title =
-        paneTitle && !hostCandidates.has(paneTitle) ? paneTitle : defaultTitle;
+      const title = paneTitle && !hostCandidates.has(paneTitle) ? paneTitle : defaultTitle;
 
       const detail: SessionDetail = {
         paneId: pane.paneId,

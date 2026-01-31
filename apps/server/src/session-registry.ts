@@ -1,4 +1,4 @@
-import type { SessionDetail, SessionSummary } from "@agent-monitor/shared";
+import type { SessionDetail, SessionSummary } from "@tmux-agent-monitor/shared";
 
 export type SessionChangeListener = (session: SessionSummary) => void;
 export type SessionRemovedListener = (paneId: string) => void;

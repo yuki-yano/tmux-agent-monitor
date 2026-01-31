@@ -3,7 +3,12 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import type { DiffFile, DiffFileStatus, DiffSummary, DiffSummaryFile } from "@agent-monitor/shared";
+import type {
+  DiffFile,
+  DiffFileStatus,
+  DiffSummary,
+  DiffSummaryFile,
+} from "@tmux-agent-monitor/shared";
 
 const execFileAsync = promisify(execFile);
 
