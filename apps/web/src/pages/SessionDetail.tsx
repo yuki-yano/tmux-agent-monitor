@@ -255,9 +255,18 @@ export const SessionDetailPage = () => {
     initial: "instant",
     resize: "instant",
   });
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const prevModeRef = useRef<ScreenMode>(mode);
   const snapToBottomRef = useRef(false);
   const isScreenLoading = screenLoadingState.loading && screenLoadingState.mode === mode;
+  const updateScrollState = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) {
+      return;
+    }
+    const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+    setIsAtBottom(distanceFromBottom <= 8);
+  }, [scrollRef]);
 
   useEffect(() => {
     const prevMode = prevModeRef.current;
@@ -277,6 +286,7 @@ export const SessionDetailPage = () => {
 
   useLayoutEffect(() => {
     if (mode !== "text") {
+      setIsAtBottom(true);
       return;
     }
     const scrollEl = scrollRef.current;
@@ -287,7 +297,26 @@ export const SessionDetailPage = () => {
     if (distanceFromBottom <= 8) {
       void scrollToBottom({ animation: "instant" });
     }
+    setIsAtBottom(distanceFromBottom <= 8);
   }, [mode, renderedScreen, scrollRef, scrollToBottom]);
+
+  useEffect(() => {
+    if (mode !== "text") {
+      return;
+    }
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) {
+      return;
+    }
+    const handleScroll = () => updateScrollState();
+    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    updateScrollState();
+    return () => {
+      scrollEl.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [mode, scrollRef, updateScrollState]);
 
   const refreshScreen = useCallback(async () => {
     if (!paneId) return;
@@ -939,18 +968,30 @@ export const SessionDetailPage = () => {
                 />
               </div>
             ) : (
-              <div
-                ref={scrollRef}
-                className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto"
-                style={{ maxHeight: "60vh" }}
-              >
-                <div ref={contentRef}>
-                  <pre
-                    className="text-latte-text w-max whitespace-pre font-mono text-xs"
-                    dangerouslySetInnerHTML={{ __html: renderedScreen }}
-                  />
+              <>
+                <div
+                  ref={scrollRef}
+                  className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto"
+                  style={{ maxHeight: "60vh" }}
+                >
+                  <div ref={contentRef}>
+                    <pre
+                      className="text-latte-text w-max whitespace-pre font-mono text-xs"
+                      dangerouslySetInnerHTML={{ __html: renderedScreen }}
+                    />
+                  </div>
                 </div>
-              </div>
+                {!isAtBottom && (
+                  <button
+                    type="button"
+                    onClick={() => scrollToBottom({ animation: "smooth", ignoreEscapes: true })}
+                    aria-label="Scroll to bottom"
+                    className="border-latte-surface2 bg-latte-base/80 text-latte-text hover:border-latte-lavender/60 hover:text-latte-lavender focus-visible:ring-latte-lavender absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full border shadow-md backdrop-blur transition focus-visible:outline-none focus-visible:ring-2"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                )}
+              </>
             )}
           </div>
         </Card>
