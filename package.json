@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/yuki-yano/tmux-agent-monitor.git"
   },
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "packageManager": "pnpm@10.28.2",
   "engines": {
