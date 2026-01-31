@@ -96,10 +96,11 @@ export const createApp = ({ config, monitor, tmuxActions }: AppContext) => {
   };
 
   const isOriginAllowed = (origin?: string | null, host?: string | null) => {
-    if (!origin || config.allowedOrigins.length === 0) {
-      return (
-        config.allowedOrigins.length === 0 || (host ? config.allowedOrigins.includes(host) : true)
-      );
+    if (config.allowedOrigins.length === 0) {
+      return true;
+    }
+    if (!origin) {
+      return false;
     }
     return (
       config.allowedOrigins.includes(origin) ||
