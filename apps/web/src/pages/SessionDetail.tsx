@@ -630,7 +630,7 @@ export const SessionDetailPage = () => {
                   placeholder="Type a command…"
                   ref={textInputRef}
                   rows={2}
-                  className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 min-h-[64px] min-w-0 flex-1 resize-y rounded-2xl border bg-white/70 px-4 py-2 text-sm shadow-sm outline-none transition focus:ring-2"
+                  className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 min-h-[64px] min-w-0 flex-1 resize-y rounded-2xl border bg-white/70 px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 md:text-sm"
                 />
                 <div className="flex shrink-0 flex-col items-end gap-2 self-start">
                   <Button onClick={handleSendText}>Send</Button>

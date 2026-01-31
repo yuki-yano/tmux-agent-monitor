@@ -9,7 +9,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ className, ...props },
     <input
       ref={ref}
       className={cn(
-        "border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 w-full rounded-2xl border bg-white/70 px-4 py-2 text-sm shadow-sm outline-none transition focus:ring-2",
+        "border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 w-full rounded-2xl border bg-white/70 px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 md:text-sm",
         className,
       )}
       {...props}
