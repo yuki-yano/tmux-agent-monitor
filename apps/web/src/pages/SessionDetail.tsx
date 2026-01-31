@@ -963,7 +963,8 @@ export const SessionDetailPage = () => {
                   placeholder="Type a command…"
                   ref={textInputRef}
                   rows={2}
-                  className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 bg-latte-base/70 min-h-[64px] min-w-0 flex-1 resize-y rounded-2xl border px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 md:text-sm"
+                  disabled={!connected}
+                  className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 bg-latte-base/70 min-h-[64px] min-w-0 flex-1 resize-y rounded-2xl border px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
                 />
                 <div className="flex shrink-0 items-center self-center">
                   <Button onClick={handleSendText} aria-label="Send" className="h-11 w-11 p-0">
@@ -1187,7 +1188,9 @@ export const SessionDetailPage = () => {
                   <div className="flex items-center gap-3 text-xs">
                     <span className="text-latte-green">+{additionsLabel}</span>
                     <span className="text-latte-red">-{deletionsLabel}</span>
-                    <span className="text-latte-subtext0">{isOpen ? "Hide" : "Show"}</span>
+                    <span className="text-latte-subtext0 min-w-[3.25rem] text-right">
+                      {isOpen ? "Hide" : "Show"}
+                    </span>
                   </div>
                 </button>
                 {isOpen && (
@@ -1345,7 +1348,7 @@ export const SessionDetailPage = () => {
                               key={`${file.path}-${file.status}`}
                               className="flex flex-col gap-2"
                             >
-                              <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-3">
                                 <div className="flex min-w-0 items-center gap-2">
                                   <span
                                     className={`${diffStatusClass(
@@ -1354,9 +1357,9 @@ export const SessionDetailPage = () => {
                                   >
                                     {statusLabel}
                                   </span>
-                                  <span className="text-latte-text break-all">{pathLabel}</span>
+                                  <span className="text-latte-text truncate">{pathLabel}</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs">
+                                <div className="ml-auto flex shrink-0 items-center gap-3 text-xs">
                                   <span className="text-latte-green">+{additions}</span>
                                   <span className="text-latte-red">-{deletions}</span>
                                   <button
@@ -1369,7 +1372,9 @@ export const SessionDetailPage = () => {
                                     ) : (
                                       <ChevronDown className="h-3.5 w-3.5" />
                                     )}
-                                    {fileOpen ? "Hide" : "Show"}
+                                    <span className="min-w-[3.25rem] text-right">
+                                      {fileOpen ? "Hide" : "Show"}
+                                    </span>
                                   </button>
                                 </div>
                               </div>
