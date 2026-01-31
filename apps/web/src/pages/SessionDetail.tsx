@@ -248,7 +248,7 @@ export const SessionDetailPage = () => {
     [screen, resolvedTheme],
   );
   const commitPageSize = 10;
-  const { scrollRef, contentRef, stopScroll } = useStickToBottom({
+  const { scrollRef, contentRef, scrollToBottom } = useStickToBottom({
     initial: "instant",
     resize: "instant",
   });
@@ -268,17 +268,23 @@ export const SessionDetailPage = () => {
     if (!snapToBottomRef.current || mode !== "text") {
       return;
     }
+    void scrollToBottom({ animation: "instant", ignoreEscapes: true });
+    snapToBottomRef.current = false;
+  }, [mode, screen, renderedScreen, scrollToBottom]);
+
+  useLayoutEffect(() => {
+    if (mode !== "text") {
+      return;
+    }
     const scrollEl = scrollRef.current;
     if (!scrollEl) {
       return;
     }
-    stopScroll?.();
-    scrollEl.scrollTop = scrollEl.scrollHeight;
-    requestAnimationFrame(() => {
-      scrollEl.scrollTop = scrollEl.scrollHeight;
-    });
-    snapToBottomRef.current = false;
-  }, [mode, screen, renderedScreen, scrollRef, stopScroll]);
+    const distanceFromBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+    if (distanceFromBottom <= 8) {
+      void scrollToBottom({ animation: "instant" });
+    }
+  }, [mode, renderedScreen, scrollRef, scrollToBottom]);
 
   const refreshScreen = useCallback(async () => {
     if (!paneId) return;
