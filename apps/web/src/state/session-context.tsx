@@ -27,7 +27,9 @@ type SessionContextValue = {
   token: string | null;
   sessions: SessionSummary[];
   connected: boolean;
+  connectionIssue: string | null;
   readOnly: boolean;
+  reconnect: () => void;
   refreshSessions: () => Promise<void>;
   requestDiffSummary: (paneId: string, options?: { force?: boolean }) => Promise<DiffSummary>;
   requestDiffFile: (
@@ -93,7 +95,9 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     return localStorage.getItem(TOKEN_KEY);
   });
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [connectionIssue, setConnectionIssue] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
+  const [wsNonce, setWsNonce] = useState(0);
   const pending = useRef(
     new Map<
       string,
@@ -105,7 +109,10 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   );
   const lastHealthAtRef = useRef<number | null>(null);
 
-  const wsUrl = useMemo(() => (token ? buildWsUrl(token) : null), [token]);
+  const wsUrl = useMemo(
+    () => (token ? `${buildWsUrl(token)}&v=${wsNonce}` : null),
+    [token, wsNonce],
+  );
 
   useEffect(() => {
     const urlToken = readTokenFromUrl();
@@ -116,14 +123,33 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshSessions = useCallback(async () => {
     if (!token) return;
-    const res = await fetch("/api/sessions", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      return;
+    try {
+      const res = await fetch("/api/sessions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        let message = `Request failed (${res.status})`;
+        if (res.status === 401 || res.status === 403) {
+          message = "Unauthorized. Please refresh with a valid token.";
+        } else {
+          try {
+            const data = (await res.json()) as { error?: { message?: string } };
+            if (data.error?.message) {
+              message = data.error.message;
+            }
+          } catch {
+            // ignore response parse failures
+          }
+        }
+        setConnectionIssue(message);
+        return;
+      }
+      const data = (await res.json()) as { sessions: SessionSummary[] };
+      setSessions(data.sessions);
+      setConnectionIssue(null);
+    } catch (err) {
+      setConnectionIssue(err instanceof Error ? err.message : "Network error. Reconnecting...");
     }
-    const data = (await res.json()) as { sessions: SessionSummary[] };
-    setSessions(data.sessions);
   }, [token]);
 
   const requestDiffSummary = useCallback(
@@ -319,18 +345,32 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       retryOnError: true,
       onOpen: () => {
         lastHealthAtRef.current = Date.now();
+        setConnectionIssue(null);
       },
       onClose: () => {
         pending.current.forEach(({ reject }) => {
           reject(new Error("WebSocket disconnected"));
         });
         pending.current.clear();
+        setConnectionIssue("Disconnected. Reconnecting...");
+      },
+      onError: () => {
+        setConnectionIssue("WebSocket error. Reconnecting...");
       },
     },
     Boolean(token),
   );
 
   const connected = readyState === ReadyState.OPEN;
+  const reconnect = useCallback(() => {
+    setConnectionIssue("Reconnecting...");
+    setWsNonce((prev) => prev + 1);
+    try {
+      getWebSocket()?.close();
+    } catch {
+      // ignore reconnect close failures
+    }
+  }, [getWebSocket]);
 
   const sendPing = useCallback(() => {
     if (!connected) {
@@ -431,7 +471,12 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       const reqId = createReqId();
       return new Promise<ScreenResponse | CommandResponse>((resolve, reject) => {
         pending.current.set(reqId, { resolve, reject });
-        sendWs({ ...payload, reqId, ts: new Date().toISOString() });
+        try {
+          sendWs({ ...payload, reqId, ts: new Date().toISOString() });
+        } catch (err) {
+          pending.current.delete(reqId);
+          reject(err instanceof Error ? err : new Error("WebSocket not connected"));
+        }
       });
     },
     [sendWs],
@@ -481,7 +526,9 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         token,
         sessions,
         connected,
+        connectionIssue,
         readOnly,
+        reconnect,
         refreshSessions,
         requestDiffSummary,
         requestDiffFile,

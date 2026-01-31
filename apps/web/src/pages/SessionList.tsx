@@ -32,7 +32,8 @@ const formatPath = (value: string | null) => {
 };
 
 export const SessionListPage = () => {
-  const { sessions, connected, readOnly, refreshSessions } = useSessions();
+  const { sessions, connected, connectionIssue, readOnly, reconnect, refreshSessions } =
+    useSessions();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
 
@@ -74,11 +75,11 @@ export const SessionListPage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => refreshSessions()}
-                aria-label="Refresh"
+                onClick={() => (connected ? refreshSessions() : reconnect())}
+                aria-label={connected ? "Refresh" : "Reconnect"}
               >
                 <RefreshCw className="h-4 w-4" />
-                <span className="sr-only">Refresh</span>
+                <span className="sr-only">{connected ? "Refresh" : "Reconnect"}</span>
               </Button>
             </div>
           </div>
@@ -107,6 +108,11 @@ export const SessionListPage = () => {
         {readOnly && (
           <div className="border-latte-peach/50 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-sm">
             Read-only mode is active. Actions are disabled.
+          </div>
+        )}
+        {connectionIssue && (
+          <div className="border-latte-peach/50 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-sm">
+            {connectionIssue}
           </div>
         )}
       </header>

@@ -64,6 +64,7 @@ const compilePatterns = () =>
   defaultDangerCommandPatterns.map((pattern) => new RegExp(pattern, "i"));
 
 const AUTO_REFRESH_INTERVAL_MS = 15_000;
+const DISCONNECTED_MESSAGE = "Disconnected. Reconnecting...";
 const backLinkClass =
   "inline-flex items-center justify-center gap-2 rounded-full border border-latte-surface2 bg-transparent px-3 py-1.5 text-xs font-semibold text-latte-subtext0 transition hover:bg-latte-crust hover:text-latte-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-latte-lavender";
 const formatPath = (value: string | null) => {
@@ -191,7 +192,9 @@ export const SessionDetailPage = () => {
   const paneId = paneIdEncoded ?? "";
   const {
     connected,
+    connectionIssue,
     getSessionDetail,
+    reconnect,
     requestCommitDetail,
     requestCommitFile,
     requestCommitLog,
@@ -321,6 +324,12 @@ export const SessionDetailPage = () => {
   const refreshScreen = useCallback(async () => {
     if (!paneId) return;
     if (!connected) {
+      refreshInFlightRef.current = null;
+      modeSwitchRef.current = null;
+      dispatchScreenLoading({ type: "reset" });
+      if (!connectionIssue) {
+        setError(DISCONNECTED_MESSAGE);
+      }
       return;
     }
     const requestId = (refreshRequestIdRef.current += 1);
@@ -367,11 +376,26 @@ export const SessionDetailPage = () => {
         }
       }
     }
-  }, [connected, mode, paneId, requestScreen]);
+  }, [connected, connectionIssue, mode, paneId, requestScreen]);
 
   useEffect(() => {
     refreshScreen();
   }, [refreshScreen]);
+
+  useEffect(() => {
+    if (!connected) {
+      refreshInFlightRef.current = null;
+      modeSwitchRef.current = null;
+      dispatchScreenLoading({ type: "reset" });
+      if (!connectionIssue && !error) {
+        setError(DISCONNECTED_MESSAGE);
+      }
+      return;
+    }
+    if (error === DISCONNECTED_MESSAGE) {
+      setError(null);
+    }
+  }, [connected, connectionIssue, error]);
 
   useEffect(() => {
     if (!paneId || !connected) {
@@ -915,6 +939,11 @@ export const SessionDetailPage = () => {
             Read-only mode is active. Actions are disabled.
           </div>
         )}
+        {connectionIssue && (
+          <div className="border-latte-peach/50 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-sm">
+            {connectionIssue}
+          </div>
+        )}
       </header>
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[1.3fr_1fr]">
@@ -926,6 +955,12 @@ export const SessionDetailPage = () => {
                 onValueChange={(value) => {
                   if ((value === "text" || value === "image") && value !== mode) {
                     const nextMode = value;
+                    if (!connected) {
+                      modeSwitchRef.current = null;
+                      dispatchScreenLoading({ type: "reset" });
+                      setMode(nextMode);
+                      return;
+                    }
                     modeSwitchRef.current = nextMode;
                     dispatchScreenLoading({ type: "start", mode: nextMode });
                     setMode(nextMode);
@@ -938,9 +973,14 @@ export const SessionDetailPage = () => {
                 </TabsList>
               </Tabs>
             </div>
-            <Button variant="ghost" size="sm" onClick={refreshScreen} aria-label="Refresh screen">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => (connected ? refreshScreen() : reconnect())}
+              aria-label={connected ? "Refresh screen" : "Reconnect"}
+            >
               <RefreshCw className="h-4 w-4" />
-              <span className="sr-only">Refresh</span>
+              <span className="sr-only">{connected ? "Refresh" : "Reconnect"}</span>
             </Button>
           </div>
           {fallbackReason && (
