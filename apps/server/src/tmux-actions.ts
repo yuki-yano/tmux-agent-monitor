@@ -15,6 +15,7 @@ const buildError = (code: ApiError["code"], message: string): ApiError => ({
 export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConfig) => {
   const dangerPatterns = compileDangerPatterns(config.dangerCommandPatterns);
   const dangerKeys = new Set(config.dangerKeys);
+  const pendingCommands = new Map<string, string>();
   const enterKey = config.input.enterKey || "C-m";
   const enterDelayMs = config.input.enterDelayMs ?? 0;
   const bracketedPaste = (value: string) => `\u001b[200~${value}\u001b[201~`;
@@ -26,7 +27,15 @@ export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConf
     if (text.length > config.input.maxTextLength) {
       return { ok: false, error: buildError("INVALID_PAYLOAD", "text too long") };
     }
-    if (isDangerousCommand(text, dangerPatterns)) {
+    const normalized = text.replace(/\r\n/g, "\n");
+    const pending = pendingCommands.get(paneId) ?? "";
+    const combined = `${pending}${normalized}`;
+    if (combined.length > config.input.maxTextLength) {
+      pendingCommands.delete(paneId);
+      return { ok: false, error: buildError("INVALID_PAYLOAD", "text too long") };
+    }
+    if (isDangerousCommand(combined, dangerPatterns)) {
+      pendingCommands.delete(paneId);
       return { ok: false, error: buildError("DANGEROUS_COMMAND", "dangerous command blocked") };
     }
 
@@ -38,7 +47,6 @@ export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConf
       `copy-mode -q -t ${paneId}`,
     ]);
 
-    const normalized = text.replace(/\r\n/g, "\n");
     if (normalized.includes("\n")) {
       const result = await adapter.run([
         "send-keys",
@@ -62,6 +70,7 @@ export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConf
           };
         }
       }
+      pendingCommands.delete(paneId);
       return { ok: true as const };
     }
 
@@ -80,7 +89,10 @@ export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConf
           error: buildError("INTERNAL", enterResult.stderr || "send-keys Enter failed"),
         };
       }
+      pendingCommands.delete(paneId);
+      return { ok: true as const };
     }
+    pendingCommands.set(paneId, combined);
     return { ok: true as const };
   };
 

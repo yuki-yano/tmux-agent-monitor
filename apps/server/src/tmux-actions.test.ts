@@ -57,6 +57,25 @@ describe("createTmuxActions.sendText", () => {
     ]);
     expect(adapter.run).toHaveBeenNthCalledWith(3, ["send-keys", "-t", "%1", "C-m"]);
   });
+
+  it("detects dangerous commands across split sends", async () => {
+    const adapter = {
+      run: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
+    };
+    const config = {
+      ...defaultConfig,
+      input: { ...defaultConfig.input, enterKey: "C-m", enterDelayMs: 0 },
+    };
+    const tmuxActions = createTmuxActions(adapter, config);
+
+    const first = await tmuxActions.sendText("%1", "rm ", false);
+    const second = await tmuxActions.sendText("%1", "-rf /tmp", true);
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(false);
+    expect(second.error?.code).toBe("DANGEROUS_COMMAND");
+    expect(adapter.run).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("createTmuxActions.sendKeys", () => {
