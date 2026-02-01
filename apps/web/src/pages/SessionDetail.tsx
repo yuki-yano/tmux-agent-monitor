@@ -1019,7 +1019,7 @@ export const SessionDetailPage = () => {
                   onClick={openTitleEditor}
                   disabled={readOnly}
                   className={`font-display text-latte-text text-left text-xl transition ${
-                    readOnly ? "cursor-default" : "cursor-text hover:text-latte-lavender"
+                    readOnly ? "cursor-default" : "hover:text-latte-lavender cursor-text"
                   } disabled:opacity-70`}
                   aria-label="Edit session title"
                 >

@@ -11,6 +11,7 @@ import type {
   WsServerMessage,
 } from "@tmux-agent-monitor/shared";
 import { encodePaneId } from "@tmux-agent-monitor/shared";
+import { hc } from "hono/client";
 import {
   createContext,
   type ReactNode,
@@ -22,6 +23,8 @@ import {
   useState,
 } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
+
+import type { ApiAppType } from "../../../server/src/app";
 
 type SessionContextValue = {
   token: string | null;
@@ -114,6 +117,17 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     () => (token ? `${buildWsUrl(token)}&v=${wsNonce}` : null),
     [token, wsNonce],
   );
+  const authHeaders = useMemo(
+    (): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {}),
+    [token],
+  );
+  const apiClient = useMemo(
+    () =>
+      hc<ApiAppType>("/api", {
+        headers: authHeaders,
+      }),
+    [authHeaders],
+  );
 
   useEffect(() => {
     const urlToken = readTokenFromUrl();
@@ -125,9 +139,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const refreshSessions = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch("/api/sessions", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiClient.sessions.$get();
       if (!res.ok) {
         let message = `Request failed (${res.status})`;
         if (res.status === 401 || res.status === 403) {
@@ -151,30 +163,23 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       setConnectionIssue(err instanceof Error ? err.message : "Network error. Reconnecting...");
     }
-  }, [token]);
+  }, [apiClient, token]);
 
   const requestDiffSummary = useCallback(
     async (paneId: string, options?: { force?: boolean }) => {
       if (!token) {
         throw new Error("Missing token");
       }
-      const params = new URLSearchParams();
-      if (options?.force) {
-        params.set("force", "1");
-      }
-      const url = `/api/sessions/${encodePaneId(paneId)}/diff${
-        params.toString() ? `?${params.toString()}` : ""
-      }`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const param = { paneId: encodePaneId(paneId) };
+      const query = options?.force ? { force: "1" } : {};
+      const res = await apiClient.sessions[":paneId"].diff.$get({ param, query });
       const data = (await res.json()) as { summary?: DiffSummary; error?: { message?: string } };
       if (!res.ok || !data.summary) {
         throw new Error(data.error?.message ?? "Failed to load diff summary");
       }
       return data.summary;
     },
-    [token],
+    [apiClient, token],
   );
 
   const requestDiffFile = useCallback(
@@ -187,26 +192,22 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       if (!token) {
         throw new Error("Missing token");
       }
-      const params = new URLSearchParams({ path: filePath });
+      const param = { paneId: encodePaneId(paneId) };
+      const query: { path: string; rev?: string; force?: string } = { path: filePath };
       if (rev) {
-        params.set("rev", rev);
+        query.rev = rev;
       }
       if (options?.force) {
-        params.set("force", "1");
+        query.force = "1";
       }
-      const res = await fetch(
-        `/api/sessions/${encodePaneId(paneId)}/diff/file?${params.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await apiClient.sessions[":paneId"].diff.file.$get({ param, query });
       const data = (await res.json()) as { file?: DiffFile; error?: { message?: string } };
       if (!res.ok || !data.file) {
         throw new Error(data.error?.message ?? "Failed to load diff file");
       }
       return data.file;
     },
-    [token],
+    [apiClient, token],
   );
 
   const requestCommitLog = useCallback(
@@ -214,29 +215,25 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       if (!token) {
         throw new Error("Missing token");
       }
-      const params = new URLSearchParams();
+      const param = { paneId: encodePaneId(paneId) };
+      const query: { limit?: string; skip?: string; force?: string } = {};
       if (options?.limit) {
-        params.set("limit", String(options.limit));
+        query.limit = String(options.limit);
       }
       if (options?.skip) {
-        params.set("skip", String(options.skip));
+        query.skip = String(options.skip);
       }
       if (options?.force) {
-        params.set("force", "1");
+        query.force = "1";
       }
-      const url = `/api/sessions/${encodePaneId(paneId)}/commits${
-        params.toString() ? `?${params.toString()}` : ""
-      }`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiClient.sessions[":paneId"].commits.$get({ param, query });
       const data = (await res.json()) as { log?: CommitLog; error?: { message?: string } };
       if (!res.ok || !data.log) {
         throw new Error(data.error?.message ?? "Failed to load commit log");
       }
       return data.log;
     },
-    [token],
+    [apiClient, token],
   );
 
   const requestCommitDetail = useCallback(
@@ -244,23 +241,16 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       if (!token) {
         throw new Error("Missing token");
       }
-      const params = new URLSearchParams();
-      if (options?.force) {
-        params.set("force", "1");
-      }
-      const url = `/api/sessions/${encodePaneId(paneId)}/commits/${encodeURIComponent(hash)}${
-        params.toString() ? `?${params.toString()}` : ""
-      }`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const param = { paneId: encodePaneId(paneId), hash };
+      const query = options?.force ? { force: "1" } : {};
+      const res = await apiClient.sessions[":paneId"].commits[":hash"].$get({ param, query });
       const data = (await res.json()) as { commit?: CommitDetail; error?: { message?: string } };
       if (!res.ok || !data.commit) {
         throw new Error(data.error?.message ?? "Failed to load commit detail");
       }
       return data.commit;
     },
-    [token],
+    [apiClient, token],
   );
 
   const requestCommitFile = useCallback(
@@ -268,13 +258,14 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       if (!token) {
         throw new Error("Missing token");
       }
-      const params = new URLSearchParams({ path });
+      const param = { paneId: encodePaneId(paneId), hash };
+      const query: { path: string; force?: string } = { path };
       if (options?.force) {
-        params.set("force", "1");
+        query.force = "1";
       }
-      const url = `/api/sessions/${encodePaneId(paneId)}/commits/${encodeURIComponent(hash)}/file?${params.toString()}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await apiClient.sessions[":paneId"].commits[":hash"].file.$get({
+        param,
+        query,
       });
       const data = (await res.json()) as {
         file?: CommitFileDiff;
@@ -285,7 +276,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       }
       return data.file;
     },
-    [token],
+    [apiClient, token],
   );
 
   const updateSession = useCallback((session: SessionSummary) => {
@@ -518,13 +509,9 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       if (!token) {
         throw new Error("Missing token");
       }
-      const res = await fetch(`/api/sessions/${encodePaneId(paneId)}/title`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title }),
+      const res = await apiClient.sessions[":paneId"].title.$put({
+        param: { paneId: encodePaneId(paneId) },
+        json: { title },
       });
       let data: { session?: SessionSummary; error?: { message?: string; code?: string } } = {};
       try {
@@ -547,7 +534,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       }
       await refreshSessions();
     },
-    [refreshSessions, token, updateSession],
+    [apiClient, refreshSessions, token, updateSession],
   );
 
   const getSessionDetail = useCallback(
