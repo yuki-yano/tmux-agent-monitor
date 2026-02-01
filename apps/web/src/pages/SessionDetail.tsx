@@ -269,7 +269,7 @@ const VirtuosoList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       {...props}
-      className={`text-latte-text w-max min-w-max px-3 py-3 font-mono text-xs ${className ?? ""}`}
+      className={`text-latte-text w-max min-w-max px-2 py-2 font-mono text-xs ${className ?? ""}`}
     />
   ),
 );
@@ -366,10 +366,10 @@ const DiffSection = memo(
     }, [diffFiles, diffOpen, expandedDiffs]);
 
     return (
-      <Card className="flex flex-col gap-4">
+      <Card className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="font-display text-latte-text text-lg font-semibold tracking-tight">
+            <h2 className="font-display text-latte-text text-base font-semibold tracking-tight">
               Changes
             </h2>
             <p className="text-latte-text text-sm">
@@ -454,7 +454,7 @@ const DiffSection = memo(
                   <button
                     type="button"
                     onClick={() => onToggle(file.path)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <span
@@ -478,7 +478,7 @@ const DiffSection = memo(
                     </div>
                   </button>
                   {isOpen && (
-                    <div className="border-latte-surface2/70 border-t px-4 py-3">
+                    <div className="border-latte-surface2/70 border-t px-3 py-2">
                       {loadingFile && <p className="text-latte-subtext0 text-xs">Loading diff…</p>}
                       {!loadingFile && fileData?.binary && (
                         <p className="text-latte-subtext0 text-xs">Binary file (no diff).</p>
@@ -587,10 +587,10 @@ const CommitSection = memo(
     }, [commitFileDetails, commitFileOpen]);
 
     return (
-      <Card className="flex flex-col gap-4">
+      <Card className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="font-display text-latte-text text-lg font-semibold tracking-tight">
+            <h2 className="font-display text-latte-text text-base font-semibold tracking-tight">
               Commit Log
             </h2>
             <p className="text-latte-text text-sm">
@@ -667,7 +667,7 @@ const CommitSection = memo(
                   key={commit.hash}
                   className="border-latte-surface2/70 bg-latte-base/70 rounded-2xl border"
                 >
-                  <div className="flex w-full flex-wrap items-start gap-3 px-4 py-3">
+                  <div className="flex w-full flex-wrap items-start gap-3 px-3 py-2">
                     <button
                       type="button"
                       onClick={() => onCopyHash(commit.hash)}
@@ -704,7 +704,7 @@ const CommitSection = memo(
                     </div>
                   </div>
                   {isOpen && (
-                    <div className="border-latte-surface2/70 border-t px-4 py-3">
+                    <div className="border-latte-surface2/70 border-t px-3 py-2">
                       {loadingDetail && (
                         <p className="text-latte-subtext0 text-xs">Loading commit…</p>
                       )}
@@ -1605,7 +1605,7 @@ export const SessionDetailPage = () => {
 
   if (!session) {
     return (
-      <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-10">
+      <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-6">
         <Card>
           <p className="text-latte-subtext0 text-sm">Session not found.</p>
           <Link to="/" className={`${backLinkClass} mt-4`}>
@@ -1618,7 +1618,7 @@ export const SessionDetailPage = () => {
   }
 
   return (
-    <div className="animate-fade-in-up mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
+    <div className="animate-fade-in-up mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <Link to="/" className={backLinkClass}>
           <ArrowLeft className="h-4 w-4" />
@@ -1626,8 +1626,8 @@ export const SessionDetailPage = () => {
         </Link>
         <ThemeToggle />
       </div>
-      <header className="shadow-glass border-latte-surface1/60 bg-latte-base/80 flex flex-col gap-4 rounded-[32px] border p-6 backdrop-blur">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <header className="shadow-glass border-latte-surface1/60 bg-latte-base/80 flex flex-col gap-3 rounded-2xl border p-4 backdrop-blur">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               {titleEditing ? (
@@ -1735,8 +1735,8 @@ export const SessionDetailPage = () => {
         )}
       </header>
 
-      <div className="flex min-w-0 flex-col gap-6">
-        <Card className="flex min-w-0 flex-col gap-5 p-6">
+      <div className="flex min-w-0 flex-col gap-4">
+        <Card className="flex min-w-0 flex-col gap-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Tabs
