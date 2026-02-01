@@ -30,7 +30,7 @@ export const QuickPanel = ({
           <button
             type="button"
             onClick={onClose}
-            className="border-latte-lavender/40 bg-latte-lavender/10 text-latte-lavender hover:border-latte-lavender/60 hover:bg-latte-lavender/20 absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition"
+            className="border-latte-lavender/40 bg-latte-lavender/10 text-latte-lavender hover:border-latte-lavender/60 hover:bg-latte-lavender/20 absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition"
             aria-label="Close quick panel"
           >
             <X className="h-4 w-4" />
