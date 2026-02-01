@@ -1770,9 +1770,10 @@ export const SessionDetailPage = () => {
   const handleOpenHere = useCallback(() => {
     if (!selectedPaneId) return;
     const encoded = encodeURIComponent(selectedPaneId);
+    closeQuickPanel();
     navigate(`/sessions/${encoded}`);
     closeLogModal();
-  }, [closeLogModal, navigate, selectedPaneId]);
+  }, [closeLogModal, closeQuickPanel, navigate, selectedPaneId]);
 
   useEffect(() => {
     if (!quickPanelOpen && !logModalOpen) {
