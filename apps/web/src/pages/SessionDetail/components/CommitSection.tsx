@@ -153,6 +153,27 @@ export const CommitSection = memo(
               const detail = commitDetails[commit.hash];
               const loadingDetail = Boolean(commitLoadingDetails[commit.hash]);
               const commitBody = detail?.body ?? commit.body;
+              const totals = (() => {
+                if (!detail?.files) return null;
+                if (detail.files.length === 0) {
+                  return { additions: 0, deletions: 0 };
+                }
+                let additions = 0;
+                let deletions = 0;
+                let hasTotals = false;
+                detail.files.forEach((file) => {
+                  if (typeof file.additions === "number") {
+                    additions += file.additions;
+                    hasTotals = true;
+                  }
+                  if (typeof file.deletions === "number") {
+                    deletions += file.deletions;
+                    hasTotals = true;
+                  }
+                });
+                if (!hasTotals) return null;
+                return { additions, deletions };
+              })();
               return (
                 <div
                   key={commit.hash}
@@ -203,6 +224,13 @@ export const CommitSection = memo(
                         <pre className="text-latte-subtext0 mb-3 whitespace-pre-wrap text-xs">
                           {commitBody}
                         </pre>
+                      )}
+                      {!loadingDetail && totals && (
+                        <div className="mb-2 flex items-center gap-2 text-xs">
+                          <span className="text-latte-subtext0">Total changes</span>
+                          <span className="text-latte-green">+{totals.additions}</span>
+                          <span className="text-latte-red">-{totals.deletions}</span>
+                        </div>
                       )}
                       {!loadingDetail && detail?.files && detail.files.length > 0 && (
                         <div className="flex flex-col gap-2 text-xs">

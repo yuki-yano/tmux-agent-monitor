@@ -68,6 +68,7 @@ describe("CommitSection", () => {
     const [first, second] = screen.getAllByText("Hide");
     expect(first).toBeTruthy();
     expect(second).toBeTruthy();
+    expect(screen.getByText("Total changes")).toBeTruthy();
     fireEvent.click(first as Element);
     expect(onToggleCommit).toHaveBeenCalledWith("abc123");
 
