@@ -108,6 +108,7 @@ export type CommitLog = {
   rev: string | null;
   generatedAt: string;
   commits: CommitSummary[];
+  totalCount?: number | null;
   truncated?: boolean;
   reason?: "not_git" | "cwd_unknown" | "error";
 };

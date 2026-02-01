@@ -223,6 +223,7 @@ const buildCommitLogSignature = (log: CommitLog) =>
     repoRoot: log.repoRoot ?? null,
     rev: log.rev ?? null,
     reason: log.reason ?? null,
+    totalCount: log.totalCount ?? null,
     commits: log.commits.map((commit) => commit.hash),
   });
 
@@ -390,7 +391,6 @@ const DiffSection = memo(
         {diffSummary?.repoRoot && (
           <p className="text-latte-subtext0 text-xs">Repo: {formatPath(diffSummary.repoRoot)}</p>
         )}
-        {diffLoading && <p className="text-latte-subtext0 text-sm">Loading diff…</p>}
         {diffSummary?.reason === "cwd_unknown" && (
           <div className="border-latte-peach/40 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-xs">
             Working directory is unknown for this session.
@@ -411,100 +411,113 @@ const DiffSection = memo(
             {diffError}
           </div>
         )}
-        {!diffLoading && diffSummary && diffSummary.files.length === 0 && !diffSummary.reason && (
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <div className="bg-latte-green/10 flex h-12 w-12 items-center justify-center rounded-full">
-              <FileCheck className="text-latte-green h-6 w-6" />
-            </div>
-            <p className="text-latte-subtext0 text-sm">Working directory is clean</p>
-          </div>
-        )}
-        <div className="flex flex-col gap-2">
-          {diffSummary?.files.map((file) => {
-            const isOpen = Boolean(diffOpen[file.path]);
-            const loadingFile = Boolean(diffLoadingFiles[file.path]);
-            const fileData = diffFiles[file.path];
-            const renderedPatch = renderedPatches[file.path];
-            const statusLabel = file.status === "?" ? "U" : file.status;
-            const additionsLabel =
-              file.additions === null || typeof file.additions === "undefined"
-                ? "—"
-                : String(file.additions);
-            const deletionsLabel =
-              file.deletions === null || typeof file.deletions === "undefined"
-                ? "—"
-                : String(file.deletions);
-            return (
-              <div
-                key={`${file.path}-${file.status}`}
-                className="border-latte-surface2/70 bg-latte-base/70 rounded-2xl border"
-              >
-                <button
-                  type="button"
-                  onClick={() => onToggle(file.path)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={`${diffStatusClass(
-                        statusLabel,
-                      )} text-[10px] font-semibold uppercase tracking-[0.25em]`}
-                    >
-                      {statusLabel}
-                    </span>
-                    <span className="text-latte-text truncate text-sm">{file.path}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="text-latte-green">+{additionsLabel}</span>
-                    <span className="text-latte-red">-{deletionsLabel}</span>
-                    {isOpen ? (
-                      <ChevronUp className="text-latte-subtext0 h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="text-latte-subtext0 h-4 w-4" />
-                    )}
-                    <span className="sr-only">{isOpen ? "Hide" : "Show"}</span>
-                  </div>
-                </button>
-                {isOpen && (
-                  <div className="border-latte-surface2/70 border-t px-4 py-3">
-                    {loadingFile && <p className="text-latte-subtext0 text-xs">Loading diff…</p>}
-                    {!loadingFile && fileData?.binary && (
-                      <p className="text-latte-subtext0 text-xs">Binary file (no diff).</p>
-                    )}
-                    {!loadingFile && !fileData?.binary && fileData?.patch && (
-                      <div className="custom-scrollbar max-h-[360px] overflow-auto">
-                        <div className="text-latte-text w-max min-w-full whitespace-pre pl-4 font-mono text-xs">
-                          {renderedPatch?.nodes}
-                        </div>
-                        {renderedPatch?.truncated && (
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                            <span className="text-latte-subtext0">
-                              Showing first {renderedPatch.previewLines} of{" "}
-                              {renderedPatch.totalLines} lines.
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleExpandDiff(file.path)}
-                              className="h-7 px-2 text-[11px]"
-                            >
-                              Render full diff
-                            </Button>
-                          </div>
-                        )}
-                        {fileData.truncated && (
-                          <p className="text-latte-subtext0 mt-2 text-xs">Diff truncated.</p>
-                        )}
-                      </div>
-                    )}
-                    {!loadingFile && !fileData?.binary && !fileData?.patch && (
-                      <p className="text-latte-subtext0 text-xs">No diff available.</p>
-                    )}
-                  </div>
-                )}
+        <div className={`relative ${diffLoading ? "min-h-[120px]" : ""}`}>
+          {diffLoading && (
+            <div className="bg-latte-base/70 pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <div className="border-latte-lavender/20 h-10 w-10 rounded-full border-2" />
+                  <div className="border-latte-lavender absolute inset-0 h-10 w-10 animate-spin rounded-full border-2 border-t-transparent" />
+                </div>
+                <span className="text-latte-subtext0 text-xs font-medium">Loading changes...</span>
               </div>
-            );
-          })}
+            </div>
+          )}
+          {diffSummary && diffSummary.files.length === 0 && !diffSummary.reason && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <div className="bg-latte-green/10 flex h-12 w-12 items-center justify-center rounded-full">
+                <FileCheck className="text-latte-green h-6 w-6" />
+              </div>
+              <p className="text-latte-subtext0 text-sm">Working directory is clean</p>
+            </div>
+          )}
+          <div className="flex flex-col gap-2">
+            {diffSummary?.files.map((file) => {
+              const isOpen = Boolean(diffOpen[file.path]);
+              const loadingFile = Boolean(diffLoadingFiles[file.path]);
+              const fileData = diffFiles[file.path];
+              const renderedPatch = renderedPatches[file.path];
+              const statusLabel = file.status === "?" ? "U" : file.status;
+              const additionsLabel =
+                file.additions === null || typeof file.additions === "undefined"
+                  ? "—"
+                  : String(file.additions);
+              const deletionsLabel =
+                file.deletions === null || typeof file.deletions === "undefined"
+                  ? "—"
+                  : String(file.deletions);
+              return (
+                <div
+                  key={`${file.path}-${file.status}`}
+                  className="border-latte-surface2/70 bg-latte-base/70 rounded-2xl border"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onToggle(file.path)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={`${diffStatusClass(
+                          statusLabel,
+                        )} text-[10px] font-semibold uppercase tracking-[0.25em]`}
+                      >
+                        {statusLabel}
+                      </span>
+                      <span className="text-latte-text truncate text-sm">{file.path}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-latte-green">+{additionsLabel}</span>
+                      <span className="text-latte-red">-{deletionsLabel}</span>
+                      {isOpen ? (
+                        <ChevronUp className="text-latte-subtext0 h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="text-latte-subtext0 h-4 w-4" />
+                      )}
+                      <span className="sr-only">{isOpen ? "Hide" : "Show"}</span>
+                    </div>
+                  </button>
+                  {isOpen && (
+                    <div className="border-latte-surface2/70 border-t px-4 py-3">
+                      {loadingFile && <p className="text-latte-subtext0 text-xs">Loading diff…</p>}
+                      {!loadingFile && fileData?.binary && (
+                        <p className="text-latte-subtext0 text-xs">Binary file (no diff).</p>
+                      )}
+                      {!loadingFile && !fileData?.binary && fileData?.patch && (
+                        <div className="custom-scrollbar max-h-[360px] overflow-auto">
+                          <div className="text-latte-text w-max min-w-full whitespace-pre pl-4 font-mono text-xs">
+                            {renderedPatch?.nodes}
+                          </div>
+                          {renderedPatch?.truncated && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                              <span className="text-latte-subtext0">
+                                Showing first {renderedPatch.previewLines} of{" "}
+                                {renderedPatch.totalLines} lines.
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleExpandDiff(file.path)}
+                                className="h-7 px-2 text-[11px]"
+                              >
+                                Render full diff
+                              </Button>
+                            </div>
+                          )}
+                          {fileData.truncated && (
+                            <p className="text-latte-subtext0 mt-2 text-xs">Diff truncated.</p>
+                          )}
+                        </div>
+                      )}
+                      {!loadingFile && !fileData?.binary && !fileData?.patch && (
+                        <p className="text-latte-subtext0 text-xs">No diff available.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </Card>
     );
@@ -581,8 +594,12 @@ const CommitSection = memo(
               Commit Log
             </h2>
             <p className="text-latte-text text-sm">
-              {commitLog?.commits.length ?? 0} commit
-              {(commitLog?.commits.length ?? 0) === 1 ? "" : "s"}
+              {(() => {
+                const currentCount = commitLog?.commits.length ?? 0;
+                const totalCount = commitLog?.totalCount ?? currentCount;
+                const suffix = totalCount === 1 ? "" : "s";
+                return `${currentCount}/${totalCount} commit${suffix}`;
+              })()}
             </p>
           </div>
           <Button
@@ -599,7 +616,6 @@ const CommitSection = memo(
         {commitLog?.repoRoot && (
           <p className="text-latte-subtext0 text-xs">Repo: {formatPath(commitLog.repoRoot)}</p>
         )}
-        {commitLoading && <p className="text-latte-subtext0 text-sm">Loading commits…</p>}
         {commitLog?.reason === "cwd_unknown" && (
           <div className="border-latte-peach/40 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-xs">
             Working directory is unknown for this session.
@@ -620,172 +636,186 @@ const CommitSection = memo(
             {commitError}
           </div>
         )}
-        {!commitLoading && commitLog && commitLog.commits.length === 0 && !commitLog.reason && (
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <div className="bg-latte-surface1/50 flex h-12 w-12 items-center justify-center rounded-full">
-              <GitCommitHorizontal className="text-latte-overlay1 h-6 w-6" />
-            </div>
-            <p className="text-latte-subtext0 text-sm">No commits in this repository yet</p>
-          </div>
-        )}
-        <div className="flex flex-col gap-2">
-          {commitLog?.commits.map((commit) => {
-            const isOpen = Boolean(commitOpen[commit.hash]);
-            const detail = commitDetails[commit.hash];
-            const loadingDetail = Boolean(commitLoadingDetails[commit.hash]);
-            const commitBody = detail?.body ?? commit.body;
-            return (
-              <div
-                key={commit.hash}
-                className="border-latte-surface2/70 bg-latte-base/70 rounded-2xl border"
-              >
-                <div className="flex w-full flex-wrap items-start gap-3 px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => onCopyHash(commit.hash)}
-                    className="border-latte-surface2/70 text-latte-subtext0 hover:text-latte-text flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold tracking-[0.2em] transition"
-                    aria-label={`Copy commit hash ${commit.shortHash}`}
-                  >
-                    <span className="font-mono">{commit.shortHash}</span>
-                    {copiedHash === commit.hash ? (
-                      <Check className="text-latte-green h-3.5 w-3.5" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="min-w-0">
-                      <p className="text-latte-text text-sm">{commit.subject}</p>
-                      <p className="text-latte-subtext0 text-xs">
-                        {commit.authorName} · {formatTimestamp(commit.authoredAt)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onToggleCommit(commit.hash)}
-                      className="ml-auto flex items-center border-0 px-2 text-xs"
-                    >
-                      {isOpen ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                      <span className="sr-only">{isOpen ? "Hide" : "Show"}</span>
-                    </Button>
-                  </div>
+        <div className={`relative ${commitLoading ? "min-h-[120px]" : ""}`}>
+          {commitLoading && (
+            <div className="bg-latte-base/70 pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <div className="border-latte-lavender/20 h-10 w-10 rounded-full border-2" />
+                  <div className="border-latte-lavender absolute inset-0 h-10 w-10 animate-spin rounded-full border-2 border-t-transparent" />
                 </div>
-                {isOpen && (
-                  <div className="border-latte-surface2/70 border-t px-4 py-3">
-                    {loadingDetail && (
-                      <p className="text-latte-subtext0 text-xs">Loading commit…</p>
-                    )}
-                    {!loadingDetail && commitBody && (
-                      <pre className="text-latte-subtext0 mb-3 whitespace-pre-wrap text-xs">
-                        {commitBody}
-                      </pre>
-                    )}
-                    {!loadingDetail && detail?.files && detail.files.length > 0 && (
-                      <div className="flex flex-col gap-2 text-xs">
-                        {detail.files.map((file) => {
-                          const statusLabel = file.status === "?" ? "U" : file.status;
-                          const fileKey = `${commit.hash}:${file.path}`;
-                          const fileOpen = Boolean(commitFileOpen[fileKey]);
-                          const fileDetail = commitFileDetails[fileKey];
-                          const loadingFile = Boolean(commitFileLoading[fileKey]);
-                          const additions =
-                            file.additions === null || typeof file.additions === "undefined"
-                              ? "—"
-                              : String(file.additions);
-                          const deletions =
-                            file.deletions === null || typeof file.deletions === "undefined"
-                              ? "—"
-                              : String(file.deletions);
-                          const pathLabel = file.renamedFrom
-                            ? `${file.renamedFrom} → ${file.path}`
-                            : file.path;
-                          const renderedPatch = renderedPatches[fileKey];
-                          return (
-                            <div
-                              key={`${file.path}-${file.status}`}
-                              className="flex flex-col gap-2"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <span
-                                    className={`${diffStatusClass(
-                                      statusLabel,
-                                    )} text-[10px] font-semibold uppercase tracking-[0.25em]`}
-                                  >
-                                    {statusLabel}
-                                  </span>
-                                  <span className="text-latte-text truncate">{pathLabel}</span>
-                                </div>
-                                <div className="ml-auto flex shrink-0 items-center gap-3 text-xs">
-                                  <span className="text-latte-green">+{additions}</span>
-                                  <span className="text-latte-red">-{deletions}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => onToggleCommitFile(commit.hash, file.path)}
-                                    className="text-latte-subtext0 hover:text-latte-text inline-flex items-center gap-1"
-                                  >
-                                    {fileOpen ? (
-                                      <ChevronUp className="h-3.5 w-3.5" />
-                                    ) : (
-                                      <ChevronDown className="h-3.5 w-3.5" />
-                                    )}
-                                    <span className="sr-only">{fileOpen ? "Hide" : "Show"}</span>
-                                  </button>
-                                </div>
-                              </div>
-                              {fileOpen && (
-                                <div className="border-latte-surface2/70 bg-latte-base/60 rounded-xl border px-3 py-2">
-                                  {loadingFile && (
-                                    <p className="text-latte-subtext0 text-xs">Loading diff…</p>
-                                  )}
-                                  {!loadingFile && fileDetail?.binary && (
-                                    <p className="text-latte-subtext0 text-xs">
-                                      Binary file (no diff).
-                                    </p>
-                                  )}
-                                  {!loadingFile && !fileDetail?.binary && fileDetail?.patch && (
-                                    <div className="custom-scrollbar max-h-[240px] overflow-auto">
-                                      <div className="text-latte-text w-max min-w-full whitespace-pre pl-4 font-mono text-xs">
-                                        {renderedPatch}
-                                      </div>
-                                      {fileDetail.truncated && (
-                                        <p className="text-latte-subtext0 mt-2 text-xs">
-                                          Diff truncated.
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                  {!loadingFile && !fileDetail?.binary && !fileDetail?.patch && (
-                                    <p className="text-latte-subtext0 text-xs">
-                                      No diff available.
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {!loadingDetail && detail?.files && detail.files.length === 0 && (
-                      <p className="text-latte-subtext0 text-xs">No files changed.</p>
-                    )}
-                    {!loadingDetail && !detail && (
-                      <p className="text-latte-subtext0 text-xs">No commit details.</p>
-                    )}
-                  </div>
-                )}
+                <span className="text-latte-subtext0 text-xs font-medium">Loading commits...</span>
               </div>
-            );
-          })}
+            </div>
+          )}
+          {commitLog && commitLog.commits.length === 0 && !commitLog.reason && (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <div className="bg-latte-surface1/50 flex h-12 w-12 items-center justify-center rounded-full">
+                <GitCommitHorizontal className="text-latte-overlay1 h-6 w-6" />
+              </div>
+              <p className="text-latte-subtext0 text-sm">No commits in this repository yet</p>
+            </div>
+          )}
+          <div className="flex flex-col gap-2">
+            {commitLog?.commits.map((commit) => {
+              const isOpen = Boolean(commitOpen[commit.hash]);
+              const detail = commitDetails[commit.hash];
+              const loadingDetail = Boolean(commitLoadingDetails[commit.hash]);
+              const commitBody = detail?.body ?? commit.body;
+              return (
+                <div
+                  key={commit.hash}
+                  className="border-latte-surface2/70 bg-latte-base/70 rounded-2xl border"
+                >
+                  <div className="flex w-full flex-wrap items-start gap-3 px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => onCopyHash(commit.hash)}
+                      className="border-latte-surface2/70 text-latte-subtext0 hover:text-latte-text flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold tracking-[0.2em] transition"
+                      aria-label={`Copy commit hash ${commit.shortHash}`}
+                    >
+                      <span className="font-mono">{commit.shortHash}</span>
+                      {copiedHash === commit.hash ? (
+                        <Check className="text-latte-green h-3.5 w-3.5" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <div className="min-w-0">
+                        <p className="text-latte-text text-sm">{commit.subject}</p>
+                        <p className="text-latte-subtext0 text-xs">
+                          {commit.authorName} · {formatTimestamp(commit.authoredAt)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onToggleCommit(commit.hash)}
+                        className="ml-auto flex items-center border-0 px-2 text-xs"
+                      >
+                        {isOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">{isOpen ? "Hide" : "Show"}</span>
+                      </Button>
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <div className="border-latte-surface2/70 border-t px-4 py-3">
+                      {loadingDetail && (
+                        <p className="text-latte-subtext0 text-xs">Loading commit…</p>
+                      )}
+                      {!loadingDetail && commitBody && (
+                        <pre className="text-latte-subtext0 mb-3 whitespace-pre-wrap text-xs">
+                          {commitBody}
+                        </pre>
+                      )}
+                      {!loadingDetail && detail?.files && detail.files.length > 0 && (
+                        <div className="flex flex-col gap-2 text-xs">
+                          {detail.files.map((file) => {
+                            const statusLabel = file.status === "?" ? "U" : file.status;
+                            const fileKey = `${commit.hash}:${file.path}`;
+                            const fileOpen = Boolean(commitFileOpen[fileKey]);
+                            const fileDetail = commitFileDetails[fileKey];
+                            const loadingFile = Boolean(commitFileLoading[fileKey]);
+                            const additions =
+                              file.additions === null || typeof file.additions === "undefined"
+                                ? "—"
+                                : String(file.additions);
+                            const deletions =
+                              file.deletions === null || typeof file.deletions === "undefined"
+                                ? "—"
+                                : String(file.deletions);
+                            const pathLabel = file.renamedFrom
+                              ? `${file.renamedFrom} → ${file.path}`
+                              : file.path;
+                            const renderedPatch = renderedPatches[fileKey];
+                            return (
+                              <div
+                                key={`${file.path}-${file.status}`}
+                                className="flex flex-col gap-2"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span
+                                      className={`${diffStatusClass(
+                                        statusLabel,
+                                      )} text-[10px] font-semibold uppercase tracking-[0.25em]`}
+                                    >
+                                      {statusLabel}
+                                    </span>
+                                    <span className="text-latte-text truncate">{pathLabel}</span>
+                                  </div>
+                                  <div className="ml-auto flex shrink-0 items-center gap-3 text-xs">
+                                    <span className="text-latte-green">+{additions}</span>
+                                    <span className="text-latte-red">-{deletions}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => onToggleCommitFile(commit.hash, file.path)}
+                                      className="text-latte-subtext0 hover:text-latte-text inline-flex items-center gap-1"
+                                    >
+                                      {fileOpen ? (
+                                        <ChevronUp className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <ChevronDown className="h-3.5 w-3.5" />
+                                      )}
+                                      <span className="sr-only">{fileOpen ? "Hide" : "Show"}</span>
+                                    </button>
+                                  </div>
+                                </div>
+                                {fileOpen && (
+                                  <div className="border-latte-surface2/70 bg-latte-base/60 rounded-xl border px-3 py-2">
+                                    {loadingFile && (
+                                      <p className="text-latte-subtext0 text-xs">Loading diff…</p>
+                                    )}
+                                    {!loadingFile && fileDetail?.binary && (
+                                      <p className="text-latte-subtext0 text-xs">
+                                        Binary file (no diff).
+                                      </p>
+                                    )}
+                                    {!loadingFile && !fileDetail?.binary && fileDetail?.patch && (
+                                      <div className="custom-scrollbar max-h-[240px] overflow-auto">
+                                        <div className="text-latte-text w-max min-w-full whitespace-pre pl-4 font-mono text-xs">
+                                          {renderedPatch}
+                                        </div>
+                                        {fileDetail.truncated && (
+                                          <p className="text-latte-subtext0 mt-2 text-xs">
+                                            Diff truncated.
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                    {!loadingFile && !fileDetail?.binary && !fileDetail?.patch && (
+                                      <p className="text-latte-subtext0 text-xs">
+                                        No diff available.
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {!loadingDetail && detail?.files && detail.files.length === 0 && (
+                        <p className="text-latte-subtext0 text-xs">No files changed.</p>
+                      )}
+                      {!loadingDetail && !detail && (
+                        <p className="text-latte-subtext0 text-xs">No commit details.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
         {commitLog && commitHasMore && !commitLog.reason && (
           <Button variant="ghost" size="sm" onClick={onLoadMore} disabled={commitLoadingMore}>
+            <ArrowDown className="h-4 w-4" />
             {commitLoadingMore ? "Loading…" : "Load more"}
           </Button>
         )}

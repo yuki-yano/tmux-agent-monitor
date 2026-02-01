@@ -67,6 +67,18 @@ const resolveHead = async (repoRoot: string) => {
   }
 };
 
+const resolveCommitCount = async (repoRoot: string) => {
+  try {
+    const output = await runGit(repoRoot, ["rev-list", "--count", "HEAD"]);
+    const trimmed = output.trim();
+    if (!trimmed) return null;
+    const count = Number.parseInt(trimmed, 10);
+    return Number.isFinite(count) ? count : null;
+  } catch {
+    return null;
+  }
+};
+
 const pickStatus = (value: string) => {
   const allowed: DiffFileStatus[] = ["A", "M", "D", "R", "C", "U", "?"];
   const status = value.toUpperCase().slice(0, 1);
@@ -230,6 +242,7 @@ export const fetchCommitLog = async (
   if (!options?.force && cached && nowMs - cached.at < LOG_TTL_MS && cached.rev === head) {
     return cached.log;
   }
+  const totalCount = head ? await resolveCommitCount(repoRoot) : 0;
   try {
     const format = [
       RECORD_SEPARATOR,
@@ -262,6 +275,7 @@ export const fetchCommitLog = async (
       rev: head,
       generatedAt: nowIso(),
       commits,
+      totalCount,
     };
     logCache.set(cacheKey, {
       at: nowMs,
@@ -276,6 +290,7 @@ export const fetchCommitLog = async (
       rev: head,
       generatedAt: nowIso(),
       commits: [],
+      totalCount,
       reason: "error",
     };
   }
