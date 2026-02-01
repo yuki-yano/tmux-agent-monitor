@@ -18,7 +18,9 @@ import {
   Copy,
   CornerDownLeft,
   FileCheck,
+  FileText,
   GitCommitHorizontal,
+  Image,
   RefreshCw,
   Send,
   X,
@@ -1725,8 +1727,18 @@ export const SessionDetailPage = () => {
                 }}
               >
                 <TabsList aria-label="Screen mode">
-                  <TabsTrigger value="text">Text</TabsTrigger>
-                  <TabsTrigger value="image">Image</TabsTrigger>
+                  <TabsTrigger value="text">
+                    <span className="inline-flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>Text</span>
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="image">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Image className="h-3.5 w-3.5" />
+                      <span>Image</span>
+                    </span>
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -1852,9 +1864,6 @@ export const SessionDetailPage = () => {
                 {controlsOpen && (
                   <div id="session-controls" className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-latte-subtext0 text-[10px] uppercase tracking-[0.3em]">
-                        Modifiers
-                      </span>
                       <button
                         type="button"
                         onClick={() => setShiftHeld((prev) => !prev)}
@@ -1887,9 +1896,6 @@ export const SessionDetailPage = () => {
                       </button>
                     </div>
                     <div className="space-y-2">
-                      <span className="text-latte-subtext0 text-[10px] uppercase tracking-[0.3em]">
-                        Common Keys
-                      </span>
                       <div className="flex flex-wrap gap-2">
                         {[
                           { label: "Esc", key: "Escape" },
@@ -1905,9 +1911,6 @@ export const SessionDetailPage = () => {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <span className="text-latte-subtext0 text-[10px] uppercase tracking-[0.3em]">
-                        Navigation
-                      </span>
                       <div className="flex items-center gap-2">
                         {[
                           {
