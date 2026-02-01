@@ -9,6 +9,7 @@ type PersistedSession = {
   lastOutputAt: string | null;
   lastEventAt: string | null;
   lastMessage: string | null;
+  lastInputAt: string | null;
   customTitle: string | null;
   state: SessionStateValue;
   stateReason: string;
@@ -45,6 +46,7 @@ export const saveState = (sessions: SessionDetail[]) => {
           lastOutputAt: session.lastOutputAt,
           lastEventAt: session.lastEventAt,
           lastMessage: session.lastMessage,
+          lastInputAt: session.lastInputAt,
           customTitle: session.customTitle ?? null,
           state: session.state,
           stateReason: session.stateReason,

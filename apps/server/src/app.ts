@@ -668,12 +668,18 @@ export const createApp = ({ config, monitor, tmuxActions }: AppContext) => {
           message.data.text,
           message.data.enter ?? true,
         );
+        if (result.ok) {
+          monitor.recordInput(message.data.paneId);
+        }
         sendWs(ws, buildEnvelope("command.response", result as CommandResponse, reqId));
         return;
       }
 
       if (message.type === "send.keys") {
         const result = await tmuxActions.sendKeys(message.data.paneId, message.data.keys);
+        if (result.ok) {
+          monitor.recordInput(message.data.paneId);
+        }
         sendWs(ws, buildEnvelope("command.response", result as CommandResponse, reqId));
         return;
       }

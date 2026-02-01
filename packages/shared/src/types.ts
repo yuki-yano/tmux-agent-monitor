@@ -54,12 +54,14 @@ export type SessionSummary = {
   paneTty: string | null;
   title: string | null;
   customTitle: string | null;
+  repoRoot: string | null;
   agent: "codex" | "claude" | "unknown";
   state: SessionStateValue;
   stateReason: string;
   lastMessage: string | null;
   lastOutputAt: string | null;
   lastEventAt: string | null;
+  lastInputAt: string | null;
   paneDead: boolean;
   alternateOn: boolean;
   pipeAttached: boolean;

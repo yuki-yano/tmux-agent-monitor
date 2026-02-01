@@ -77,6 +77,59 @@ const formatPath = (value: string | null) => {
   return value;
 };
 
+const formatRelativeTime = (value: string | null, nowMs: number) => {
+  if (!value) return "-";
+  const ts = Date.parse(value);
+  if (Number.isNaN(ts)) return "-";
+  const diffSec = Math.max(0, Math.floor((nowMs - ts) / 1000));
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h ago`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${diffDay}d ago`;
+};
+
+const getLastInputTone = (value: string | null, nowMs: number) => {
+  if (!value) {
+    return {
+      pill: "border-latte-surface2/70 bg-latte-crust/60 text-latte-subtext0",
+      dot: "bg-latte-subtext0",
+    };
+  }
+  const ts = Date.parse(value);
+  if (Number.isNaN(ts)) {
+    return {
+      pill: "border-latte-surface2/70 bg-latte-crust/60 text-latte-subtext0",
+      dot: "bg-latte-subtext0",
+    };
+  }
+  const diffSec = Math.max(0, Math.floor((nowMs - ts) / 1000));
+  if (diffSec < 300) {
+    return {
+      pill: "border-latte-green/40 bg-latte-green/10 text-latte-green",
+      dot: "bg-latte-green shadow-[0_0_8px_rgba(64,160,43,0.6)]",
+    };
+  }
+  if (diffSec < 1800) {
+    return {
+      pill: "border-latte-yellow/40 bg-latte-yellow/10 text-latte-yellow",
+      dot: "bg-latte-yellow shadow-[0_0_8px_rgba(223,142,29,0.6)]",
+    };
+  }
+  if (diffSec < 7200) {
+    return {
+      pill: "border-latte-peach/40 bg-latte-peach/10 text-latte-peach",
+      dot: "bg-latte-peach shadow-[0_0_8px_rgba(239,159,118,0.6)]",
+    };
+  }
+  return {
+    pill: "border-latte-red/40 bg-latte-red/10 text-latte-red",
+    dot: "bg-latte-red shadow-[0_0_8px_rgba(210,15,57,0.6)]",
+  };
+};
+
 const isDangerousText = (text: string) => {
   const patterns = compilePatterns();
   const normalized = text.replace(/\r\n/g, "\n").split("\n");
@@ -212,6 +265,8 @@ export const SessionDetailPage = () => {
   const sessionCustomTitle = session?.customTitle ?? null;
   const sessionAutoTitle = session?.title ?? session?.sessionName ?? "";
   const sessionDisplayTitle = sessionCustomTitle ?? sessionAutoTitle;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const lastInputTone = getLastInputTone(session?.lastInputAt ?? null, nowMs);
   const [mode, setMode] = useState<ScreenMode>("text");
   const [screen, setScreen] = useState<string>("");
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -258,6 +313,11 @@ export const SessionDetailPage = () => {
   const modeSwitchRef = useRef<ScreenMode | null>(null);
   const refreshInFlightRef = useRef<null | { id: number; mode: ScreenMode }>(null);
   const refreshRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const renderedScreen = useMemo(
     () => renderAnsi(screen || "No screen data", resolvedTheme),
     [screen, resolvedTheme],
@@ -1055,9 +1115,18 @@ export const SessionDetailPage = () => {
             </div>
             {titleError && <p className="text-latte-red text-xs">{titleError}</p>}
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Badge tone={agentTone}>{agentLabel}</Badge>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
             <Badge tone={stateTone(session.state)}>{session.state}</Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone={agentTone}>{agentLabel}</Badge>
+              <span
+                className={`${lastInputTone.pill} inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${lastInputTone.dot}`} />
+                <span className="text-[9px] uppercase tracking-[0.2em]">Last input</span>
+                <span>{formatRelativeTime(session.lastInputAt, nowMs)}</span>
+              </span>
+            </div>
           </div>
         </div>
         {session.pipeConflict && (

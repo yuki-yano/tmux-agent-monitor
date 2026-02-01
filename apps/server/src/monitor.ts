@@ -81,6 +81,8 @@ const hasAgentHint = (value: string | null | undefined) =>
 const processCacheTtlMs = 5000;
 const processCommandCache = new Map<number, { command: string; at: number }>();
 const ttyAgentCache = new Map<string, { agent: "codex" | "claude" | "unknown"; at: number }>();
+const repoRootCacheTtlMs = 10000;
+const repoRootCache = new Map<string, { repoRoot: string | null; at: number }>();
 const processSnapshotCache = {
   at: 0,
   byPid: new Map<number, { pid: number; ppid: number; command: string }>(),
@@ -118,6 +120,40 @@ const hostCandidates = (() => {
   const short = host.split(".")[0] ?? host;
   return new Set([host, short, `${host}.local`, `${short}.local`]);
 })();
+
+const runGit = async (cwd: string, args: string[]) => {
+  try {
+    const result = await execFileAsync("git", ["-C", cwd, ...args], {
+      encoding: "utf8",
+      timeout: 2000,
+      maxBuffer: 2_000_000,
+    });
+    return result.stdout ?? "";
+  } catch {
+    return "";
+  }
+};
+
+const resolveRepoRoot = async (cwd: string | null) => {
+  if (!cwd) return null;
+  const output = await runGit(cwd, ["rev-parse", "--show-toplevel"]);
+  const trimmed = output.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const resolveRepoRootCached = async (cwd: string | null) => {
+  if (!cwd) return null;
+  const normalized = cwd.replace(/\/+$/, "");
+  if (!normalized) return null;
+  const nowMs = Date.now();
+  const cached = repoRootCache.get(normalized);
+  if (cached && nowMs - cached.at < repoRootCacheTtlMs) {
+    return cached.repoRoot;
+  }
+  const repoRoot = await resolveRepoRoot(normalized);
+  repoRootCache.set(normalized, { repoRoot, at: nowMs });
+  return repoRoot;
+};
 
 const toIsoFromEpochSeconds = (value: number | null) => {
   if (!value) {
@@ -300,6 +336,7 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
   const lastOutputAt = new Map<string, string>();
   const lastEventAt = new Map<string, string>();
   const lastMessage = new Map<string, string | null>();
+  const lastInputAt = new Map<string, string>();
   const lastFingerprint = new Map<string, string>();
   const customTitles = new Map<string, string>();
   const restored = restoreSessions();
@@ -315,6 +352,9 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
     lastOutputAt.set(paneId, session.lastOutputAt ?? null);
     lastEventAt.set(paneId, session.lastEventAt ?? null);
     lastMessage.set(paneId, session.lastMessage ?? null);
+    if (session.lastInputAt) {
+      lastInputAt.set(paneId, session.lastInputAt);
+    }
     if (session.customTitle) {
       customTitles.set(paneId, session.customTitle);
     }
@@ -496,6 +536,8 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
       const defaultTitle = buildDefaultTitle(pane.currentPath, pane.paneId, pane.sessionName);
       const title = paneTitle && !hostCandidates.has(paneTitle) ? paneTitle : defaultTitle;
       const customTitle = customTitles.get(pane.paneId) ?? null;
+      const repoRoot = await resolveRepoRootCached(pane.currentPath);
+      const inputAt = lastInputAt.get(pane.paneId) ?? null;
 
       const detail: SessionDetail = {
         paneId: pane.paneId,
@@ -509,12 +551,14 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
         paneTty: pane.paneTty,
         title,
         customTitle,
+        repoRoot,
         agent,
         state: finalState,
         stateReason: finalReason,
         lastMessage: message,
         lastOutputAt: outputAt,
         lastEventAt: eventAt,
+        lastInputAt: inputAt,
         paneDead: pane.paneDead,
         alternateOn: pane.alternateOn,
         pipeAttached,
@@ -535,6 +579,7 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
         lastOutputAt.delete(paneId);
         lastEventAt.delete(paneId);
         lastMessage.delete(paneId);
+        lastInputAt.delete(paneId);
         lastFingerprint.delete(paneId);
         hookStates.delete(paneId);
       }
@@ -560,6 +605,20 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
   const handleHookEvent = (context: HookEventContext) => {
     hookStates.set(context.paneId, context.hookState);
     lastEventAt.set(context.paneId, context.hookState.at);
+  };
+
+  const recordInput = (paneId: string, at = new Date().toISOString()) => {
+    lastInputAt.set(paneId, at);
+    const existing = registry.getDetail(paneId);
+    if (!existing) {
+      return;
+    }
+    if (existing.lastInputAt === at) {
+      return;
+    }
+    const next = { ...existing, lastInputAt: at };
+    registry.update(next);
+    saveState(registry.values());
   };
 
   const startHookTailer = async () => {
@@ -628,5 +687,6 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
     handleHookEvent,
     getScreenCapture,
     setCustomTitle,
+    recordInput,
   };
 };
