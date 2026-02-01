@@ -146,9 +146,9 @@ export const SessionListPage = () => {
             to={`/sessions/${encodeURIComponent(session.paneId)}`}
             className="group"
           >
-            <Card className="hover:shadow-glow transition hover:-translate-y-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <Card className="hover:shadow-glow p-6 transition hover:-translate-y-1">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={agentTone(session.agent)}>{agentLabel(session.agent)}</Badge>
                   <Badge tone={stateTone(session.state)}>{session.state}</Badge>
                 </div>
@@ -158,19 +158,25 @@ export const SessionListPage = () => {
                   </span>
                 )}
               </div>
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-3">
                 <h3 className="font-display text-latte-text text-lg">
                   {session.customTitle ?? session.title ?? session.sessionName}
                 </h3>
-                <p className="text-latte-subtext0 text-sm">
-                  {session.currentCommand ?? "unknown"} · {formatPath(session.currentPath)}
-                </p>
+                <p className="text-latte-subtext0 text-sm">{formatPath(session.currentPath)}</p>
                 {session.lastMessage && (
                   <p className="text-latte-overlay1 text-xs">{session.lastMessage}</p>
                 )}
               </div>
-              <div className="text-latte-overlay1 mt-4 text-xs">
-                <span>Pane {session.paneId}</span>
+              <div className="text-latte-overlay1 mt-4 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                <span className="border-latte-surface2/60 bg-latte-crust/40 rounded-full border px-3 py-1">
+                  Session {session.sessionName}
+                </span>
+                <span className="border-latte-surface2/60 bg-latte-crust/40 rounded-full border px-3 py-1">
+                  Window {session.windowIndex}
+                </span>
+                <span className="border-latte-surface2/60 bg-latte-crust/40 rounded-full border px-3 py-1">
+                  Pane {session.paneId}
+                </span>
               </div>
             </Card>
           </Link>

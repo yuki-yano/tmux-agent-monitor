@@ -977,9 +977,9 @@ export const SessionDetailPage = () => {
         </Link>
         <ThemeToggle />
       </div>
-      <header className="shadow-glass border-latte-surface1/60 bg-latte-base/80 flex flex-col gap-3 rounded-[32px] border p-4 backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0">
+      <header className="shadow-glass border-latte-surface1/60 bg-latte-base/80 flex flex-col gap-4 rounded-[32px] border p-6 backdrop-blur">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               {titleEditing ? (
                 <input
@@ -1039,10 +1039,23 @@ export const SessionDetailPage = () => {
                 </button>
               )}
             </div>
-            <p className="text-latte-subtext0 text-sm">{formatPath(session.currentPath)}</p>
+            <div className="space-y-4">
+              <p className="text-latte-subtext0 text-sm">{formatPath(session.currentPath)}</p>
+              <div className="text-latte-overlay1 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                <span className="border-latte-surface2/60 bg-latte-crust/40 rounded-full border px-3 py-1">
+                  Session {session.sessionName}
+                </span>
+                <span className="border-latte-surface2/60 bg-latte-crust/40 rounded-full border px-3 py-1">
+                  Window {session.windowIndex}
+                </span>
+                <span className="border-latte-surface2/60 bg-latte-crust/40 rounded-full border px-3 py-1">
+                  Pane {session.paneId}
+                </span>
+              </div>
+            </div>
             {titleError && <p className="text-latte-red text-xs">{titleError}</p>}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <Badge tone={agentTone}>{agentLabel}</Badge>
             <Badge tone={stateTone(session.state)}>{session.state}</Badge>
           </div>
@@ -1065,8 +1078,8 @@ export const SessionDetailPage = () => {
       </header>
 
       <div className="flex min-w-0 flex-col gap-6">
-        <Card className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <Card className="flex min-w-0 flex-col gap-5 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Tabs
                 value={mode}
@@ -1111,7 +1124,7 @@ export const SessionDetailPage = () => {
               {error}
             </div>
           )}
-          <div className="border-latte-surface1 bg-latte-mantle/40 relative flex min-h-[320px] w-full min-w-0 max-w-full flex-1 overflow-hidden rounded-2xl border p-4">
+          <div className="border-latte-surface1 bg-latte-mantle/40 relative flex min-h-[320px] w-full min-w-0 max-w-full flex-1 overflow-hidden rounded-2xl border p-5">
             {isScreenLoading && (
               <div className="bg-latte-base/60 absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm">
                 <div className="border-latte-lavender/40 border-t-latte-lavender h-8 w-8 animate-spin rounded-full border-2" />
@@ -1152,10 +1165,10 @@ export const SessionDetailPage = () => {
               </>
             )}
           </div>
-          <div className="pt-2">
+          <div className="pt-4">
             {!readOnly ? (
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
                   <textarea
                     placeholder="Type a prompt…"
                     ref={textInputRef}
