@@ -6,7 +6,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { buildSessionGroups } from "@/lib/session-group";
 import { useSessions } from "@/state/session-context";
 
@@ -115,7 +114,6 @@ const getLastInputTone = (value: string | null, nowMs: number) => {
 export const SessionListPage = () => {
   const { sessions, connected, connectionIssue, readOnly, reconnect, refreshSessions } =
     useSessions();
-  const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -125,16 +123,11 @@ export const SessionListPage = () => {
   }, []);
 
   const filtered = useMemo(() => {
-    const lower = query.trim().toLowerCase();
     return sessions.filter((session) => {
       const matchesFilter = filter === "ALL" || session.state === filter;
-      if (!matchesFilter) return false;
-      if (!lower) return true;
-      const haystack =
-        `${session.sessionName} ${session.currentCommand ?? ""} ${session.currentPath ?? ""} ${session.title ?? ""} ${session.customTitle ?? ""}`.toLowerCase();
-      return haystack.includes(lower);
+      return matchesFilter;
     });
-  }, [filter, query, sessions]);
+  }, [filter, sessions]);
 
   const groups = useMemo(() => buildSessionGroups(filtered), [filtered]);
 
@@ -173,26 +166,17 @@ export const SessionListPage = () => {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-[200px] flex-1">
-            <Input
-              placeholder="Search by command, path, session..."
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {["ALL", "RUNNING", "WAITING_INPUT", "WAITING_PERMISSION", "UNKNOWN"].map((state) => (
-              <Button
-                key={state}
-                variant={filter === state ? "primary" : "ghost"}
-                size="sm"
-                onClick={() => setFilter(state)}
-              >
-                {state.replace("_", " ")}
-              </Button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {["ALL", "RUNNING", "WAITING_INPUT", "WAITING_PERMISSION", "UNKNOWN"].map((state) => (
+            <Button
+              key={state}
+              variant={filter === state ? "primary" : "ghost"}
+              size="sm"
+              onClick={() => setFilter(state)}
+            >
+              {state.replace("_", " ")}
+            </Button>
+          ))}
         </div>
         {readOnly && (
           <div className="border-latte-peach/50 bg-latte-peach/10 text-latte-peach rounded-2xl border px-4 py-2 text-sm">
