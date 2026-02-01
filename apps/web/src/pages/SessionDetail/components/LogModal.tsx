@@ -55,11 +55,11 @@ export const LogModal = ({
 
   return (
     <div className="fixed bottom-24 left-6 z-50 w-[calc(100vw-3rem)] max-w-[480px] translate-x-1 translate-y-1">
-      <Card className="border-latte-lavender/40 bg-latte-base/95 font-body animate-fade-in-up relative rounded-[24px] border p-4 shadow-[0_30px_80px_-40px_rgba(76,79,105,0.55),0_0_0_1px_rgba(180,190,254,0.35)] backdrop-blur">
+      <Card className="font-body animate-panel-enter border-latte-lavender/30 bg-latte-mantle/85 relative rounded-[28px] border-2 p-4 shadow-[0_25px_80px_-20px_rgba(114,135,253,0.4),0_0_0_1px_rgba(114,135,253,0.15)] ring-1 ring-inset ring-white/10 backdrop-blur-xl">
         <button
           type="button"
           onClick={onClose}
-          className="shadow-glass border-latte-surface1/60 bg-latte-base/80 text-latte-subtext0 hover:text-latte-text hover:border-latte-lavender/60 absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition"
+          className="border-latte-lavender/40 bg-latte-lavender/10 text-latte-lavender hover:border-latte-lavender/60 hover:bg-latte-lavender/20 absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition"
           aria-label="Close log"
         >
           <X className="h-4 w-4" />
@@ -71,10 +71,22 @@ export const LogModal = ({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onOpenHere} aria-label="Open here">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenHere}
+              aria-label="Open here"
+              className="border-latte-lavender/40 text-latte-lavender hover:border-latte-lavender/60 hover:bg-latte-lavender/10"
+            >
               <CornerDownLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onOpenNewTab} aria-label="Open in new tab">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenNewTab}
+              aria-label="Open in new tab"
+              className="border-latte-lavender/40 text-latte-lavender hover:border-latte-lavender/60 hover:bg-latte-lavender/10"
+            >
               <ExternalLink className="h-4 w-4" />
             </Button>
           </div>
@@ -84,7 +96,7 @@ export const LogModal = ({
             {error}
           </div>
         )}
-        <div className="border-latte-surface2/80 bg-latte-crust/95 relative mt-3 min-h-[200px] w-full rounded-2xl border-2 shadow-inner">
+        <div className="border-latte-surface2/50 bg-latte-crust/60 relative mt-3 min-h-[200px] w-full rounded-2xl border shadow-inner">
           {loading && (
             <div className="bg-latte-base/70 absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl backdrop-blur-sm">
               <div className="relative">
