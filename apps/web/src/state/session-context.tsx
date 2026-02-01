@@ -102,7 +102,6 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const [connectionIssue, setConnectionIssue] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
   const [wsNonce, setWsNonce] = useState(0);
-  const [shouldConnect, setShouldConnect] = useState(true);
   const pending = useRef(
     new Map<
       string,
@@ -352,18 +351,19 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         setConnectionIssue("WebSocket error. Reconnecting...");
       },
     },
-    Boolean(token) && shouldConnect,
+    Boolean(token),
   );
 
   const connected = readyState === ReadyState.OPEN;
   const reconnect = useCallback(() => {
     setConnectionIssue("Reconnecting...");
-    setShouldConnect(false);
     setWsNonce((prev) => prev + 1);
-    window.setTimeout(() => {
-      setShouldConnect(true);
-    }, 0);
-  }, [setConnectionIssue, setShouldConnect, setWsNonce]);
+    try {
+      getWebSocket()?.close();
+    } catch {
+      // ignore reconnect close failures
+    }
+  }, [getWebSocket]);
 
   const sendPing = useCallback(() => {
     if (!connected) {
