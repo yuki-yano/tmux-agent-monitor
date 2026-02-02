@@ -368,7 +368,7 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
   };
 
   const capturePaneFingerprint = async (paneId: string, useAlt: boolean) => {
-    const args = ["capture-pane", "-p", "-t", paneId, "-S", "-5", "-E", "-1"];
+    const args = ["capture-pane", "-p", "-t", paneId, "-S", "-20", "-E", "-1"];
     if (useAlt) {
       args.push("-a");
     }
@@ -489,7 +489,7 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
         updateOutputAt(activityAt);
       }
 
-      if (agent === "codex" && !pane.paneDead) {
+      if (!pane.paneDead) {
         const fingerprint = await capturePaneFingerprint(pane.paneId, pane.alternateOn);
         if (fingerprint) {
           const previous = lastFingerprint.get(pane.paneId);
