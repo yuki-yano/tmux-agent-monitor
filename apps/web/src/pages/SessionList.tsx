@@ -50,8 +50,9 @@ export const SessionListPage = () => {
   const groups = useMemo(() => buildSessionGroups(filtered), [filtered]);
 
   return (
-    <div className="animate-fade-in-up mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
-      <div className="flex justify-end">
+    <div className="animate-fade-in-up mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 pb-10 pt-6">
+      <div className="flex items-center justify-between gap-3">
+        <div />
         <ThemeToggle />
       </div>
       <header className="shadow-glass border-latte-surface1/60 bg-latte-base/80 animate-fade-in stagger-1 flex flex-col gap-4 rounded-[32px] border p-6 opacity-0 backdrop-blur">

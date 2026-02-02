@@ -20,17 +20,29 @@ const ThemeToggle = ({ className }: ThemeToggleProps) => {
   return (
     <Tabs value={preference} onValueChange={handleValueChange} className={className}>
       <TabsList aria-label="Theme selection">
-        <TabsTrigger value="system" className="flex items-center gap-1">
-          <Laptop className="h-3 w-3" />
-          System
+        <TabsTrigger
+          value="system"
+          className="flex h-7 w-7 items-center justify-center p-0"
+          aria-label="System theme"
+          title="System"
+        >
+          <Laptop className="h-4 w-4" />
         </TabsTrigger>
-        <TabsTrigger value="latte" className="flex items-center gap-1">
-          <Sun className="h-3 w-3" />
-          Latte
+        <TabsTrigger
+          value="latte"
+          className="flex h-7 w-7 items-center justify-center p-0"
+          aria-label="Latte theme"
+          title="Latte"
+        >
+          <Sun className="h-4 w-4" />
         </TabsTrigger>
-        <TabsTrigger value="mocha" className="flex items-center gap-1">
-          <Moon className="h-3 w-3" />
-          Mocha
+        <TabsTrigger
+          value="mocha"
+          className="flex h-7 w-7 items-center justify-center p-0"
+          aria-label="Mocha theme"
+          title="Mocha"
+        >
+          <Moon className="h-4 w-4" />
         </TabsTrigger>
       </TabsList>
     </Tabs>
