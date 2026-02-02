@@ -157,6 +157,8 @@ export const useSessionLogs = ({
 
   const closeQuickPanel = useCallback(() => {
     setQuickPanelOpen(false);
+    setLogModalOpen(false);
+    setSelectedPaneId(null);
   }, []);
 
   useEffect(() => {
