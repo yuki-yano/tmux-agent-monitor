@@ -61,4 +61,11 @@ describe("renderAnsiLines", () => {
     expect(unknownLines[0]).toContain("background-color");
     expect(unknownLines[1]).not.toContain("background-color");
   });
+
+  it("normalizes codex latte background fills to the latte base", () => {
+    const text = "\u001b[40mfoo\u001b[0m";
+    const lines = renderAnsiLines(text, "latte", { agent: "codex" });
+    expect(lines[0]).toContain("rgb(230, 233, 239)");
+    expect(lines[0]).not.toContain("background-color:#4c4f69");
+  });
 });

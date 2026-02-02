@@ -190,10 +190,53 @@ const ansiEscapePattern = new RegExp(String.raw`\u001b\[[0-?]*[ -/]*[@-~]`, "g")
 const stripAnsi = (value: string) => value.replace(ansiEscapePattern, "");
 
 const backgroundColorPattern = /background-color:\s*([^;"']+)/i;
+const backgroundColorPatternGlobal = /background-color:\s*([^;"']+)/gi;
 
 const extractBackgroundColor = (html: string): string | null => {
   const match = html.match(backgroundColorPattern);
   return match?.[1]?.trim() ?? null;
+};
+
+const codexLatteBackgroundTarget = "#e6e9ef";
+
+const blendRgb = (
+  from: [number, number, number],
+  to: [number, number, number],
+  ratio: number,
+): [number, number, number] => {
+  const safeRatio = Math.min(1, Math.max(0, ratio));
+  const mix = (value: number, target: number) =>
+    Math.round(value * (1 - safeRatio) + target * safeRatio);
+  return [mix(from[0], to[0]), mix(from[1], to[1]), mix(from[2], to[2])];
+};
+
+const normalizeCodexBackgrounds = (
+  html: string,
+  theme: Theme,
+  options?: RenderAnsiOptions,
+): string => {
+  if (options?.agent !== "codex" || theme !== "latte") {
+    return html;
+  }
+  if (!html.includes("background-color")) {
+    return html;
+  }
+  const fallbackRgb = parseColor(codexLatteBackgroundTarget);
+  if (!fallbackRgb) {
+    return html;
+  }
+  return html.replace(backgroundColorPatternGlobal, (match, rawValue: string) => {
+    const value = rawValue.trim();
+    const rgb = parseColor(value);
+    if (!rgb) {
+      return match;
+    }
+    if (luminance(rgb) > 0.28) {
+      return match;
+    }
+    const blended = blendRgb(rgb, fallbackRgb, 1);
+    return `background-color: rgb(${blended[0]}, ${blended[1]}, ${blended[2]})`;
+  });
 };
 
 const wrapLineBackground = (html: string, color: string): string => {
@@ -345,7 +388,9 @@ export const renderAnsiLines = (
   if (options?.agent !== "claude") {
     const rendered = lines.map((line) => {
       const html = converter.toHtml(line);
-      return ensureLineContent(adjustLowContrast(html, theme, options));
+      const adjusted = adjustLowContrast(html, theme, options);
+      const normalized = normalizeCodexBackgrounds(adjusted, theme, options);
+      return ensureLineContent(normalized);
     });
     return shouldPadBackground ? applyAdjacentBackgroundPadding(rendered, lines) : rendered;
   }
