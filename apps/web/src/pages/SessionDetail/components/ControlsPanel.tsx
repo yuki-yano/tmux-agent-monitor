@@ -137,15 +137,15 @@ export const ControlsPanel = ({
       {controlsOpen && (
         <div id="session-controls" className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <ModifierToggle type="button" onClick={onToggleShift} active={shiftHeld} tone="mauve">
+            <ModifierToggle type="button" onClick={onToggleShift} active={shiftHeld}>
               <span
-                className={`h-2 w-2 rounded-full transition-colors ${shiftHeld ? "bg-latte-mauve" : "bg-latte-surface2"}`}
+                className={`h-2 w-2 rounded-full transition-colors ${shiftHeld ? "bg-latte-lavender" : "bg-latte-surface2"}`}
               />
               Shift
             </ModifierToggle>
-            <ModifierToggle type="button" onClick={onToggleCtrl} active={ctrlHeld} tone="blue">
+            <ModifierToggle type="button" onClick={onToggleCtrl} active={ctrlHeld}>
               <span
-                className={`h-2 w-2 rounded-full transition-colors ${ctrlHeld ? "bg-latte-blue" : "bg-latte-surface2"}`}
+                className={`h-2 w-2 rounded-full transition-colors ${ctrlHeld ? "bg-latte-lavender" : "bg-latte-surface2"}`}
               />
               Ctrl
             </ModifierToggle>
