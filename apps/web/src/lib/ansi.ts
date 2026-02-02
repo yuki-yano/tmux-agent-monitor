@@ -75,10 +75,13 @@ type RenderAnsiOptions = {
 };
 
 const needsLowContrastAdjust = (html: string, theme: Theme, options?: RenderAnsiOptions) => {
+  if (options?.agent !== "claude") {
+    return false;
+  }
   if (html.includes("background-color")) {
     return true;
   }
-  return theme === "latte" && options?.agent === "claude" && html.includes("color:");
+  return theme === "latte" && html.includes("color:");
 };
 
 const parseColor = (value: string | null): [number, number, number] | null => {
