@@ -186,6 +186,66 @@ const ensureLineContent = (html: string): string => {
 const ansiEscapePattern = new RegExp(String.raw`\u001b\[[0-?]*[ -/]*[@-~]`, "g");
 const stripAnsi = (value: string) => value.replace(ansiEscapePattern, "");
 
+const backgroundColorPattern = /background-color:\s*([^;"']+)/i;
+
+const extractBackgroundColor = (html: string): string | null => {
+  const match = html.match(backgroundColorPattern);
+  return match?.[1]?.trim() ?? null;
+};
+
+const wrapLineBackground = (html: string, color: string): string => {
+  return `<span style="background-color:${color}; display:block; width:100%;">${html}</span>`;
+};
+
+const hasVisibleText = (line: string): boolean => stripAnsi(line).length > 0;
+
+const applyAdjacentBackgroundPadding = (htmlLines: string[], rawLines: string[]): string[] => {
+  if (htmlLines.length === 0) return htmlLines;
+  const baseColors = htmlLines.map(extractBackgroundColor);
+  const paddedColors: Array<string | null> = [...baseColors];
+  let inBlock = false;
+  let blockColor: string | null = null;
+  let blockEnd = -1;
+
+  for (let i = 0; i < baseColors.length; i += 1) {
+    const baseColor = baseColors[i];
+    if (baseColor) {
+      inBlock = true;
+      blockColor = baseColor;
+      blockEnd = i;
+      continue;
+    }
+    if (inBlock && hasVisibleText(rawLines[i] ?? "")) {
+      if (!paddedColors[i]) {
+        paddedColors[i] = blockColor;
+      }
+      blockEnd = i;
+      continue;
+    }
+    if (inBlock) {
+      const below = i;
+      if (blockColor && below < paddedColors.length && !paddedColors[below]) {
+        paddedColors[below] = blockColor;
+      }
+      inBlock = false;
+      blockColor = null;
+      blockEnd = -1;
+    }
+  }
+  if (inBlock) {
+    const below = blockEnd + 1;
+    if (blockColor && below < paddedColors.length && !paddedColors[below]) {
+      paddedColors[below] = blockColor;
+    }
+  }
+
+  return htmlLines.map((html, index) => {
+    const color = paddedColors[index];
+    if (!color) return html;
+    return wrapLineBackground(html, color);
+  });
+};
+
 const escapeHtml = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -275,18 +335,20 @@ export const renderAnsiLines = (
   theme: Theme = "latte",
   options?: RenderAnsiOptions,
 ): string[] => {
-  const converter = buildAnsiToHtml(theme, { stream: true });
+  const converter = buildAnsiToHtml(theme, { stream: false });
   const normalized = text.replace(/\r\n/g, "\n");
   const lines = normalized.split("\n");
+  const shouldPadBackground = options?.agent === "codex";
   if (options?.agent !== "claude") {
-    return lines.map((line) => {
+    const rendered = lines.map((line) => {
       const html = converter.toHtml(line);
       return ensureLineContent(adjustLowContrast(html, theme, options));
     });
+    return shouldPadBackground ? applyAdjacentBackgroundPadding(rendered, lines) : rendered;
   }
   const plainLines = lines.map(stripAnsi);
   const diffMask = buildClaudeDiffMask(plainLines);
-  return lines.map((line, index) => {
+  const rendered = lines.map((line, index) => {
     if (!diffMask[index]) {
       const html = converter.toHtml(line);
       return ensureLineContent(adjustLowContrast(html, theme, options));
@@ -294,4 +356,5 @@ export const renderAnsiLines = (
     const plainLine = plainLines[index] ?? "";
     return ensureLineContent(renderClaudeDiffLine(plainLine));
   });
+  return rendered;
 };

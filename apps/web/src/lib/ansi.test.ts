@@ -50,4 +50,15 @@ describe("renderAnsiLines", () => {
     expect(lines[0]).not.toMatch(/#eff1f5|rgb\(239, 241, 245\)/);
     expect(lines[0]).toMatch(/76,\s*79,\s*105|#4c4f69/);
   });
+
+  it("applies background padding only for codex", () => {
+    const text = ["\u001b[41mfirst", "second"].join("\n");
+    const codexLines = renderAnsiLines(text, "latte", { agent: "codex" });
+    expect(codexLines[0]).toContain("background-color");
+    expect(codexLines[1]).toContain("background-color");
+
+    const unknownLines = renderAnsiLines(text, "latte", { agent: "unknown" });
+    expect(unknownLines[0]).toContain("background-color");
+    expect(unknownLines[1]).not.toContain("background-color");
+  });
 });
