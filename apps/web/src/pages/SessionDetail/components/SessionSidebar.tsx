@@ -54,7 +54,7 @@ type SidebarHeaderProps = {
 const SidebarHeader = memo(({ totalSessions, repoCount }: SidebarHeaderProps) => (
   <div className="flex items-center justify-between gap-3">
     <div>
-      <p className="text-latte-subtext0 text-[10px] uppercase tracking-[0.45em]">Session Atlas</p>
+      <p className="text-latte-subtext0 text-[10px] uppercase tracking-[0.45em]">vde-monitor</p>
       <h2 className="font-display text-latte-text text-xl font-semibold">Live Constellation</h2>
     </div>
     <div className="flex flex-col items-end gap-2">
@@ -465,7 +465,7 @@ export const SessionSidebar = ({
   return (
     <Card
       className={cn(
-        "border-latte-surface1/70 bg-latte-mantle/80 relative flex h-full flex-col p-4 shadow-[0_18px_50px_-25px_rgba(17,17,27,0.6)]",
+        "border-latte-surface1/70 bg-latte-mantle/80 relative flex h-full flex-col overflow-hidden p-4 shadow-[0_18px_50px_-25px_rgba(17,17,27,0.6)]",
         className,
       )}
     >
