@@ -8,7 +8,7 @@ import {
   GitCommitHorizontal,
   RefreshCw,
 } from "lucide-react";
-import { memo, type ReactNode, useMemo } from "react";
+import { memo, type ReactNode, useMemo, useRef } from "react";
 
 import {
   Button,
@@ -23,7 +23,6 @@ import {
   PanelSection,
   SectionHeader,
   TagPill,
-  Toolbar,
 } from "@/components/ui";
 
 import { diffLineClass, diffStatusClass, formatPath, formatTimestamp } from "../sessionDetailUtils";
@@ -47,6 +46,93 @@ type CommitSectionProps = {
   onToggleCommitFile: (hash: string, path: string) => void;
   onCopyHash: (hash: string) => void;
 };
+
+type CommitFileRowProps = {
+  commitHash: string;
+  file: CommitDetail["files"][number];
+  fileOpen: boolean;
+  additions: string;
+  deletions: string;
+  loadingFile: boolean;
+  fileDetail?: CommitFileDiff;
+  renderedPatch?: ReactNode;
+  onToggleCommitFile: (hash: string, path: string) => void;
+};
+
+const CommitFileRow = memo(
+  ({
+    commitHash,
+    file,
+    fileOpen,
+    additions,
+    deletions,
+    loadingFile,
+    fileDetail,
+    renderedPatch,
+    onToggleCommitFile,
+  }: CommitFileRowProps) => {
+    const labelContainerRef = useRef<HTMLDivElement | null>(null);
+    const statusLabel = file.status === "?" ? "A" : file.status;
+
+    return (
+      <div key={`${file.path}-${file.status}`} className="flex flex-col gap-2">
+        <div
+          onClick={() => onToggleCommitFile(commitHash, file.path)}
+          className="grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <TagPill tone="status" className={`${diffStatusClass(statusLabel)} shrink-0`}>
+              {statusLabel}
+            </TagPill>
+            <div ref={labelContainerRef} className="min-w-0 flex-1">
+              <FilePathLabel
+                path={file.path}
+                renamedFrom={file.renamedFrom}
+                size="xs"
+                dirTruncate="segments"
+                dirReservePx={12}
+                measureRef={labelContainerRef}
+                className="w-full font-mono"
+              />
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-3 whitespace-nowrap text-xs">
+            <span className="text-latte-green">+{additions}</span>
+            <span className="text-latte-red">-{deletions}</span>
+            <span className="text-latte-overlay1">
+              {fileOpen ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </span>
+          </div>
+        </div>
+        {fileOpen && (
+          <div className="border-latte-surface2/70 bg-latte-base/60 rounded-xl border px-3 py-2">
+            {loadingFile && <p className="text-latte-subtext0 text-xs">Loading diff…</p>}
+            {!loadingFile && fileDetail?.binary && (
+              <p className="text-latte-subtext0 text-xs">Binary file (no diff).</p>
+            )}
+            {!loadingFile && !fileDetail?.binary && fileDetail?.patch && (
+              <div className="custom-scrollbar max-h-[240px] overflow-auto">
+                <MonoBlock>{renderedPatch}</MonoBlock>
+                {fileDetail.truncated && (
+                  <p className="text-latte-subtext0 mt-2 text-xs">Diff truncated.</p>
+                )}
+              </div>
+            )}
+            {!loadingFile && !fileDetail?.binary && !fileDetail?.patch && (
+              <p className="text-latte-subtext0 text-xs">No diff available.</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  },
+);
+
+CommitFileRow.displayName = "CommitFileRow";
 
 export const CommitSection = memo(
   ({
@@ -232,7 +318,6 @@ export const CommitSection = memo(
                       {!loadingDetail && detail?.files && detail.files.length > 0 && (
                         <div className="flex flex-col gap-2 text-xs">
                           {detail.files.map((file) => {
-                            const statusLabel = file.status === "?" ? "A" : file.status;
                             const fileKey = `${commit.hash}:${file.path}`;
                             const fileOpen = Boolean(commitFileOpen[fileKey]);
                             const fileDetail = commitFileDetails[fileKey];
@@ -247,69 +332,18 @@ export const CommitSection = memo(
                                 : String(file.deletions);
                             const renderedPatch = renderedPatches[fileKey];
                             return (
-                              <div
+                              <CommitFileRow
                                 key={`${file.path}-${file.status}`}
-                                className="flex flex-col gap-2"
-                              >
-                                <Toolbar
-                                  onClick={() => onToggleCommitFile(commit.hash, file.path)}
-                                  className="cursor-pointer"
-                                >
-                                  <div className="flex min-w-0 items-center gap-2">
-                                    <TagPill
-                                      tone="status"
-                                      className={`${diffStatusClass(statusLabel)} shrink-0`}
-                                    >
-                                      {statusLabel}
-                                    </TagPill>
-                                    <FilePathLabel
-                                      path={file.path}
-                                      renamedFrom={file.renamedFrom}
-                                      size="xs"
-                                      tailSegments={3}
-                                      className="font-mono"
-                                    />
-                                  </div>
-                                  <div className="flex shrink-0 items-center gap-3 text-xs">
-                                    <span className="text-latte-green">+{additions}</span>
-                                    <span className="text-latte-red">-{deletions}</span>
-                                    <span className="text-latte-overlay1">
-                                      {fileOpen ? (
-                                        <ChevronUp className="h-3.5 w-3.5" />
-                                      ) : (
-                                        <ChevronDown className="h-3.5 w-3.5" />
-                                      )}
-                                    </span>
-                                  </div>
-                                </Toolbar>
-                                {fileOpen && (
-                                  <div className="border-latte-surface2/70 bg-latte-base/60 rounded-xl border px-3 py-2">
-                                    {loadingFile && (
-                                      <p className="text-latte-subtext0 text-xs">Loading diff…</p>
-                                    )}
-                                    {!loadingFile && fileDetail?.binary && (
-                                      <p className="text-latte-subtext0 text-xs">
-                                        Binary file (no diff).
-                                      </p>
-                                    )}
-                                    {!loadingFile && !fileDetail?.binary && fileDetail?.patch && (
-                                      <div className="custom-scrollbar max-h-[240px] overflow-auto">
-                                        <MonoBlock>{renderedPatch}</MonoBlock>
-                                        {fileDetail.truncated && (
-                                          <p className="text-latte-subtext0 mt-2 text-xs">
-                                            Diff truncated.
-                                          </p>
-                                        )}
-                                      </div>
-                                    )}
-                                    {!loadingFile && !fileDetail?.binary && !fileDetail?.patch && (
-                                      <p className="text-latte-subtext0 text-xs">
-                                        No diff available.
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                                commitHash={commit.hash}
+                                file={file}
+                                fileOpen={fileOpen}
+                                additions={additions}
+                                deletions={deletions}
+                                loadingFile={loadingFile}
+                                fileDetail={fileDetail}
+                                renderedPatch={renderedPatch}
+                                onToggleCommitFile={onToggleCommitFile}
+                              />
                             );
                           })}
                         </div>

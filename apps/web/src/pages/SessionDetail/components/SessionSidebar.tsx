@@ -36,7 +36,7 @@ const HOVER_PREVIEW_DELAY_MS = 320;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const SidebarBackdrop = memo(() => (
-  <div className="pointer-events-none absolute inset-0">
+  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-none rounded-r-[32px]">
     <div className="bg-latte-lavender/15 absolute -left-10 top-10 h-32 w-32 rounded-full blur-3xl" />
     <div className="bg-latte-peach/15 absolute -right-12 top-40 h-36 w-36 rounded-full blur-3xl" />
     <div className="from-latte-lavender/70 via-latte-peach/40 absolute left-0 top-0 h-full w-[2px] bg-gradient-to-b to-transparent" />
@@ -465,7 +465,7 @@ export const SessionSidebar = ({
   return (
     <Card
       className={cn(
-        "border-latte-surface1/70 bg-latte-mantle/80 relative flex h-full flex-col overflow-hidden p-4 shadow-[0_18px_50px_-25px_rgba(17,17,27,0.6)]",
+        "border-latte-surface1/70 bg-latte-mantle/80 relative flex h-full flex-col p-4 shadow-[0_18px_50px_-25px_rgba(17,17,27,0.6)]",
         className,
       )}
     >
