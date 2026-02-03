@@ -311,6 +311,11 @@ const parseLineNumberParts = (line: string) => {
   };
 };
 
+const leadingWhitespaceLength = (line: string) => {
+  const match = line.match(/^\s+/);
+  return match?.[0]?.length ?? 0;
+};
+
 const hasDiffMarker = (line: string) => {
   const parsed = parseLineNumberParts(line);
   if (!parsed) return false;
@@ -327,6 +332,7 @@ const isDiffCandidateLine = (line: string) => {
 const buildClaudeDiffMask = (lines: string[]) => {
   const mask = new Array(lines.length).fill(false);
   let segmentStart = -1;
+  let segmentIndent: number | null = null;
   const closeSegment = (end: number) => {
     if (segmentStart < 0) return;
     let include = false;
@@ -342,13 +348,29 @@ const buildClaudeDiffMask = (lines: string[]) => {
       }
     }
     segmentStart = -1;
+    segmentIndent = null;
   };
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i] ?? "";
+    const parsed = parseLineNumberParts(line);
+    if (parsed) {
+      if (segmentStart === -1) {
+        segmentStart = i;
+      }
+      segmentIndent = Math.max(1, leadingWhitespaceLength(line));
+      continue;
+    }
     if (isDiffCandidateLine(line)) {
       if (segmentStart === -1) {
         segmentStart = i;
       }
+      continue;
+    }
+    const isContinuation =
+      segmentStart !== -1 &&
+      segmentIndent !== null &&
+      leadingWhitespaceLength(line) >= segmentIndent;
+    if (isContinuation) {
       continue;
     }
     closeSegment(i - 1);
@@ -369,6 +391,53 @@ const renderClaudeDiffLine = (plainLine: string) => {
       ? "text-latte-red"
       : "text-latte-text";
   return `<span class="text-latte-text">${escapeHtml(parsed.prefix)}</span><span class="${restClass}">${escapeHtml(parsed.rest)}</span>`;
+};
+
+const renderClaudeContinuationLine = (
+  plainLine: string,
+  marker: "add" | "remove" | "neutral" | null,
+) => {
+  const className =
+    marker === "add"
+      ? "text-latte-green"
+      : marker === "remove"
+        ? "text-latte-red"
+        : "text-latte-text";
+  return `<span class="${className}">${escapeHtml(plainLine)}</span>`;
+};
+
+const resolveClaudeMarker = (plainLine: string): "add" | "remove" | "neutral" => {
+  const parsed = parseLineNumberParts(plainLine);
+  if (!parsed) return "neutral";
+  const restTrimmed = parsed.rest.trimStart();
+  if (restTrimmed.startsWith("+")) return "add";
+  if (restTrimmed.startsWith("-")) return "remove";
+  return "neutral";
+};
+
+const isClaudeNeutralLine = (plainLine: string) => {
+  const trimmed = plainLine.trim();
+  return trimmed === "" || trimmed === "...";
+};
+
+const applyClaudeDiffMask = (plainLines: string[], diffMask: boolean[]) => {
+  let currentMarker: "add" | "remove" | "neutral" | null = null;
+  return plainLines.map((plainLine, index) => {
+    if (!diffMask[index]) {
+      currentMarker = null;
+      return null;
+    }
+    const parsed = parseLineNumberParts(plainLine);
+    if (parsed) {
+      currentMarker = resolveClaudeMarker(plainLine);
+      return renderClaudeDiffLine(plainLine);
+    }
+    if (isClaudeNeutralLine(plainLine)) {
+      currentMarker = "neutral";
+      return renderClaudeContinuationLine(plainLine, "neutral");
+    }
+    return renderClaudeContinuationLine(plainLine, currentMarker);
+  });
 };
 
 export const renderAnsi = (text: string, theme: Theme = "latte"): string => {
@@ -396,13 +465,15 @@ export const renderAnsiLines = (
   }
   const plainLines = lines.map(stripAnsi);
   const diffMask = buildClaudeDiffMask(plainLines);
+  const maskedHtml = applyClaudeDiffMask(plainLines, diffMask);
   const rendered = lines.map((line, index) => {
     if (!diffMask[index]) {
       const html = converter.toHtml(line);
       return ensureLineContent(adjustLowContrast(html, theme, options));
     }
     const plainLine = plainLines[index] ?? "";
-    return ensureLineContent(renderClaudeDiffLine(plainLine));
+    const masked = maskedHtml[index] ?? renderClaudeDiffLine(plainLine);
+    return ensureLineContent(masked);
   });
   return rendered;
 };

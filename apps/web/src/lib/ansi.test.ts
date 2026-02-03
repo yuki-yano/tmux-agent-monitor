@@ -21,6 +21,29 @@ describe("renderAnsiLines", () => {
     expect(lines[3]).toContain('class="text-latte-text"');
   });
 
+  it("keeps wrapped Claude diff lines styled with the diff marker", () => {
+    const text = [
+      "  98 - very-long-line",
+      "       continuation",
+      "  99 + add-line",
+      "       next",
+    ].join("\n");
+    const lines = renderAnsiLines(text, "latte", { agent: "claude" });
+    expect(lines[1]).toContain('class="text-latte-red"');
+    expect(lines[3]).toContain('class="text-latte-green"');
+  });
+
+  it("keeps wrapped Claude context lines in diff segments neutral", () => {
+    const text = [
+      "  104 - old-value",
+      "  105 + new-value",
+      '  106            className="border"',
+      '           ty-60 md:text-sm"',
+    ].join("\n");
+    const lines = renderAnsiLines(text, "latte", { agent: "claude" });
+    expect(lines[3]).toContain('class="text-latte-text"');
+  });
+
   it("does not format line-number blocks without diff markers", () => {
     const text = ["  1 foo", "  2 bar"].join("\n");
     const lines = renderAnsiLines(text, "latte", { agent: "claude" });
