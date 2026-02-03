@@ -79,6 +79,13 @@ export const ControlsPanel = ({
     textarea.style.height = `${textarea.scrollHeight}px`;
   };
 
+  const handleSendText = () => {
+    onSendText();
+    if (textInputRef.current) {
+      textInputRef.current.style.height = "auto";
+    }
+  };
+
   if (readOnly) {
     return (
       <Callout tone="warning" size="sm">
@@ -99,7 +106,7 @@ export const ControlsPanel = ({
           className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 bg-latte-base/70 min-h-[64px] min-w-0 flex-1 resize-none rounded-2xl border px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
         />
         <div className="flex shrink-0 items-center self-center">
-          <Button onClick={onSendText} aria-label="Send" className="h-11 w-11 p-0">
+          <Button onClick={handleSendText} aria-label="Send" className="h-11 w-11 p-0">
             <Send className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>
