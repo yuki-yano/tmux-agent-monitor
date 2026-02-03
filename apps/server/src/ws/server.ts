@@ -1,11 +1,8 @@
-import { randomUUID } from "node:crypto";
-
 import type { createNodeWebSocket } from "@hono/node-ws";
 import type {
   AgentMonitorConfig,
   CommandResponse,
   ScreenResponse,
-  WsEnvelope,
   WsServerMessage,
 } from "@vde-monitor/shared";
 import { wsClientMessageSchema } from "@vde-monitor/shared";
@@ -13,48 +10,16 @@ import type { WSContext } from "hono/ws";
 
 import { buildError, nowIso } from "../http/helpers.js";
 import type { createSessionMonitor } from "../monitor.js";
-import { buildScreenDeltas, shouldSendFull } from "../screen-diff.js";
-import { captureTerminalScreen } from "../screen-service.js";
 import type { createTmuxActions } from "../tmux-actions.js";
+import { handleCommandMessage } from "./command-handler.js";
+import { buildEnvelope } from "./envelope.js";
+import { createRateLimiter } from "./rate-limit.js";
+import { createScreenCache } from "./screen-cache.js";
+import { handleScreenRequest } from "./screen-handler.js";
 
 type Monitor = ReturnType<typeof createSessionMonitor>;
 type TmuxActions = ReturnType<typeof createTmuxActions>;
 type UpgradeWebSocket = ReturnType<typeof createNodeWebSocket>["upgradeWebSocket"];
-
-type ScreenSnapshot = {
-  cursor: string;
-  lines: string[];
-  alternateOn: boolean;
-  truncated: boolean | null;
-};
-
-const buildEnvelope = <TType extends string, TData>(
-  type: TType,
-  data: TData,
-  reqId?: string,
-): WsEnvelope<TType, TData> => ({
-  type,
-  ts: nowIso(),
-  reqId,
-  data,
-});
-
-const createRateLimiter = (windowMs: number, max: number) => {
-  const hits = new Map<string, { count: number; expiresAt: number }>();
-  return (key: string) => {
-    const nowMs = Date.now();
-    const entry = hits.get(key);
-    if (!entry || entry.expiresAt <= nowMs) {
-      hits.set(key, { count: 1, expiresAt: nowMs + windowMs });
-      return true;
-    }
-    if (entry.count >= max) {
-      return false;
-    }
-    entry.count += 1;
-    return true;
-  };
-};
 
 export const createWsServer = ({
   config,
@@ -75,91 +40,7 @@ export const createWsServer = ({
     config.rateLimit.screen.max,
   );
 
-  const SCREEN_CACHE_LIMIT = 10;
-  const screenCache = new Map<string, Map<string, ScreenSnapshot>>();
-
-  const splitScreenLines = (value: string) => value.replace(/\r\n/g, "\n").split("\n");
-
-  const getScreenCacheKey = (paneId: string, lineCount: number) => `${paneId}:text:${lineCount}`;
-
-  const storeScreenSnapshot = (cacheKey: string, snapshot: ScreenSnapshot) => {
-    const bucket = screenCache.get(cacheKey) ?? new Map<string, ScreenSnapshot>();
-    bucket.set(snapshot.cursor, snapshot);
-    while (bucket.size > SCREEN_CACHE_LIMIT) {
-      const oldestKey = bucket.keys().next().value;
-      if (!oldestKey) break;
-      bucket.delete(oldestKey);
-    }
-    screenCache.set(cacheKey, bucket);
-  };
-
-  const buildTextResponse = ({
-    paneId,
-    lineCount,
-    screen,
-    alternateOn,
-    truncated,
-    cursor,
-    fallbackReason,
-  }: {
-    paneId: string;
-    lineCount: number;
-    screen: string;
-    alternateOn: boolean;
-    truncated: boolean | null;
-    cursor?: string;
-    fallbackReason?: "image_failed" | "image_disabled";
-  }): ScreenResponse => {
-    const cacheKey = getScreenCacheKey(paneId, lineCount);
-    const bucket = screenCache.get(cacheKey);
-    const previous = cursor ? bucket?.get(cursor) : null;
-
-    const nextLines = splitScreenLines(screen);
-    const nextCursor = randomUUID();
-    storeScreenSnapshot(cacheKey, {
-      cursor: nextCursor,
-      lines: nextLines,
-      alternateOn,
-      truncated,
-    });
-
-    const response: ScreenResponse = {
-      ok: true,
-      paneId,
-      mode: "text",
-      capturedAt: nowIso(),
-      lines: lineCount,
-      truncated,
-      alternateOn,
-      cursor: nextCursor,
-    };
-    if (fallbackReason) {
-      response.fallbackReason = fallbackReason;
-    }
-
-    if (!cursor || !previous) {
-      response.full = true;
-      response.screen = screen;
-      return response;
-    }
-
-    if (previous.alternateOn !== alternateOn || previous.truncated !== truncated) {
-      response.full = true;
-      response.screen = screen;
-      return response;
-    }
-
-    const deltas = buildScreenDeltas(previous.lines, nextLines);
-    if (shouldSendFull(previous.lines.length, nextLines.length, deltas)) {
-      response.full = true;
-      response.screen = screen;
-      return response;
-    }
-
-    response.full = false;
-    response.deltas = deltas;
-    return response;
-  };
+  const screenCache = createScreenCache();
 
   const sendWs = (ws: WSContext, message: WsServerMessage) => {
     ws.send(JSON.stringify(message));
@@ -263,218 +144,28 @@ export const createWsServer = ({
       }
 
       if (message.type === "screen.request") {
-        const clientKey = "ws";
-        if (!screenLimiter(clientKey)) {
-          sendWs(
-            ws,
-            buildEnvelope(
-              "screen.response",
-              {
-                ok: false,
-                paneId: message.data.paneId,
-                mode: "text",
-                capturedAt: nowIso(),
-                error: buildError("RATE_LIMIT", "rate limited"),
-              } as ScreenResponse,
-              reqId,
-            ),
-          );
-          return;
-        }
-
-        const mode = message.data.mode ?? config.screen.mode;
-        const lineCount = Math.min(
-          message.data.lines ?? config.screen.defaultLines,
-          config.screen.maxLines,
-        );
-
-        if (mode === "image") {
-          if (!config.screen.image.enabled) {
-            try {
-              const text = await monitor.getScreenCapture().captureText({
-                paneId: message.data.paneId,
-                lines: lineCount,
-                joinLines: config.screen.joinLines,
-                includeAnsi: config.screen.ansi,
-                altScreen: config.screen.altScreen,
-                alternateOn: target.alternateOn,
-              });
-              const response = buildTextResponse({
-                paneId: message.data.paneId,
-                lineCount,
-                screen: text.screen,
-                alternateOn: text.alternateOn,
-                truncated: text.truncated,
-                cursor: message.data.cursor,
-                fallbackReason: "image_disabled",
-              });
-              sendWs(ws, buildEnvelope("screen.response", response, reqId));
-              return;
-            } catch {
-              sendWs(
-                ws,
-                buildEnvelope(
-                  "screen.response",
-                  {
-                    ok: false,
-                    paneId: message.data.paneId,
-                    mode: "text",
-                    capturedAt: nowIso(),
-                    error: buildError("INTERNAL", "screen capture failed"),
-                  } as ScreenResponse,
-                  reqId,
-                ),
-              );
-              return;
-            }
-          }
-          const imageResult = await captureTerminalScreen(target.paneTty, {
-            paneId: message.data.paneId,
-            tmux: config.tmux,
-            cropPane: config.screen.image.cropPane,
-            backend: config.screen.image.backend,
-          });
-          if (imageResult) {
-            sendWs(
-              ws,
-              buildEnvelope(
-                "screen.response",
-                {
-                  ok: true,
-                  paneId: message.data.paneId,
-                  mode: "image",
-                  capturedAt: nowIso(),
-                  imageBase64: imageResult.imageBase64,
-                  cropped: imageResult.cropped,
-                } as ScreenResponse,
-                reqId,
-              ),
-            );
-            return;
-          }
-          try {
-            const text = await monitor.getScreenCapture().captureText({
-              paneId: message.data.paneId,
-              lines: lineCount,
-              joinLines: config.screen.joinLines,
-              includeAnsi: config.screen.ansi,
-              altScreen: config.screen.altScreen,
-              alternateOn: target.alternateOn,
-            });
-            const response = buildTextResponse({
-              paneId: message.data.paneId,
-              lineCount,
-              screen: text.screen,
-              alternateOn: text.alternateOn,
-              truncated: text.truncated,
-              cursor: message.data.cursor,
-              fallbackReason: "image_failed",
-            });
-            sendWs(ws, buildEnvelope("screen.response", response, reqId));
-            return;
-          } catch {
-            sendWs(
-              ws,
-              buildEnvelope(
-                "screen.response",
-                {
-                  ok: false,
-                  paneId: message.data.paneId,
-                  mode: "text",
-                  capturedAt: nowIso(),
-                  error: buildError("INTERNAL", "screen capture failed"),
-                } as ScreenResponse,
-                reqId,
-              ),
-            );
-            return;
-          }
-        }
-
-        try {
-          const text = await monitor.getScreenCapture().captureText({
-            paneId: message.data.paneId,
-            lines: lineCount,
-            joinLines: config.screen.joinLines,
-            includeAnsi: config.screen.ansi,
-            altScreen: config.screen.altScreen,
-            alternateOn: target.alternateOn,
-          });
-          const response = buildTextResponse({
-            paneId: message.data.paneId,
-            lineCount,
-            screen: text.screen,
-            alternateOn: text.alternateOn,
-            truncated: text.truncated,
-            cursor: message.data.cursor,
-          });
-          sendWs(ws, buildEnvelope("screen.response", response, reqId));
-          return;
-        } catch {
-          sendWs(
-            ws,
-            buildEnvelope(
-              "screen.response",
-              {
-                ok: false,
-                paneId: message.data.paneId,
-                mode: "text",
-                capturedAt: nowIso(),
-                error: buildError("INTERNAL", "screen capture failed"),
-              } as ScreenResponse,
-              reqId,
-            ),
-          );
-          return;
-        }
-      }
-
-      if (config.readOnly) {
-        sendWs(
-          ws,
-          buildEnvelope(
-            "command.response",
-            { ok: false, error: buildError("READ_ONLY", "read-only mode") },
-            reqId,
-          ),
-        );
+        await handleScreenRequest({
+          config,
+          monitor,
+          message,
+          reqId,
+          target,
+          screenLimiter,
+          buildTextResponse: screenCache.buildTextResponse,
+          send: (payload) => sendWs(ws, payload),
+        });
         return;
       }
 
-      const clientKey = "ws";
-      if (!sendLimiter(clientKey)) {
-        sendWs(
-          ws,
-          buildEnvelope(
-            "command.response",
-            { ok: false, error: buildError("RATE_LIMIT", "rate limited") },
-            reqId,
-          ),
-        );
-        return;
-      }
-
-      if (message.type === "send.text") {
-        const result = await tmuxActions.sendText(
-          message.data.paneId,
-          message.data.text,
-          message.data.enter ?? true,
-        );
-        if (result.ok) {
-          monitor.recordInput(message.data.paneId);
-        }
-        sendWs(ws, buildEnvelope("command.response", result as CommandResponse, reqId));
-        return;
-      }
-
-      if (message.type === "send.keys") {
-        const result = await tmuxActions.sendKeys(message.data.paneId, message.data.keys);
-        if (result.ok) {
-          monitor.recordInput(message.data.paneId);
-        }
-        sendWs(ws, buildEnvelope("command.response", result as CommandResponse, reqId));
-        return;
-      }
+      await handleCommandMessage({
+        config,
+        monitor,
+        tmuxActions,
+        message,
+        reqId,
+        sendLimiter,
+        send: (payload) => sendWs(ws, payload),
+      });
     },
   }));
 
