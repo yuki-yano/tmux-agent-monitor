@@ -3,6 +3,9 @@ import AnsiToHtml from "ansi-to-html";
 
 import type { Theme } from "@/lib/theme";
 
+import { applyClaudeDiffMask, buildClaudeDiffMask, renderClaudeDiffLine } from "./ansi-claude-diff";
+import { blendRgb, contrastRatio, luminance, parseColor } from "./ansi-colors";
+
 const catppuccinLatteAnsi: Record<number, string> = {
   0: "#4c4f69",
   1: "#d20f39",
@@ -84,65 +87,23 @@ const isHighlightCorrectionEnabled = (
   return value !== false;
 };
 
+const shouldApplyHighlight = (options: RenderAnsiOptions | undefined, agent: "codex" | "claude") =>
+  options?.agent === agent && isHighlightCorrectionEnabled(options, agent);
+
 const needsLowContrastAdjust = (html: string, theme: Theme, options?: RenderAnsiOptions) => {
-  if (options?.agent !== "claude") {
-    return false;
-  }
-  if (!isHighlightCorrectionEnabled(options, "claude")) {
-    return false;
-  }
-  if (html.includes("background-color")) {
-    return true;
-  }
+  if (!shouldApplyHighlight(options, "claude")) return false;
+  if (html.includes("background-color")) return true;
   return theme === "latte" && html.includes("color:");
 };
 
-const parseColor = (value: string | null): [number, number, number] | null => {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (trimmed.startsWith("#")) {
-    const hex = trimmed.slice(1);
-    if (hex.length === 3) {
-      const rHex = hex[0] ?? "0";
-      const gHex = hex[1] ?? "0";
-      const bHex = hex[2] ?? "0";
-      const r = Number.parseInt(rHex + rHex, 16);
-      const g = Number.parseInt(gHex + gHex, 16);
-      const b = Number.parseInt(bHex + bHex, 16);
-      return [r, g, b];
-    }
-    if (hex.length === 6) {
-      const r = Number.parseInt(hex.slice(0, 2) || "00", 16);
-      const g = Number.parseInt(hex.slice(2, 4) || "00", 16);
-      const b = Number.parseInt(hex.slice(4, 6) || "00", 16);
-      return [r, g, b];
-    }
-    return null;
+const resolveInlineColor = (node: HTMLElement): ReturnType<typeof parseColor> => {
+  let current: HTMLElement | null = node;
+  while (current) {
+    const parsed = parseColor(current.style.color);
+    if (parsed) return parsed;
+    current = current.parentElement;
   }
-  const rgbMatch = trimmed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-  if (!rgbMatch) return null;
-  return [
-    Number.parseInt(rgbMatch[1] ?? "0", 10),
-    Number.parseInt(rgbMatch[2] ?? "0", 10),
-    Number.parseInt(rgbMatch[3] ?? "0", 10),
-  ];
-};
-
-const luminance = (rgb: [number, number, number]) => {
-  const toLinear = (value: number) => {
-    const channel = value / 255;
-    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
-  };
-  const [r, g, b] = rgb;
-  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-};
-
-const contrastRatio = (a: [number, number, number], b: [number, number, number]) => {
-  const lumA = luminance(a);
-  const lumB = luminance(b);
-  const lighter = Math.max(lumA, lumB);
-  const darker = Math.min(lumA, lumB);
-  return (lighter + 0.05) / (darker + 0.05);
+  return null;
 };
 
 const adjustLowContrast = (html: string, theme: Theme, options?: RenderAnsiOptions): string => {
@@ -175,7 +136,7 @@ const adjustLowContrast = (html: string, theme: Theme, options?: RenderAnsiOptio
       return;
     }
     if (!bg) return;
-    const fg = parseColor(node.style.color);
+    const fg = resolveInlineColor(node);
     if (!fg) return;
     if (contrastRatio(bg, fg) >= 3) return;
     node.style.backgroundColor = fallback.background;
@@ -199,6 +160,17 @@ const ensureLineContent = (html: string): string => {
   return `${html}${placeholder}`;
 };
 
+const normalizeLineBreaks = (text: string) => text.replace(/\r\n/g, "\n");
+
+const splitLines = (text: string) => normalizeLineBreaks(text).split("\n");
+
+const convertAnsiLineToHtml = (
+  converter: AnsiToHtml,
+  line: string,
+  theme: Theme,
+  options?: RenderAnsiOptions,
+) => adjustLowContrast(converter.toHtml(line), theme, options);
+
 const ansiEscapePattern = new RegExp(String.raw`\u001b\[[0-?]*[ -/]*[@-~]`, "g");
 const stripAnsi = (value: string) => value.replace(ansiEscapePattern, "");
 
@@ -212,26 +184,12 @@ const extractBackgroundColor = (html: string): string | null => {
 
 const codexLatteBackgroundTarget = "#e6e9ef";
 
-const blendRgb = (
-  from: [number, number, number],
-  to: [number, number, number],
-  ratio: number,
-): [number, number, number] => {
-  const safeRatio = Math.min(1, Math.max(0, ratio));
-  const mix = (value: number, target: number) =>
-    Math.round(value * (1 - safeRatio) + target * safeRatio);
-  return [mix(from[0], to[0]), mix(from[1], to[1]), mix(from[2], to[2])];
-};
-
 const normalizeCodexBackgrounds = (
   html: string,
   theme: Theme,
   options?: RenderAnsiOptions,
 ): string => {
-  if (options?.agent !== "codex" || theme !== "latte") {
-    return html;
-  }
-  if (!isHighlightCorrectionEnabled(options, "codex")) {
+  if (theme !== "latte" || !shouldApplyHighlight(options, "codex")) {
     return html;
   }
   if (!html.includes("background-color")) {
@@ -308,151 +266,40 @@ const applyAdjacentBackgroundPadding = (htmlLines: string[], rawLines: string[])
   });
 };
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const lineNumberPattern = /^(\s*\d+)(\s+(?:[|:\u2502]\s*)?)(.*)$/;
-
-const parseLineNumberParts = (line: string) => {
-  const match = line.match(lineNumberPattern);
-  if (!match) return null;
-  return {
-    prefix: `${match[1] ?? ""}${match[2] ?? ""}`,
-    rest: match[3] ?? "",
-  };
+const renderDefaultLines = (
+  lines: string[],
+  converter: AnsiToHtml,
+  theme: Theme,
+  options: RenderAnsiOptions | undefined,
+  shouldApplyCodexHighlight: boolean,
+): string[] => {
+  const rendered = lines.map((line) => {
+    const html = convertAnsiLineToHtml(converter, line, theme, options);
+    const normalized = shouldApplyCodexHighlight
+      ? normalizeCodexBackgrounds(html, theme, options)
+      : html;
+    return ensureLineContent(normalized);
+  });
+  return shouldApplyCodexHighlight ? applyAdjacentBackgroundPadding(rendered, lines) : rendered;
 };
 
-const leadingWhitespaceLength = (line: string) => {
-  const match = line.match(/^\s+/);
-  return match?.[0]?.length ?? 0;
-};
-
-const hasDiffMarker = (line: string) => {
-  const parsed = parseLineNumberParts(line);
-  if (!parsed) return false;
-  const restTrimmed = parsed.rest.trimStart();
-  return restTrimmed.startsWith("+") || restTrimmed.startsWith("-");
-};
-
-const isDiffCandidateLine = (line: string) => {
-  if (parseLineNumberParts(line)) return true;
-  const trimmed = line.trim();
-  return trimmed === "" || trimmed === "...";
-};
-
-const buildClaudeDiffMask = (lines: string[]) => {
-  const mask = new Array(lines.length).fill(false);
-  let segmentStart = -1;
-  let segmentIndent: number | null = null;
-  const closeSegment = (end: number) => {
-    if (segmentStart < 0) return;
-    let include = false;
-    for (let i = segmentStart; i <= end; i += 1) {
-      if (hasDiffMarker(lines[i] ?? "")) {
-        include = true;
-        break;
-      }
-    }
-    if (include) {
-      for (let i = segmentStart; i <= end; i += 1) {
-        mask[i] = true;
-      }
-    }
-    segmentStart = -1;
-    segmentIndent = null;
-  };
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i] ?? "";
-    const parsed = parseLineNumberParts(line);
-    if (parsed) {
-      if (segmentStart === -1) {
-        segmentStart = i;
-      }
-      segmentIndent = Math.max(1, leadingWhitespaceLength(line));
-      continue;
-    }
-    if (isDiffCandidateLine(line)) {
-      if (segmentStart === -1) {
-        segmentStart = i;
-      }
-      continue;
-    }
-    const isContinuation =
-      segmentStart !== -1 &&
-      segmentIndent !== null &&
-      leadingWhitespaceLength(line) >= segmentIndent;
-    if (isContinuation) {
-      continue;
-    }
-    closeSegment(i - 1);
-  }
-  closeSegment(lines.length - 1);
-  return mask;
-};
-
-const renderClaudeDiffLine = (plainLine: string) => {
-  const parsed = parseLineNumberParts(plainLine);
-  if (!parsed) {
-    return `<span class="text-latte-text">${escapeHtml(plainLine)}</span>`;
-  }
-  const restTrimmed = parsed.rest.trimStart();
-  const restClass = restTrimmed.startsWith("+")
-    ? "text-latte-green"
-    : restTrimmed.startsWith("-")
-      ? "text-latte-red"
-      : "text-latte-text";
-  return `<span class="text-latte-text">${escapeHtml(parsed.prefix)}</span><span class="${restClass}">${escapeHtml(parsed.rest)}</span>`;
-};
-
-const renderClaudeContinuationLine = (
-  plainLine: string,
-  marker: "add" | "remove" | "neutral" | null,
-) => {
-  const className =
-    marker === "add"
-      ? "text-latte-green"
-      : marker === "remove"
-        ? "text-latte-red"
-        : "text-latte-text";
-  return `<span class="${className}">${escapeHtml(plainLine)}</span>`;
-};
-
-const resolveClaudeMarker = (plainLine: string): "add" | "remove" | "neutral" => {
-  const parsed = parseLineNumberParts(plainLine);
-  if (!parsed) return "neutral";
-  const restTrimmed = parsed.rest.trimStart();
-  if (restTrimmed.startsWith("+")) return "add";
-  if (restTrimmed.startsWith("-")) return "remove";
-  return "neutral";
-};
-
-const isClaudeNeutralLine = (plainLine: string) => {
-  const trimmed = plainLine.trim();
-  return trimmed === "" || trimmed === "...";
-};
-
-const applyClaudeDiffMask = (plainLines: string[], diffMask: boolean[]) => {
-  let currentMarker: "add" | "remove" | "neutral" | null = null;
-  return plainLines.map((plainLine, index) => {
+const renderClaudeLines = (
+  lines: string[],
+  converter: AnsiToHtml,
+  theme: Theme,
+  options: RenderAnsiOptions | undefined,
+): string[] => {
+  const plainLines = lines.map(stripAnsi);
+  const diffMask = buildClaudeDiffMask(plainLines);
+  const maskedHtml = applyClaudeDiffMask(plainLines, diffMask);
+  return lines.map((line, index) => {
     if (!diffMask[index]) {
-      currentMarker = null;
-      return null;
+      const html = convertAnsiLineToHtml(converter, line, theme, options);
+      return ensureLineContent(html);
     }
-    const parsed = parseLineNumberParts(plainLine);
-    if (parsed) {
-      currentMarker = resolveClaudeMarker(plainLine);
-      return renderClaudeDiffLine(plainLine);
-    }
-    if (isClaudeNeutralLine(plainLine)) {
-      currentMarker = "neutral";
-      return renderClaudeContinuationLine(plainLine, "neutral");
-    }
-    return renderClaudeContinuationLine(plainLine, currentMarker);
+    const plainLine = plainLines[index] ?? "";
+    const masked = maskedHtml[index] ?? renderClaudeDiffLine(plainLine);
+    return ensureLineContent(masked);
   });
 };
 
@@ -467,35 +314,11 @@ export const renderAnsiLines = (
   options?: RenderAnsiOptions,
 ): string[] => {
   const converter = buildAnsiToHtml(theme, { stream: false });
-  const normalized = text.replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
-  const shouldApplyCodexHighlight =
-    options?.agent === "codex" && isHighlightCorrectionEnabled(options, "codex");
-  const shouldApplyClaudeHighlight =
-    options?.agent === "claude" && isHighlightCorrectionEnabled(options, "claude");
-  const shouldPadBackground = shouldApplyCodexHighlight;
+  const lines = splitLines(text);
+  const shouldApplyCodexHighlight = shouldApplyHighlight(options, "codex");
+  const shouldApplyClaudeHighlight = shouldApplyHighlight(options, "claude");
   if (!shouldApplyClaudeHighlight) {
-    const rendered = lines.map((line) => {
-      const html = converter.toHtml(line);
-      const adjusted = adjustLowContrast(html, theme, options);
-      const normalized = shouldApplyCodexHighlight
-        ? normalizeCodexBackgrounds(adjusted, theme, options)
-        : adjusted;
-      return ensureLineContent(normalized);
-    });
-    return shouldPadBackground ? applyAdjacentBackgroundPadding(rendered, lines) : rendered;
+    return renderDefaultLines(lines, converter, theme, options, shouldApplyCodexHighlight);
   }
-  const plainLines = lines.map(stripAnsi);
-  const diffMask = buildClaudeDiffMask(plainLines);
-  const maskedHtml = applyClaudeDiffMask(plainLines, diffMask);
-  const rendered = lines.map((line, index) => {
-    if (!diffMask[index]) {
-      const html = converter.toHtml(line);
-      return ensureLineContent(adjustLowContrast(html, theme, options));
-    }
-    const plainLine = plainLines[index] ?? "";
-    const masked = maskedHtml[index] ?? renderClaudeDiffLine(plainLine);
-    return ensureLineContent(masked);
-  });
-  return rendered;
+  return renderClaudeLines(lines, converter, theme, options);
 };

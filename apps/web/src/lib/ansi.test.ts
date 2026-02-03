@@ -111,4 +111,39 @@ describe("renderAnsiLines", () => {
     expect(lines[0]).toContain("background-color");
     expect(lines[1]).not.toContain("background-color");
   });
+
+  it("inserts a placeholder for empty lines", () => {
+    const lines = renderAnsiLines(["foo", "", "bar"].join("\n"), "latte", {
+      agent: "unknown",
+    });
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain("&#x200B;");
+  });
+
+  it("inserts a placeholder when HTML has only tags", () => {
+    const lines = renderAnsiLines("\u001b[31m\u001b[0m", "latte", {
+      agent: "unknown",
+    });
+    expect(lines[0]).toContain("&#x200B;");
+  });
+
+  it("normalizes CRLF line endings", () => {
+    const lines = renderAnsiLines("foo\r\nbar", "latte", { agent: "unknown" });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toContain("\r");
+  });
+
+  it("applies low-contrast fallback for mocha theme", () => {
+    const text = "\u001b[30;40mfoo\u001b[0m";
+    const lines = renderAnsiLines(text, "mocha", { agent: "claude" });
+    expect(lines[0]).toMatch(/background-color:\s*(#313244|rgb\(49,\s*50,\s*68\))/);
+    expect(lines[0]).toMatch(/color:\s*(#cdd6f4|rgb\(205,\s*214,\s*244\))/);
+  });
+
+  it("does not normalize codex backgrounds outside latte theme", () => {
+    const text = "\u001b[40mfoo\u001b[0m";
+    const lines = renderAnsiLines(text, "mocha", { agent: "codex" });
+    expect(lines[0]).toContain("background-color");
+    expect(lines[0]).not.toContain("rgb(230, 233, 239)");
+  });
 });
