@@ -9,7 +9,15 @@ import {
   Pin,
   Send,
 } from "lucide-react";
-import type { FormEvent, KeyboardEvent, ReactNode, RefObject } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 
 import { Button, Callout, IconButton, ModifierToggle, PillToggle, Toolbar } from "@/components/ui";
 
@@ -29,6 +37,9 @@ type ControlsPanelProps = {
   onSendKey: (key: string) => void;
   onTouchSession: () => void;
 };
+
+const PROMPT_SCALE = 0.875;
+const PROMPT_SCALE_INVERSE = 1 / PROMPT_SCALE;
 
 const KeyButton = ({
   label,
@@ -72,11 +83,18 @@ export const ControlsPanel = ({
   onTouchSession,
 }: ControlsPanelProps) => {
   const tabLabel = "Tab";
+  const inputWrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const handleTextareaInput = (e: FormEvent<HTMLTextAreaElement>) => {
-    const textarea = e.currentTarget;
+  const syncPromptHeight = useCallback((textarea: HTMLTextAreaElement) => {
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
+    if (inputWrapperRef.current) {
+      inputWrapperRef.current.style.height = `${textarea.scrollHeight * PROMPT_SCALE}px`;
+    }
+  }, []);
+
+  const handleTextareaInput = (e: FormEvent<HTMLTextAreaElement>) => {
+    syncPromptHeight(e.currentTarget);
   };
 
   const handleTextareaKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -89,9 +107,15 @@ export const ControlsPanel = ({
   const handleSendText = () => {
     onSendText();
     if (textInputRef.current) {
-      textInputRef.current.style.height = "auto";
+      syncPromptHeight(textInputRef.current);
     }
   };
+
+  useEffect(() => {
+    if (textInputRef.current) {
+      syncPromptHeight(textInputRef.current);
+    }
+  }, [syncPromptHeight, textInputRef]);
 
   if (readOnly) {
     return (
@@ -104,16 +128,22 @@ export const ControlsPanel = ({
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-4">
-        <textarea
-          placeholder="Type a prompt…"
-          ref={textInputRef}
-          rows={2}
-          disabled={!connected}
-          onInput={handleTextareaInput}
-          onKeyDown={handleTextareaKeyDown}
-          style={{ zoom: 0.875 }}
-          className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 bg-latte-base/70 min-h-[64px] min-w-0 flex-1 resize-none rounded-2xl border px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
-        />
+        <div ref={inputWrapperRef} className="min-h-[56px] min-w-0 flex-1 overflow-hidden">
+          <textarea
+            placeholder="Type a prompt…"
+            ref={textInputRef}
+            rows={2}
+            disabled={!connected}
+            onInput={handleTextareaInput}
+            onKeyDown={handleTextareaKeyDown}
+            style={{
+              transform: `scale(${PROMPT_SCALE})`,
+              transformOrigin: "top left",
+              width: `${PROMPT_SCALE_INVERSE * 100}%`,
+            }}
+            className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 bg-latte-base/70 min-h-[64px] w-full resize-none rounded-2xl border px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </div>
         <div className="flex shrink-0 items-center self-center">
           <Button onClick={handleSendText} aria-label="Send" className="h-11 w-11 p-0">
             <Send className="h-4 w-4" />
