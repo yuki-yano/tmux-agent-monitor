@@ -4,6 +4,7 @@ export type AgentType = "codex" | "claude" | "unknown";
 
 const agentHintPattern = /codex|claude/i;
 const editorCommandNames = new Set(["vim", "nvim", "vi", "gvim", "nvim-qt", "neovim"]);
+const shellCommandNames = new Set(["bash", "zsh", "fish"]);
 
 export const buildAgent = (hint: string): AgentType => {
   const normalized = hint.toLowerCase();
@@ -35,6 +36,16 @@ export const editorCommandHasAgentArg = (command: string | null | undefined) => 
   }
   const rest = tokens.join(" ");
   return rest.length > 0 && agentHintPattern.test(rest);
+};
+
+export const isShellCommand = (command: string | null | undefined) => {
+  if (!command) return false;
+  const trimmed = command.trim();
+  if (!trimmed) return false;
+  const token = trimmed.split(/\s+/)[0] ?? "";
+  if (!token) return false;
+  const binary = path.basename(token).replace(/^-+/, "");
+  return shellCommandNames.has(binary);
 };
 
 export const hasAgentHint = (value: string | null | undefined) =>

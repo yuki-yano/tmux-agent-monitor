@@ -56,7 +56,7 @@ describe("buildSessionDetail", () => {
       customTitle: "Custom",
       repoRoot: null,
     });
-    expect(detail.title).toBe("project:1");
+    expect(detail.title).toBe("project:w0:1");
     expect(detail.customTitle).toBe("Custom");
   });
 
@@ -76,7 +76,7 @@ describe("buildSessionDetail", () => {
       customTitle: null,
       repoRoot: null,
     });
-    expect(detail.title).toBe("main:1");
+    expect(detail.title).toBe("main:w0:1");
     expect(detail.pipeConflict).toBe(true);
     expect(detail.lastMessage).toBe("msg");
   });

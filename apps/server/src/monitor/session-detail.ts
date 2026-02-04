@@ -25,9 +25,10 @@ export const resolveSessionTitle = (
   currentPath: string | null,
   paneId: string,
   sessionName: string,
+  windowIndex: number,
 ) => {
   const normalized = normalizeTitle(paneTitle);
-  const defaultTitle = buildDefaultTitle(currentPath, paneId, sessionName);
+  const defaultTitle = buildDefaultTitle(currentPath, paneId, sessionName, windowIndex);
   return normalized && !hostCandidates.has(normalized) ? normalized : defaultTitle;
 };
 
@@ -69,7 +70,13 @@ export const buildSessionDetail = ({
   currentCommand: pane.currentCommand,
   currentPath: pane.currentPath,
   paneTty: pane.paneTty,
-  title: resolveSessionTitle(pane.paneTitle, pane.currentPath, pane.paneId, pane.sessionName),
+  title: resolveSessionTitle(
+    pane.paneTitle,
+    pane.currentPath,
+    pane.paneId,
+    pane.sessionName,
+    pane.windowIndex,
+  ),
   customTitle,
   repoRoot,
   agent,

@@ -6,6 +6,7 @@ export const sessionStateSchema = z.enum([
   "RUNNING",
   "WAITING_INPUT",
   "WAITING_PERMISSION",
+  "SHELL",
   "UNKNOWN",
 ]);
 

@@ -1,6 +1,7 @@
 import type { AgentMonitorConfig, PaneMeta, SessionDetail } from "@vde-monitor/shared";
 
 import { resolvePaneAgent } from "./agent-resolver.js";
+import { isShellCommand } from "./agent-resolver-utils.js";
 import type { PaneLogManager } from "./pane-log-manager.js";
 import { updatePaneOutputState } from "./pane-output.js";
 import type { PaneRuntimeState } from "./pane-state.js";
@@ -52,16 +53,29 @@ export const processPane = async (
     panePid: pane.panePid,
     paneTty: pane.paneTty,
   });
-  const monitored = !ignore && agent !== "unknown";
-  if (!monitored) {
+  if (ignore) {
     return null;
   }
 
-  const { pipeAttached, pipeConflict, logPath } = await paneLogManager.preparePaneLogging({
-    paneId: pane.paneId,
-    panePipe: pane.panePipe,
-    pipeTagValue: pane.pipeTagValue,
-  });
+  const isShell =
+    agent === "unknown" &&
+    (isShellCommand(pane.paneStartCommand) || isShellCommand(pane.currentCommand));
+  const isAgent = agent !== "unknown";
+
+  let pipeAttached = false;
+  let pipeConflict = false;
+  let logPath = paneLogManager.getPaneLogPath(pane.paneId);
+
+  if (isAgent) {
+    const logging = await paneLogManager.preparePaneLogging({
+      paneId: pane.paneId,
+      panePipe: pane.panePipe,
+      pipeTagValue: pane.pipeTagValue,
+    });
+    pipeAttached = logging.pipeAttached;
+    pipeConflict = logging.pipeConflict;
+    logPath = logging.logPath;
+  }
 
   const paneState = paneStates.get(pane.paneId);
   const { outputAt, hookState } = await updateOutput({
@@ -82,13 +96,18 @@ export const processPane = async (
   });
 
   const restoredSession = applyRestored(pane.paneId);
-  const estimated = estimateState({
-    agent,
-    paneDead: pane.paneDead,
-    lastOutputAt: outputAt,
-    hookState,
-    activity: config.activity,
-  });
+  const estimated = isAgent
+    ? estimateState({
+        agent,
+        paneDead: pane.paneDead,
+        lastOutputAt: outputAt,
+        hookState,
+        activity: config.activity,
+      })
+    : {
+        state: isShell ? ("SHELL" as const) : ("UNKNOWN" as const),
+        reason: isShell ? "shell" : "process:unknown",
+      };
   const finalState = restoredSession ? restoredSession.state : estimated.state;
   const finalReason = restoredSession ? "restored" : estimated.reason;
 

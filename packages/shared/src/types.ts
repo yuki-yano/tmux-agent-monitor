@@ -1,4 +1,9 @@
-export type SessionStateValue = "RUNNING" | "WAITING_INPUT" | "WAITING_PERMISSION" | "UNKNOWN";
+export type SessionStateValue =
+  | "RUNNING"
+  | "WAITING_INPUT"
+  | "WAITING_PERMISSION"
+  | "SHELL"
+  | "UNKNOWN";
 
 export type AllowedKey =
   | "Enter"

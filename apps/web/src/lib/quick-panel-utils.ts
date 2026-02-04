@@ -40,6 +40,13 @@ export const statusIconMeta = (state: string): IconMeta => {
         wrap: "border-latte-green/40 bg-latte-green/10",
         label: "RUNNING",
       };
+    case "SHELL":
+      return {
+        icon: Circle,
+        className: "text-latte-blue",
+        wrap: "border-latte-blue/40 bg-latte-blue/10",
+        label: "SHELL",
+      };
     default:
       return {
         icon: Circle,

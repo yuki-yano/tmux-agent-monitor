@@ -6,6 +6,8 @@ export const stateTone = (state: string) => {
       return "waiting";
     case "WAITING_PERMISSION":
       return "permission";
+    case "SHELL":
+      return "shell";
     default:
       return "unknown";
   }

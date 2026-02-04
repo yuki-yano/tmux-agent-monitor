@@ -22,8 +22,8 @@ describe("monitor-utils", () => {
   });
 
   it("builds default titles from path or session name", () => {
-    expect(buildDefaultTitle("/Users/test/project", "1", "main")).toBe("project:1");
-    expect(buildDefaultTitle(null, "2", "dev")).toBe("dev:2");
+    expect(buildDefaultTitle("/Users/test/project", "1", "main", 2)).toBe("project:w2:1");
+    expect(buildDefaultTitle(null, "2", "dev", 0)).toBe("dev:w0:2");
   });
 
   it("derives hook state from events", () => {

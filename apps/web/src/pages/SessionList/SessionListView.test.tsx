@@ -101,7 +101,15 @@ const buildSession = (overrides: Partial<SessionSummary> = {}): SessionSummary =
   ...overrides,
 });
 
-const filterValues = ["ALL", "RUNNING", "WAITING_INPUT", "WAITING_PERMISSION", "UNKNOWN"] as const;
+const filterValues = [
+  "ALL",
+  "AGENT",
+  "RUNNING",
+  "WAITING_INPUT",
+  "WAITING_PERMISSION",
+  "SHELL",
+  "UNKNOWN",
+] as const;
 
 const filterOptions = filterValues.map((value) => ({
   value,
@@ -116,7 +124,7 @@ const createViewProps = (overrides: Partial<SessionListViewProps> = {}): Session
     sessions,
     groups,
     quickPanelGroups,
-    filter: "ALL",
+    filter: "AGENT",
     filterOptions,
     connected: true,
     connectionIssue: null,
@@ -193,6 +201,14 @@ describe("SessionListView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "WAITING INPUT" }));
     expect(onFilterChange).toHaveBeenCalledWith("WAITING_INPUT");
+  });
+
+  it("includes agent and shell status in filter buttons", () => {
+    const props = createViewProps();
+    renderWithRouter(<SessionListView {...props} />);
+
+    expect(screen.getByRole("button", { name: "AGENT" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "SHELL" })).toBeTruthy();
   });
 
   it("renders repo group and session card", () => {

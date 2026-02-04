@@ -31,14 +31,15 @@ export const buildDefaultTitle = (
   currentPath: string | null,
   paneId: string,
   sessionName: string,
+  windowIndex: number,
 ) => {
   if (!currentPath) {
-    return `${sessionName}:${paneId}`;
+    return `${sessionName}:w${windowIndex}:${paneId}`;
   }
   const normalized = currentPath.replace(/\/+$/, "");
   const parts = normalized.split("/");
   const name = parts.pop() || "unknown";
-  return `${name}:${paneId}`;
+  return `${name}:w${windowIndex}:${paneId}`;
 };
 
 export const hostCandidates = (() => {

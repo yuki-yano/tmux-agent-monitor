@@ -4,7 +4,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
-  tone?: "running" | "waiting" | "permission" | "done" | "unknown" | "codex" | "claude";
+  tone?: "running" | "waiting" | "permission" | "shell" | "done" | "unknown" | "codex" | "claude";
   size?: "sm" | "md";
 };
 
@@ -15,6 +15,7 @@ const toneClass: Record<NonNullable<BadgeProps["tone"]>, string> = {
     "bg-latte-peach/20 text-latte-peach border-latte-peach/40 shadow-[0_0_8px_rgb(var(--ctp-peach)/0.25)]",
   permission:
     "bg-latte-red/25 text-latte-red border-latte-red/60 shadow-[0_0_20px_rgb(var(--ctp-red)/0.5)] animate-pulse-attention",
+  shell: "bg-latte-blue/15 text-latte-blue border-latte-blue/40",
   done: "bg-latte-blue/15 text-latte-blue border-latte-blue/40",
   unknown: "bg-latte-surface1 text-latte-overlay1 border-latte-overlay0/60",
   codex: "bg-latte-mauve/15 text-latte-mauve border-latte-mauve/40",
@@ -25,6 +26,7 @@ const toneIcon: Record<NonNullable<BadgeProps["tone"]>, (className: string) => R
   running: (className) => <Loader2 className={cn("animate-spin", className)} />,
   waiting: (className) => <Clock className={className} />,
   permission: (className) => <AlertTriangle className={cn("animate-bounce-subtle", className)} />,
+  shell: (className) => <Circle className={className} />,
   done: (className) => <CheckCircle className={className} />,
   unknown: (className) => <Circle className={className} />,
   codex: (className) => <Sparkles className={className} />,

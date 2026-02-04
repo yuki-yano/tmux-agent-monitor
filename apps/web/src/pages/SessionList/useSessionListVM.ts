@@ -10,13 +10,15 @@ import { useTheme } from "@/state/theme-context";
 
 import { useSessionLogs } from "../SessionDetail/hooks/useSessionLogs";
 
-type SessionListFilter = "ALL" | SessionStateValue;
+type SessionListFilter = "ALL" | "AGENT" | SessionStateValue;
 
 const FILTER_VALUES: SessionListFilter[] = [
   "ALL",
+  "AGENT",
   "RUNNING",
   "WAITING_INPUT",
   "WAITING_PERMISSION",
+  "SHELL",
   "UNKNOWN",
 ];
 
@@ -36,21 +38,24 @@ export const useSessionListVM = () => {
     requestScreen,
     highlightCorrections,
   } = useSessions();
-  const [filter, setFilter] = useState<SessionListFilter>("ALL");
+  const [filter, setFilter] = useState<SessionListFilter>("AGENT");
   const nowMs = useNowMs();
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const { sidebarWidth, handlePointerDown } = useSidebarWidth();
 
-  const filtered = useMemo(() => {
+  const visibleSessions = useMemo(() => {
     return sessions.filter((session) => {
-      const matchesFilter = filter === "ALL" || session.state === filter;
-      return matchesFilter;
+      if (filter === "ALL") return true;
+      if (filter === "AGENT") {
+        return session.state !== "SHELL" && session.state !== "UNKNOWN";
+      }
+      return session.state === filter;
     });
   }, [filter, sessions]);
 
-  const groups = useMemo(() => buildSessionGroups(filtered), [filtered]);
-  const quickPanelGroups = useMemo(() => buildSessionGroups(sessions), [sessions]);
+  const groups = useMemo(() => buildSessionGroups(visibleSessions), [visibleSessions]);
+  const quickPanelGroups = useMemo(() => buildSessionGroups(visibleSessions), [visibleSessions]);
 
   const {
     quickPanelOpen,

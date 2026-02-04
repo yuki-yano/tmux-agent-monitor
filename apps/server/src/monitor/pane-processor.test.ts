@@ -51,13 +51,23 @@ const baseConfig = {
 } as AgentMonitorConfig;
 
 describe("processPane", () => {
-  it("returns null when pane is not monitored", async () => {
+  it("returns detail for shell panes and skips pipe logging", async () => {
+    const preparePaneLogging = vi.fn(async () => ({
+      pipeAttached: false,
+      pipeConflict: false,
+      logPath: "/tmp/log",
+    }));
+    const getPaneLogPath = vi.fn(() => "/tmp/log");
+    const updatePaneOutputState = vi.fn(async () => ({
+      outputAt: "2024-01-01T00:00:00.000Z",
+      hookState: null,
+    }));
     const result = await processPane(
       {
         pane: basePane,
         config: baseConfig,
         paneStates: { get: () => createPaneState() },
-        paneLogManager: createPaneLogManager(),
+        paneLogManager: createPaneLogManager({ preparePaneLogging, getPaneLogPath }),
         capturePaneFingerprint: vi.fn(async () => null),
         applyRestored: vi.fn(() => null),
         getCustomTitle: vi.fn(() => null),
@@ -65,10 +75,16 @@ describe("processPane", () => {
       },
       {
         resolvePaneAgent: vi.fn(async () => ({ agent: "unknown" as const, ignore: false })),
+        updatePaneOutputState,
       },
     );
 
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result?.state).toBe("SHELL");
+    expect(preparePaneLogging).not.toHaveBeenCalled();
+    expect(updatePaneOutputState).toHaveBeenCalledWith(
+      expect.objectContaining({ logPath: "/tmp/log" }),
+    );
   });
 
   it("returns detail with restored state when available", async () => {
