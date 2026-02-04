@@ -1,10 +1,5 @@
-import {
-  type AgentMonitorConfig,
-  type ApiError,
-  compileDangerPatterns,
-  isDangerousCommand,
-} from "@vde-monitor/shared";
-import { allowedKeys } from "@vde-monitor/shared";
+import type { AgentMonitorConfig, ApiError, RawItem } from "@vde-monitor/shared";
+import { allowedKeys, compileDangerPatterns, isDangerousCommand } from "@vde-monitor/shared";
 import type { TmuxAdapter } from "@vde-monitor/tmux";
 
 const buildError = (code: ApiError["code"], message: string): ApiError => ({
@@ -19,6 +14,20 @@ export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConf
   const enterKey = config.input.enterKey || "C-m";
   const enterDelayMs = config.input.enterDelayMs ?? 0;
   const bracketedPaste = (value: string) => `\u001b[200~${value}\u001b[201~`;
+
+  const sendRawText = async (paneId: string, value: string) => {
+    if (!value) return { ok: true as const };
+    if (value.length > config.input.maxTextLength) {
+      return { ok: false, error: buildError("INVALID_PAYLOAD", "text too long") };
+    }
+    const normalized = value.replace(/\r\n/g, "\n");
+    const payload = normalized.includes("\n") ? bracketedPaste(normalized) : normalized;
+    const result = await adapter.run(["send-keys", "-l", "-t", paneId, payload]);
+    if (result.exitCode !== 0) {
+      return { ok: false, error: buildError("INTERNAL", result.stderr || "send-keys failed") };
+    }
+    return { ok: true as const };
+  };
 
   const sendText = async (paneId: string, text: string, enter = true) => {
     if (!text || text.trim().length === 0) {
@@ -113,5 +122,39 @@ export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConf
     return { ok: true as const };
   };
 
-  return { sendText, sendKeys };
+  const sendRaw = async (paneId: string, items: RawItem[], unsafe = false) => {
+    if (!items || items.length === 0) {
+      return { ok: false, error: buildError("INVALID_PAYLOAD", "items are required") };
+    }
+    const allowed = new Set(allowedKeys);
+    if (items.some((item) => item.kind === "key" && !allowed.has(item.value as never))) {
+      return { ok: false, error: buildError("INVALID_PAYLOAD", "invalid keys") };
+    }
+    if (!unsafe && items.some((item) => item.kind === "key" && dangerKeys.has(item.value))) {
+      return { ok: false, error: buildError("DANGEROUS_COMMAND", "dangerous key blocked") };
+    }
+
+    await adapter.run([
+      "if-shell",
+      "-t",
+      paneId,
+      '[ "#{pane_in_mode}" = "1" ]',
+      `copy-mode -q -t ${paneId}`,
+    ]);
+
+    for (const item of items) {
+      if (item.kind === "text") {
+        const result = await sendRawText(paneId, item.value);
+        if (!result.ok) return result;
+        continue;
+      }
+      const result = await adapter.run(["send-keys", "-t", paneId, item.value]);
+      if (result.exitCode !== 0) {
+        return { ok: false, error: buildError("INTERNAL", result.stderr || "send-keys failed") };
+      }
+    }
+    return { ok: true as const };
+  };
+
+  return { sendText, sendKeys, sendRaw };
 };

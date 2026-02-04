@@ -51,12 +51,21 @@ export const SessionDetailView = ({
   shiftHeld,
   ctrlHeld,
   controlsOpen,
+  rawMode,
+  allowDangerKeys,
   handleSendKey,
   handleSendText,
+  handleRawBeforeInput,
+  handleRawInput,
+  handleRawKeyDown,
+  handleRawCompositionStart,
+  handleRawCompositionEnd,
   toggleAutoEnter,
   toggleControls,
   toggleShift,
   toggleCtrl,
+  toggleRawMode,
+  toggleAllowDangerKeys,
   handleTouchSession,
   diffSummary,
   diffError,
@@ -188,6 +197,8 @@ export const SessionDetailView = ({
                 onAtBottomChange={handleAtBottomChange}
                 onScrollToBottom={scrollToBottom}
                 onUserScrollStateChange={handleUserScrollStateChange}
+                rawMode={rawMode}
+                allowDangerKeys={allowDangerKeys}
                 controls={
                   <ControlsPanel
                     readOnly={readOnly}
@@ -198,11 +209,20 @@ export const SessionDetailView = ({
                     onToggleAutoEnter={toggleAutoEnter}
                     controlsOpen={controlsOpen}
                     onToggleControls={toggleControls}
+                    rawMode={rawMode}
+                    onToggleRawMode={toggleRawMode}
+                    allowDangerKeys={allowDangerKeys}
+                    onToggleAllowDangerKeys={toggleAllowDangerKeys}
                     shiftHeld={shiftHeld}
                     onToggleShift={toggleShift}
                     ctrlHeld={ctrlHeld}
                     onToggleCtrl={toggleCtrl}
                     onSendKey={handleSendKey}
+                    onRawBeforeInput={handleRawBeforeInput}
+                    onRawInput={handleRawInput}
+                    onRawKeyDown={handleRawKeyDown}
+                    onRawCompositionStart={handleRawCompositionStart}
+                    onRawCompositionEnd={handleRawCompositionEnd}
                     onTouchSession={handleTouchSession}
                   />
                 }

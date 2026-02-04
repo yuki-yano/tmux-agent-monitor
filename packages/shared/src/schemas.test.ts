@@ -26,6 +26,7 @@ describe("wsClientMessageSchema", () => {
         paneId: "%1",
         keys: [
           "BTab",
+          "C-a",
           "C-Tab",
           "C-BTab",
           "C-Left",
@@ -35,6 +36,23 @@ describe("wsClientMessageSchema", () => {
           "C-Enter",
           "C-Escape",
         ],
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts send.raw with text and key items", () => {
+    const result = wsClientMessageSchema.safeParse({
+      type: "send.raw",
+      ts: "2025-01-01T00:00:00Z",
+      data: {
+        paneId: "%1",
+        items: [
+          { kind: "text", value: "ls -la" },
+          { kind: "key", value: "Enter" },
+          { kind: "key", value: "C-d" },
+        ],
+        unsafe: true,
       },
     });
     expect(result.success).toBe(true);
@@ -362,6 +380,16 @@ describe("claudeHookEventSchema", () => {
 });
 
 describe("configSchema", () => {
+  it("fills default raw rate limit when missing", () => {
+    const rateLimit: Partial<typeof defaultConfig.rateLimit> = { ...defaultConfig.rateLimit };
+    delete rateLimit.raw;
+    const result = configSchema.safeParse({ ...defaultConfig, rateLimit });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rateLimit.raw).toEqual(defaultConfig.rateLimit.raw);
+    }
+  });
+
   it("accepts supported image backends", () => {
     const backends = ["alacritty", "terminal", "iterm", "wezterm", "ghostty"] as const;
     for (const backend of backends) {

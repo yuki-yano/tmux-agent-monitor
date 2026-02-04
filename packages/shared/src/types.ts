@@ -23,12 +23,33 @@ export type AllowedKey =
   | "End"
   | "PageUp"
   | "PageDown"
+  | "C-a"
+  | "C-b"
   | "C-c"
   | "C-d"
+  | "C-e"
+  | "C-f"
+  | "C-g"
+  | "C-h"
+  | "C-i"
+  | "C-j"
+  | "C-k"
+  | "C-l"
+  | "C-m"
+  | "C-n"
+  | "C-o"
+  | "C-p"
+  | "C-q"
+  | "C-r"
+  | "C-s"
+  | "C-t"
+  | "C-u"
+  | "C-v"
+  | "C-w"
+  | "C-x"
+  | "C-y"
   | "C-z"
   | "C-\\"
-  | "C-u"
-  | "C-k"
   | "F1"
   | "F2"
   | "F3"
@@ -41,6 +62,8 @@ export type AllowedKey =
   | "F10"
   | "F11"
   | "F12";
+
+export type RawItem = { kind: "text"; value: string } | { kind: "key"; value: AllowedKey };
 
 export type SessionSummary = {
   paneId: string;
@@ -211,6 +234,7 @@ export type WsClientMessage =
     >
   | WsEnvelope<"send.text", { paneId: string; text: string; enter?: boolean }>
   | WsEnvelope<"send.keys", { paneId: string; keys: AllowedKey[] }>
+  | WsEnvelope<"send.raw", { paneId: string; items: RawItem[]; unsafe?: boolean }>
   | WsEnvelope<"client.ping", Record<string, never>>;
 
 export type WsServerMessage =
@@ -262,6 +286,7 @@ export type AgentMonitorConfigBase = {
   rateLimit: {
     send: { windowMs: number; max: number };
     screen: { windowMs: number; max: number };
+    raw: { windowMs: number; max: number };
   };
   dangerKeys: string[];
   dangerCommandPatterns: string[];

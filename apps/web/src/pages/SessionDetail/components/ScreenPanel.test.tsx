@@ -22,6 +22,37 @@ vi.mock("react-virtuoso", () => ({
 }));
 
 describe("ScreenPanel", () => {
+  const baseRawProps = { rawMode: false, allowDangerKeys: false };
+
+  it("shows raw indicator when enabled", () => {
+    render(
+      <ScreenPanel
+        mode="text"
+        onModeChange={vi.fn()}
+        connected
+        onRefresh={vi.fn()}
+        fallbackReason={null}
+        error={null}
+        isScreenLoading={false}
+        imageBase64={null}
+        screenLines={["line"]}
+        virtuosoRef={{ current: null }}
+        scrollerRef={{ current: null }}
+        isAtBottom
+        forceFollow={false}
+        onAtBottomChange={vi.fn()}
+        onScrollToBottom={vi.fn()}
+        onUserScrollStateChange={vi.fn()}
+        rawMode
+        allowDangerKeys
+        controls={null}
+      />,
+    );
+
+    expect(screen.getByText("Raw")).toBeTruthy();
+    expect(screen.getByText("Unsafe")).toBeTruthy();
+  });
+
   it("renders fallback and error messages", () => {
     render(
       <ScreenPanel
@@ -41,6 +72,7 @@ describe("ScreenPanel", () => {
         onAtBottomChange={vi.fn()}
         onScrollToBottom={vi.fn()}
         onUserScrollStateChange={vi.fn()}
+        {...baseRawProps}
         controls={null}
       />,
     );
@@ -68,6 +100,7 @@ describe("ScreenPanel", () => {
         onAtBottomChange={vi.fn()}
         onScrollToBottom={vi.fn()}
         onUserScrollStateChange={vi.fn()}
+        {...baseRawProps}
         controls={null}
       />,
     );
@@ -96,6 +129,7 @@ describe("ScreenPanel", () => {
         onAtBottomChange={vi.fn()}
         onScrollToBottom={onScrollToBottom}
         onUserScrollStateChange={vi.fn()}
+        {...baseRawProps}
         controls={null}
       />,
     );
@@ -124,6 +158,7 @@ describe("ScreenPanel", () => {
         onAtBottomChange={vi.fn()}
         onScrollToBottom={vi.fn()}
         onUserScrollStateChange={vi.fn()}
+        {...baseRawProps}
         controls={null}
       />,
     );
@@ -158,6 +193,7 @@ describe("ScreenPanel", () => {
         onAtBottomChange={vi.fn()}
         onScrollToBottom={vi.fn()}
         onUserScrollStateChange={vi.fn()}
+        {...baseRawProps}
         controls={null}
       />,
     );

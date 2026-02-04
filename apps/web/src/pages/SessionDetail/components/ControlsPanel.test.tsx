@@ -5,7 +5,20 @@ import { describe, expect, it, vi } from "vitest";
 import { ControlsPanel } from "./ControlsPanel";
 
 describe("ControlsPanel", () => {
+  const buildRawProps = () => ({
+    rawMode: false,
+    onToggleRawMode: vi.fn(),
+    allowDangerKeys: false,
+    onToggleAllowDangerKeys: vi.fn(),
+    onRawBeforeInput: vi.fn(),
+    onRawInput: vi.fn(),
+    onRawKeyDown: vi.fn(),
+    onRawCompositionStart: vi.fn(),
+    onRawCompositionEnd: vi.fn(),
+  });
+
   it("renders read-only banner when disabled", () => {
+    const rawProps = buildRawProps();
     render(
       <ControlsPanel
         readOnly
@@ -16,6 +29,7 @@ describe("ControlsPanel", () => {
         onToggleAutoEnter={vi.fn()}
         controlsOpen={false}
         onToggleControls={vi.fn()}
+        {...rawProps}
         shiftHeld={false}
         onToggleShift={vi.fn()}
         ctrlHeld={false}
@@ -34,6 +48,7 @@ describe("ControlsPanel", () => {
     const onSendText = vi.fn();
     const onToggleControls = vi.fn();
     const onTouchSession = vi.fn();
+    const rawProps = buildRawProps();
     render(
       <ControlsPanel
         readOnly={false}
@@ -44,6 +59,7 @@ describe("ControlsPanel", () => {
         onToggleAutoEnter={vi.fn()}
         controlsOpen={false}
         onToggleControls={onToggleControls}
+        {...rawProps}
         shiftHeld={false}
         onToggleShift={vi.fn()}
         ctrlHeld={false}
@@ -65,6 +81,7 @@ describe("ControlsPanel", () => {
 
   it("sends prompt on ctrl/meta enter", () => {
     const onSendText = vi.fn();
+    const rawProps = buildRawProps();
     render(
       <ControlsPanel
         readOnly={false}
@@ -75,6 +92,7 @@ describe("ControlsPanel", () => {
         onToggleAutoEnter={vi.fn()}
         controlsOpen={false}
         onToggleControls={vi.fn()}
+        {...rawProps}
         shiftHeld={false}
         onToggleShift={vi.fn()}
         ctrlHeld={false}
@@ -95,6 +113,7 @@ describe("ControlsPanel", () => {
     const onSendKey = vi.fn();
     const onToggleShift = vi.fn();
     const onToggleCtrl = vi.fn();
+    const rawProps = buildRawProps();
     render(
       <ControlsPanel
         readOnly={false}
@@ -105,6 +124,7 @@ describe("ControlsPanel", () => {
         onToggleAutoEnter={vi.fn()}
         controlsOpen
         onToggleControls={vi.fn()}
+        {...rawProps}
         shiftHeld={false}
         onToggleShift={onToggleShift}
         ctrlHeld={false}

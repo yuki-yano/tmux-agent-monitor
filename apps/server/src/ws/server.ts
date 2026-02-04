@@ -39,6 +39,7 @@ export const createWsServer = ({
     config.rateLimit.screen.windowMs,
     config.rateLimit.screen.max,
   );
+  const rawLimiter = createRateLimiter(config.rateLimit.raw.windowMs, config.rateLimit.raw.max);
 
   const screenCache = createScreenCache();
 
@@ -173,6 +174,7 @@ export const createWsServer = ({
         message,
         reqId,
         sendLimiter,
+        rawLimiter,
         send: (payload) => sendWs(ws, payload),
       });
     },

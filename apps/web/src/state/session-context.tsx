@@ -6,6 +6,7 @@ import type {
   DiffFile,
   DiffSummary,
   HighlightCorrectionConfig,
+  RawItem,
   ScreenResponse,
   SessionDetail,
   SessionSummary,
@@ -54,6 +55,7 @@ type SessionContextValue = {
   ) => Promise<ScreenResponse>;
   sendText: (paneId: string, text: string, enter?: boolean) => Promise<CommandResponse>;
   sendKeys: (paneId: string, keys: string[]) => Promise<CommandResponse>;
+  sendRaw: (paneId: string, items: RawItem[], unsafe?: boolean) => Promise<CommandResponse>;
   touchSession: (paneId: string) => Promise<void>;
   updateSessionTitle: (paneId: string, title: string | null) => Promise<void>;
   getSessionDetail: (paneId: string) => SessionDetail | null;
@@ -86,7 +88,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     setHighlightCorrections((prev) => ({ ...prev, ...nextHighlight }));
   }, []);
 
-  const { connected, reconnect, requestScreen, sendText, sendKeys } = useSessionSocket({
+  const { connected, reconnect, requestScreen, sendText, sendKeys, sendRaw } = useSessionSocket({
     token,
     onSessionsSnapshot: applySessionsSnapshot,
     onSessionUpdated: updateSession,
@@ -138,6 +140,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         requestScreen,
         sendText,
         sendKeys,
+        sendRaw,
         touchSession,
         updateSessionTitle,
         getSessionDetail,

@@ -13,7 +13,7 @@ import { buildEnvelope } from "./envelope.js";
 type Monitor = ReturnType<typeof createSessionMonitor>;
 type TmuxActions = ReturnType<typeof createTmuxActions>;
 type CommandLimiter = (key: string) => boolean;
-type CommandMessage = Extract<WsClientMessage, { type: "send.text" | "send.keys" }>;
+type CommandMessage = Extract<WsClientMessage, { type: "send.text" | "send.keys" | "send.raw" }>;
 type SendMessage = (message: WsServerMessage) => void;
 
 type CommandHandlerArgs = {
@@ -23,6 +23,7 @@ type CommandHandlerArgs = {
   message: CommandMessage;
   reqId?: string;
   sendLimiter: CommandLimiter;
+  rawLimiter: CommandLimiter;
   send: SendMessage;
 };
 
@@ -33,6 +34,7 @@ export const handleCommandMessage = async ({
   message,
   reqId,
   sendLimiter,
+  rawLimiter,
   send,
 }: CommandHandlerArgs) => {
   const sendResponse = (response: CommandResponse) => {
@@ -45,7 +47,8 @@ export const handleCommandMessage = async ({
   }
 
   const clientKey = "ws";
-  if (!sendLimiter(clientKey)) {
+  const limiter = message.type === "send.raw" ? rawLimiter : sendLimiter;
+  if (!limiter(clientKey)) {
     sendResponse({ ok: false, error: buildError("RATE_LIMIT", "rate limited") });
     return;
   }
@@ -65,6 +68,19 @@ export const handleCommandMessage = async ({
 
   if (message.type === "send.keys") {
     const result = await tmuxActions.sendKeys(message.data.paneId, message.data.keys);
+    if (result.ok) {
+      monitor.recordInput(message.data.paneId);
+    }
+    sendResponse(result as CommandResponse);
+    return;
+  }
+
+  if (message.type === "send.raw") {
+    const result = await tmuxActions.sendRaw(
+      message.data.paneId,
+      message.data.items,
+      message.data.unsafe ?? false,
+    );
     if (result.ok) {
       monitor.recordInput(message.data.paneId);
     }

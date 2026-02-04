@@ -1,4 +1,9 @@
-import type { CommandResponse, ScreenResponse, WsServerMessage } from "@vde-monitor/shared";
+import type {
+  CommandResponse,
+  RawItem,
+  ScreenResponse,
+  WsServerMessage,
+} from "@vde-monitor/shared";
 import { useCallback, useRef } from "react";
 
 type RequestHandler = {
@@ -105,10 +110,21 @@ export const useSessionSocketRequests = ({
     [sendRequest],
   );
 
+  const sendRaw = useCallback(
+    (paneId: string, items: RawItem[], unsafe = false) => {
+      return sendRequest({
+        type: "send.raw",
+        data: { paneId, items, unsafe },
+      }) as Promise<CommandResponse>;
+    },
+    [sendRequest],
+  );
+
   return {
     requestScreen,
     sendText,
     sendKeys,
+    sendRaw,
     handleResponseMessage,
     rejectAllPending,
   };

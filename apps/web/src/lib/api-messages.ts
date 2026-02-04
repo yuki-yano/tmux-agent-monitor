@@ -11,6 +11,7 @@ export const API_ERROR_MESSAGES = {
   screenRequestFailed: "Screen request failed",
   sendKeys: "Failed to send keys",
   sendText: "Failed to send text",
+  sendRaw: "Failed to send raw input",
   diffSummary: "Failed to load diff summary",
   diffFile: "Failed to load diff file",
   commitLog: "Failed to load commit log",

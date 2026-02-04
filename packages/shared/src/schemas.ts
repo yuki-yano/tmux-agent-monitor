@@ -54,6 +54,11 @@ export const commandResponseSchema = z.object({
   error: apiErrorSchema.optional(),
 });
 
+const rawItemSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("text"), value: z.string() }),
+  z.object({ kind: z.literal("key"), value: allowedKeySchema }),
+]);
+
 export const sessionSummarySchema = z.object({
   paneId: z.string(),
   sessionName: z.string(),
@@ -130,6 +135,10 @@ export const wsClientMessageSchema = z.discriminatedUnion("type", [
     z.literal("send.keys"),
     z.object({ paneId: z.string(), keys: z.array(allowedKeySchema) }),
   ),
+  wsEnvelopeSchema(
+    z.literal("send.raw"),
+    z.object({ paneId: z.string(), items: z.array(rawItemSchema), unsafe: z.boolean().optional() }),
+  ),
   wsEnvelopeSchema(z.literal("client.ping"), z.object({}).strict()),
 ]);
 
@@ -179,6 +188,7 @@ export const configSchema = z.object({
   rateLimit: z.object({
     send: z.object({ windowMs: z.number(), max: z.number() }),
     screen: z.object({ windowMs: z.number(), max: z.number() }),
+    raw: z.object({ windowMs: z.number(), max: z.number() }).default({ windowMs: 1000, max: 200 }),
   }),
   dangerKeys: z.array(z.string()),
   dangerCommandPatterns: z.array(z.string()),

@@ -43,6 +43,8 @@ type ScreenPanelProps = {
   onAtBottomChange: (value: boolean) => void;
   onScrollToBottom: (behavior: "auto" | "smooth") => void;
   onUserScrollStateChange: (value: boolean) => void;
+  rawMode: boolean;
+  allowDangerKeys: boolean;
   controls: ReactNode;
 };
 
@@ -75,6 +77,8 @@ export const ScreenPanel = ({
   onAtBottomChange,
   onScrollToBottom,
   onUserScrollStateChange,
+  rawMode,
+  allowDangerKeys,
   controls,
 }: ScreenPanelProps) => {
   const { scrollerRef: stableScrollerRef, handleRangeChanged } = useStableVirtuosoScroll({
@@ -145,15 +149,27 @@ export const ScreenPanel = ({
             </TabsList>
           </Tabs>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRefresh}
-          aria-label={connected ? "Refresh screen" : "Reconnect"}
-        >
-          <RefreshCw className="h-4 w-4" />
-          <span className="sr-only">{connected ? "Refresh" : "Reconnect"}</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {rawMode && (
+            <div className="border-latte-lavender/60 bg-latte-lavender/10 text-latte-lavender inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] shadow-[inset_0_0_0_1px_rgba(114,135,253,0.12)]">
+              Raw
+              {allowDangerKeys && (
+                <span className="bg-latte-red/20 text-latte-red rounded-full px-2 py-0.5 text-[9px] tracking-[0.24em]">
+                  Unsafe
+                </span>
+              )}
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRefresh}
+            aria-label={connected ? "Refresh screen" : "Reconnect"}
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="sr-only">{connected ? "Refresh" : "Reconnect"}</span>
+          </Button>
+        </div>
       </Toolbar>
       {fallbackReason && (
         <Callout tone="warning" size="xs">

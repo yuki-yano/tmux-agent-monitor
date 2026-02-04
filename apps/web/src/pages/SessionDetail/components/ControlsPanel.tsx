@@ -10,6 +10,7 @@ import {
   Send,
 } from "lucide-react";
 import {
+  type CompositionEvent,
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
@@ -30,11 +31,20 @@ type ControlsPanelProps = {
   onToggleAutoEnter: () => void;
   controlsOpen: boolean;
   onToggleControls: () => void;
+  rawMode: boolean;
+  onToggleRawMode: () => void;
+  allowDangerKeys: boolean;
+  onToggleAllowDangerKeys: () => void;
   shiftHeld: boolean;
   onToggleShift: () => void;
   ctrlHeld: boolean;
   onToggleCtrl: () => void;
   onSendKey: (key: string) => void;
+  onRawBeforeInput: (event: FormEvent<HTMLTextAreaElement>) => void;
+  onRawInput: (event: FormEvent<HTMLTextAreaElement>) => void;
+  onRawKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onRawCompositionStart: (event: CompositionEvent<HTMLTextAreaElement>) => void;
+  onRawCompositionEnd: (event: CompositionEvent<HTMLTextAreaElement>) => void;
   onTouchSession: () => void;
 };
 
@@ -58,7 +68,7 @@ const KeyButton = ({
     variant={danger ? "danger" : "ghost"}
     size="sm"
     onClick={onClick}
-    className="min-w-[70px]"
+    className="h-8 min-w-[44px] px-2 text-[10px] tracking-[0.12em]"
     disabled={disabled}
     aria-label={ariaLabel}
   >
@@ -75,15 +85,25 @@ export const ControlsPanel = ({
   onToggleAutoEnter,
   controlsOpen,
   onToggleControls,
+  rawMode,
+  onToggleRawMode,
+  allowDangerKeys,
+  onToggleAllowDangerKeys,
   shiftHeld,
   onToggleShift,
   ctrlHeld,
   onToggleCtrl,
   onSendKey,
+  onRawBeforeInput,
+  onRawInput,
+  onRawKeyDown,
+  onRawCompositionStart,
+  onRawCompositionEnd,
   onTouchSession,
 }: ControlsPanelProps) => {
   const tabLabel = "Tab";
   const inputWrapperRef = useRef<HTMLDivElement | null>(null);
+  const placeholder = rawMode ? "Raw input (sent immediately)..." : "Type a prompt…";
 
   const syncPromptHeight = useCallback((textarea: HTMLTextAreaElement) => {
     textarea.style.height = "auto";
@@ -94,10 +114,17 @@ export const ControlsPanel = ({
   }, []);
 
   const handleTextareaInput = (e: FormEvent<HTMLTextAreaElement>) => {
+    if (rawMode) {
+      onRawInput(e);
+    }
     syncPromptHeight(e.currentTarget);
   };
 
   const handleTextareaKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (rawMode) {
+      onRawKeyDown(event);
+      return;
+    }
     if (event.key !== "Enter") return;
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
@@ -128,12 +155,24 @@ export const ControlsPanel = ({
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-4">
-        <div ref={inputWrapperRef} className="min-h-[56px] min-w-0 flex-1 overflow-hidden">
+        <div
+          ref={inputWrapperRef}
+          className={`border-latte-surface2/80 bg-latte-base/70 min-h-[56px] min-w-0 flex-1 overflow-hidden rounded-2xl border transition ${
+            rawMode
+              ? allowDangerKeys
+                ? "border-latte-red/70 bg-latte-base/80 shadow-[0_0_10px_rgb(var(--ctp-red)/0.32),0_0_22px_rgb(var(--ctp-red)/0.14)]"
+                : "border-latte-peach/70 bg-latte-base/80 shadow-[0_0_10px_rgb(var(--ctp-peach)/0.32),0_0_22px_rgb(var(--ctp-peach)/0.14)]"
+              : "focus-within:border-latte-lavender focus-within:ring-latte-lavender/30 focus-within:ring-2"
+          }`}
+        >
           <textarea
-            placeholder="Type a prompt…"
+            placeholder={placeholder}
             ref={textInputRef}
             rows={2}
             disabled={!connected}
+            onBeforeInput={onRawBeforeInput}
+            onCompositionStart={onRawCompositionStart}
+            onCompositionEnd={onRawCompositionEnd}
             onInput={handleTextareaInput}
             onKeyDown={handleTextareaKeyDown}
             style={{
@@ -141,28 +180,59 @@ export const ControlsPanel = ({
               transformOrigin: "top left",
               width: `${PROMPT_SCALE_INVERSE * 100}%`,
             }}
-            className="border-latte-surface2 text-latte-text focus:border-latte-lavender focus:ring-latte-lavender/30 bg-latte-base/70 min-h-[64px] w-full resize-none rounded-2xl border px-4 py-2 text-base shadow-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="text-latte-text min-h-[64px] w-full resize-none rounded-2xl bg-transparent px-4 py-2 text-base outline-none disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
         <div className="flex shrink-0 items-center self-center">
-          <Button onClick={handleSendText} aria-label="Send" className="h-11 w-11 p-0">
+          <Button
+            onClick={handleSendText}
+            aria-label="Send"
+            className="h-11 w-11 p-0"
+            disabled={rawMode || !connected}
+          >
             <Send className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>
         </div>
       </div>
       <Toolbar>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleControls}
-          aria-expanded={controlsOpen}
-          aria-controls="session-controls"
-          className="text-latte-subtext0 flex items-center gap-2 text-[11px] uppercase tracking-[0.32em]"
-        >
-          {controlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          Keys
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleControls}
+            aria-expanded={controlsOpen}
+            aria-controls="session-controls"
+            className="text-latte-subtext0 flex items-center gap-2 px-2.5 py-1 text-[10px] uppercase tracking-[0.3em]"
+          >
+            {controlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            Keys
+          </Button>
+          <PillToggle
+            type="button"
+            onClick={onToggleRawMode}
+            active={rawMode}
+            disabled={!connected}
+            title="Raw input mode"
+          >
+            Raw
+          </PillToggle>
+          {rawMode && (
+            <PillToggle
+              type="button"
+              onClick={onToggleAllowDangerKeys}
+              active={allowDangerKeys}
+              title="Allow dangerous keys"
+              className={
+                allowDangerKeys
+                  ? "border-latte-red/70 bg-latte-red/10 text-latte-red"
+                  : "border-latte-surface2/70 text-latte-subtext0"
+              }
+            >
+              Danger
+            </PillToggle>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <IconButton
             type="button"
@@ -178,6 +248,7 @@ export const ControlsPanel = ({
             type="button"
             onClick={onToggleAutoEnter}
             active={autoEnter}
+            disabled={rawMode}
             title="Auto-enter after send"
             className="group"
           >
@@ -190,13 +261,23 @@ export const ControlsPanel = ({
       {controlsOpen && (
         <div id="session-controls" className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <ModifierToggle type="button" onClick={onToggleShift} active={shiftHeld}>
+            <ModifierToggle
+              type="button"
+              onClick={onToggleShift}
+              active={shiftHeld}
+              className="px-2.5 py-1 text-[10px] tracking-[0.18em]"
+            >
               <span
                 className={`h-2 w-2 rounded-full transition-colors ${shiftHeld ? "bg-latte-lavender" : "bg-latte-surface2"}`}
               />
               Shift
             </ModifierToggle>
-            <ModifierToggle type="button" onClick={onToggleCtrl} active={ctrlHeld}>
+            <ModifierToggle
+              type="button"
+              onClick={onToggleCtrl}
+              active={ctrlHeld}
+              className="px-2.5 py-1 text-[10px] tracking-[0.18em]"
+            >
               <span
                 className={`h-2 w-2 rounded-full transition-colors ${ctrlHeld ? "bg-latte-lavender" : "bg-latte-surface2"}`}
               />

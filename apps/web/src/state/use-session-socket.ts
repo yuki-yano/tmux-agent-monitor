@@ -74,7 +74,7 @@ export const useSessionSocket = ({
     sendPing,
   });
 
-  const { requestScreen, sendText, sendKeys, handleResponseMessage, rejectAllPending } =
+  const { requestScreen, sendText, sendKeys, sendRaw, handleResponseMessage, rejectAllPending } =
     useSessionSocketRequests({
       connected,
       sendJsonMessage,
@@ -158,5 +158,6 @@ export const useSessionSocket = ({
     requestScreen,
     sendText,
     sendKeys,
+    sendRaw,
   };
 };

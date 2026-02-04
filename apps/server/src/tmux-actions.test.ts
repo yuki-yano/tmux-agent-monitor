@@ -95,3 +95,57 @@ describe("createTmuxActions.sendKeys", () => {
     expect(adapter.run).not.toHaveBeenCalled();
   });
 });
+
+describe("createTmuxActions.sendRaw", () => {
+  it("sends raw text and key items in order", async () => {
+    const adapter = {
+      run: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
+    };
+    const tmuxActions = createTmuxActions(adapter, { ...defaultConfig, token: "test-token" });
+
+    const result = await tmuxActions.sendRaw(
+      "%1",
+      [
+        { kind: "text", value: "ls" },
+        { kind: "key", value: "Enter" },
+      ],
+      false,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(adapter.run).toHaveBeenNthCalledWith(1, [
+      "if-shell",
+      "-t",
+      "%1",
+      '[ "#{pane_in_mode}" = "1" ]',
+      "copy-mode -q -t %1",
+    ]);
+    expect(adapter.run).toHaveBeenNthCalledWith(2, ["send-keys", "-l", "-t", "%1", "ls"]);
+    expect(adapter.run).toHaveBeenNthCalledWith(3, ["send-keys", "-t", "%1", "Enter"]);
+  });
+
+  it("blocks dangerous keys when unsafe is false", async () => {
+    const adapter = {
+      run: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
+    };
+    const tmuxActions = createTmuxActions(adapter, { ...defaultConfig, token: "test-token" });
+
+    const result = await tmuxActions.sendRaw("%1", [{ kind: "key", value: "C-c" }], false);
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("DANGEROUS_COMMAND");
+    expect(adapter.run).not.toHaveBeenCalled();
+  });
+
+  it("allows dangerous keys when unsafe is true", async () => {
+    const adapter = {
+      run: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
+    };
+    const tmuxActions = createTmuxActions(adapter, { ...defaultConfig, token: "test-token" });
+
+    const result = await tmuxActions.sendRaw("%1", [{ kind: "key", value: "C-c" }], true);
+
+    expect(result.ok).toBe(true);
+    expect(adapter.run).toHaveBeenCalledWith(["send-keys", "-t", "%1", "C-c"]);
+  });
+});
