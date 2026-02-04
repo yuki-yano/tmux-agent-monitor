@@ -42,6 +42,39 @@ export const handleScreenRequest = async ({
     send(buildEnvelope("screen.response", response, reqId));
   };
 
+  const captureTextAndRespond = async (
+    fallbackReason?: "image_failed" | "image_disabled",
+  ): Promise<void> => {
+    try {
+      const text = await monitor.getScreenCapture().captureText({
+        paneId: message.data.paneId,
+        lines: lineCount,
+        joinLines: config.screen.joinLines,
+        includeAnsi: config.screen.ansi,
+        altScreen: config.screen.altScreen,
+        alternateOn: target.alternateOn,
+      });
+      const response = buildTextResponse({
+        paneId: message.data.paneId,
+        lineCount,
+        screen: text.screen,
+        alternateOn: text.alternateOn,
+        truncated: text.truncated,
+        cursor: message.data.cursor,
+        fallbackReason,
+      });
+      sendResponse(response);
+    } catch {
+      sendResponse({
+        ok: false,
+        paneId: message.data.paneId,
+        mode: "text",
+        capturedAt: nowIso(),
+        error: buildError("INTERNAL", "screen capture failed"),
+      });
+    }
+  };
+
   const clientKey = "ws";
   if (!screenLimiter(clientKey)) {
     sendResponse({
@@ -62,36 +95,8 @@ export const handleScreenRequest = async ({
 
   if (mode === "image") {
     if (!config.screen.image.enabled) {
-      try {
-        const text = await monitor.getScreenCapture().captureText({
-          paneId: message.data.paneId,
-          lines: lineCount,
-          joinLines: config.screen.joinLines,
-          includeAnsi: config.screen.ansi,
-          altScreen: config.screen.altScreen,
-          alternateOn: target.alternateOn,
-        });
-        const response = buildTextResponse({
-          paneId: message.data.paneId,
-          lineCount,
-          screen: text.screen,
-          alternateOn: text.alternateOn,
-          truncated: text.truncated,
-          cursor: message.data.cursor,
-          fallbackReason: "image_disabled",
-        });
-        sendResponse(response);
-        return;
-      } catch {
-        sendResponse({
-          ok: false,
-          paneId: message.data.paneId,
-          mode: "text",
-          capturedAt: nowIso(),
-          error: buildError("INTERNAL", "screen capture failed"),
-        });
-        return;
-      }
+      await captureTextAndRespond("image_disabled");
+      return;
     }
     const imageResult = await captureTerminalScreen(target.paneTty, {
       paneId: message.data.paneId,
@@ -110,63 +115,9 @@ export const handleScreenRequest = async ({
       });
       return;
     }
-    try {
-      const text = await monitor.getScreenCapture().captureText({
-        paneId: message.data.paneId,
-        lines: lineCount,
-        joinLines: config.screen.joinLines,
-        includeAnsi: config.screen.ansi,
-        altScreen: config.screen.altScreen,
-        alternateOn: target.alternateOn,
-      });
-      const response = buildTextResponse({
-        paneId: message.data.paneId,
-        lineCount,
-        screen: text.screen,
-        alternateOn: text.alternateOn,
-        truncated: text.truncated,
-        cursor: message.data.cursor,
-        fallbackReason: "image_failed",
-      });
-      sendResponse(response);
-      return;
-    } catch {
-      sendResponse({
-        ok: false,
-        paneId: message.data.paneId,
-        mode: "text",
-        capturedAt: nowIso(),
-        error: buildError("INTERNAL", "screen capture failed"),
-      });
-      return;
-    }
+    await captureTextAndRespond("image_failed");
+    return;
   }
 
-  try {
-    const text = await monitor.getScreenCapture().captureText({
-      paneId: message.data.paneId,
-      lines: lineCount,
-      joinLines: config.screen.joinLines,
-      includeAnsi: config.screen.ansi,
-      altScreen: config.screen.altScreen,
-      alternateOn: target.alternateOn,
-    });
-    const response = buildTextResponse({
-      paneId: message.data.paneId,
-      lineCount,
-      screen: text.screen,
-      alternateOn: text.alternateOn,
-      truncated: text.truncated,
-      cursor: message.data.cursor,
-    });
-    sendResponse(response);
-  } catch {
-    sendResponse({
-      ok: false,
-      paneId: message.data.paneId,
-      mode: "text",
-      capturedAt: nowIso(),
-      error: buildError("INTERNAL", "screen capture failed"),
-    });
-  }
+  await captureTextAndRespond();
 };
