@@ -7,6 +7,10 @@ import { Badge, Card, LastInputPill, TagPill } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatRepoDirLabel, statusIconMeta } from "@/lib/quick-panel-utils";
 import type { SessionGroup } from "@/lib/session-group";
+import {
+  buildSessionWindowGroups,
+  type SessionWindowGroup,
+} from "@/pages/SessionList/session-window-group";
 import { useSessions } from "@/state/session-context";
 import { useTheme } from "@/state/theme-context";
 
@@ -36,7 +40,7 @@ type SessionSidebarProps = {
 };
 
 const surfaceLinkClass =
-  "border-latte-surface2/50 bg-latte-crust/60 focus-visible:ring-latte-lavender block w-full rounded-2xl border px-3 py-3 text-left transition-all duration-200 hover:shadow-[0_6px_14px_rgba(114,135,253,0.2)] focus-visible:outline-none focus-visible:ring-2";
+  "border-latte-surface2/70 bg-latte-base/70 focus-visible:ring-latte-lavender block w-full rounded-2xl border px-3 py-3 text-left transition-all duration-200 hover:border-latte-lavender/50 hover:bg-latte-mantle/70 hover:shadow-[0_8px_18px_-10px_rgba(114,135,253,0.35)] focus-visible:outline-none focus-visible:ring-2";
 
 const SidebarBackdrop = memo(() => (
   <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-none rounded-r-3xl">
@@ -241,17 +245,40 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
   const { connected, connectionIssue, requestScreen, highlightCorrections } = useSessions();
   const { resolvedTheme } = useTheme();
 
+  const agentGroups = useMemo(() => {
+    return sessionGroups
+      .map((group) => {
+        const agentSessions = group.sessions.filter((session) => session.agent !== "unknown");
+        const windowGroups = buildSessionWindowGroups(agentSessions);
+        if (windowGroups.length === 0) {
+          return null;
+        }
+        return {
+          repoRoot: group.repoRoot,
+          windowGroups,
+        };
+      })
+      .filter(
+        (
+          group,
+        ): group is { repoRoot: SessionGroup["repoRoot"]; windowGroups: SessionWindowGroup[] } =>
+          Boolean(group),
+      );
+  }, [sessionGroups]);
+
   const { totalSessions, repoCount, sessionIndex } = useMemo(() => {
     let total = 0;
     const map = new Map<string, SessionSummary>();
-    sessionGroups.forEach((group) => {
-      total += group.sessions.length;
-      group.sessions.forEach((session) => {
-        map.set(session.paneId, session);
+    agentGroups.forEach((group) => {
+      group.windowGroups.forEach((windowGroup) => {
+        total += windowGroup.sessions.length;
+        windowGroup.sessions.forEach((session) => {
+          map.set(session.paneId, session);
+        });
       });
     });
-    return { totalSessions: total, repoCount: sessionGroups.length, sessionIndex: map };
-  }, [sessionGroups]);
+    return { totalSessions: total, repoCount: agentGroups.length, sessionIndex: map };
+  }, [agentGroups]);
 
   const {
     preview,
@@ -289,45 +316,78 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
     >
       <SidebarBackdrop />
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-4">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-5">
         <SidebarHeader totalSessions={totalSessions} repoCount={repoCount} />
 
         <div
           className="custom-scrollbar -mr-2 min-h-0 flex-1 overflow-y-auto pr-2"
           onScroll={handleListScroll}
         >
-          <div className="space-y-4">
-            {sessionGroups.length === 0 && (
+          <div className="space-y-5">
+            {agentGroups.length === 0 && (
               <div className="border-latte-surface2/60 bg-latte-crust/50 text-latte-subtext0 rounded-2xl border px-3 py-4 text-center text-xs">
-                No sessions available.
+                No agent sessions available.
               </div>
             )}
-            {sessionGroups.map((group) => (
-              <div key={group.repoRoot ?? "no-repo"} className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <p className="text-latte-lavender/70 text-[11px] font-semibold uppercase tracking-wider">
-                    {formatRepoDirLabel(group.repoRoot)}
-                  </p>
-                  <TagPill tone="meta">{group.sessions.length} sessions</TagPill>
+            {agentGroups.map((group) => {
+              const groupTotalPanes = group.windowGroups.reduce(
+                (total, windowGroup) => total + windowGroup.sessions.length,
+                0,
+              );
+              return (
+                <div key={group.repoRoot ?? "no-repo"} className="space-y-3">
+                  <div className="border-latte-surface2/70 bg-latte-base/80 flex items-center justify-between gap-2 rounded-2xl border px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-latte-lavender/70 h-2 w-2 rounded-full shadow-[0_0_8px_rgba(114,135,253,0.5)]" />
+                      <span className="text-latte-lavender/80 text-[11px] font-semibold uppercase tracking-wider">
+                        {formatRepoDirLabel(group.repoRoot)}
+                      </span>
+                    </div>
+                    <TagPill tone="neutral" className="text-[9px]">
+                      {group.windowGroups.length} windows
+                    </TagPill>
+                  </div>
+                  <div className="space-y-4 pl-2.5">
+                    {group.windowGroups.map((windowGroup) => (
+                      <div
+                        key={`${windowGroup.sessionName}:${windowGroup.windowIndex}`}
+                        className="border-latte-surface2/60 bg-latte-crust/70 rounded-2xl border px-3 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-latte-text truncate text-[12px] font-semibold uppercase tracking-wider">
+                              Window {windowGroup.windowIndex}
+                            </p>
+                            <p className="text-latte-subtext0 truncate text-[10px]">
+                              Session {windowGroup.sessionName}
+                            </p>
+                          </div>
+                          <TagPill tone="neutral" className="text-[9px]">
+                            {windowGroup.sessions.length} / {groupTotalPanes} panes
+                          </TagPill>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {windowGroup.sessions.map((item) => (
+                            <SessionSidebarItem
+                              key={item.paneId}
+                              item={item}
+                              nowMs={nowMs}
+                              isCurrent={currentPaneId === item.paneId}
+                              onHoverStart={handleHoverStart}
+                              onHoverEnd={handleHoverEnd}
+                              onFocus={handleFocus}
+                              onBlur={handleBlur}
+                              onSelect={() => handleSelect(item.paneId)}
+                              registerItemRef={registerItemRef}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {group.sessions.map((item) => (
-                    <SessionSidebarItem
-                      key={item.paneId}
-                      item={item}
-                      nowMs={nowMs}
-                      isCurrent={currentPaneId === item.paneId}
-                      onHoverStart={handleHoverStart}
-                      onHoverEnd={handleHoverEnd}
-                      onFocus={handleFocus}
-                      onBlur={handleBlur}
-                      onSelect={() => handleSelect(item.paneId)}
-                      registerItemRef={registerItemRef}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

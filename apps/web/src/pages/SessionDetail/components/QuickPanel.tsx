@@ -120,7 +120,7 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
   return (
     <div className="fixed bottom-4 left-6 z-40 flex flex-col items-start gap-3">
       {open && (
-        <Card className="font-body animate-panel-enter border-latte-lavender/30 bg-latte-mantle/85 relative flex max-h-[85dvh] w-[calc(100vw-2rem)] max-w-[520px] flex-col overflow-hidden rounded-3xl border-2 p-4 shadow-[0_25px_80px_-20px_rgba(114,135,253,0.4),0_0_0_1px_rgba(114,135,253,0.15)] ring-1 ring-inset ring-white/10 backdrop-blur-xl">
+        <Card className="font-body animate-panel-enter border-latte-lavender/30 bg-latte-mantle/85 relative flex max-h-[75dvh] w-[calc(100vw-3.5rem)] max-w-[480px] flex-col overflow-hidden rounded-3xl border-2 p-4 shadow-[0_25px_80px_-20px_rgba(114,135,253,0.4),0_0_0_1px_rgba(114,135,253,0.15)] ring-1 ring-inset ring-white/10 backdrop-blur-xl">
           <IconButton
             type="button"
             onClick={onClose}
@@ -141,89 +141,103 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
                   No agent sessions available.
                 </div>
               )}
-              {agentGroups.map((group) => (
-                <div key={group.repoRoot ?? "no-repo"} className="space-y-3">
-                  <div className="border-latte-surface2/70 bg-latte-base/70 flex items-center justify-between gap-2 rounded-2xl border px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-latte-lavender/70 h-2 w-2 rounded-full shadow-[0_0_8px_rgba(114,135,253,0.5)]" />
-                      <span className="text-latte-lavender/80 text-[11px] font-semibold uppercase tracking-wider">
-                        {formatRepoDirLabel(group.repoRoot)}
-                      </span>
-                    </div>
-                    <TagPill tone="neutral" className="text-[9px]">
-                      {group.windowGroups.length} windows
-                    </TagPill>
-                  </div>
-                  <div className="border-latte-surface2/70 space-y-3 border-l-2 pl-2.5">
-                    {group.windowGroups.map((windowGroup) => (
-                      <div key={`${windowGroup.sessionName}:${windowGroup.windowIndex}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-latte-overlay1 truncate text-[11px] font-semibold uppercase tracking-wider">
-                              Window {windowGroup.windowIndex}
-                            </p>
-                            <p className="text-latte-subtext0 truncate text-[10px]">
-                              Session {windowGroup.sessionName}
-                            </p>
-                          </div>
-                          <TagPill tone="neutral" className="text-[9px]">
-                            {windowGroup.sessions.length} panes
-                          </TagPill>
-                        </div>
-                        <div className="mt-2 space-y-2">
-                          {windowGroup.sessions.map((item) => {
-                            const displayTitle = item.customTitle ?? item.title ?? item.sessionName;
-                            const lastInputTone = getLastInputTone(item.lastInputAt ?? null, nowMs);
-                            const statusMeta = statusIconMeta(item.state);
-                            const StatusIcon = statusMeta.icon;
-                            const isCurrent = currentPaneId === item.paneId;
-                            return (
-                              <SurfaceButton
-                                key={item.paneId}
-                                type="button"
-                                onClick={() => onOpenLogModal(item.paneId)}
-                                aria-current={isCurrent ? "true" : undefined}
-                                className={`flex items-center justify-between gap-3 ${
-                                  isCurrent
-                                    ? "border-latte-lavender/70 bg-latte-lavender/10 shadow-[0_0_0_1px_rgba(114,135,253,0.35),0_10px_20px_-12px_rgba(114,135,253,0.35)]"
-                                    : ""
-                                }`}
-                              >
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <span
-                                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${statusMeta.wrap}`}
-                                    aria-label={statusMeta.label}
-                                  >
-                                    <StatusIcon className={`h-3.5 w-3.5 ${statusMeta.className}`} />
-                                  </span>
-                                  <span className="text-latte-text min-w-0 truncate text-sm font-semibold">
-                                    {displayTitle}
-                                  </span>
-                                </div>
-                                <div className="flex shrink-0 items-center gap-2">
-                                  {isKnownAgent(item.agent) && (
-                                    <Badge tone={agentToneFor(item.agent)} size="sm">
-                                      {agentLabelFor(item.agent)}
-                                    </Badge>
-                                  )}
-                                  <LastInputPill
-                                    tone={lastInputTone}
-                                    label={<Clock className="h-3 w-3" />}
-                                    srLabel="Last input"
-                                    value={formatRelativeTime(item.lastInputAt, nowMs)}
-                                    size="xs"
-                                    showDot={false}
-                                  />
-                                </div>
-                              </SurfaceButton>
-                            );
-                          })}
-                        </div>
+              {agentGroups.map((group) => {
+                const groupTotalPanes = group.windowGroups.reduce(
+                  (total, windowGroup) => total + windowGroup.sessions.length,
+                  0,
+                );
+                return (
+                  <div key={group.repoRoot ?? "no-repo"} className="space-y-3">
+                    <div className="border-latte-surface2/70 bg-latte-base/70 flex items-center justify-between gap-2 rounded-2xl border px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-latte-lavender/70 h-2 w-2 rounded-full shadow-[0_0_8px_rgba(114,135,253,0.5)]" />
+                        <span className="text-latte-lavender/80 text-[11px] font-semibold uppercase tracking-wider">
+                          {formatRepoDirLabel(group.repoRoot)}
+                        </span>
                       </div>
-                    ))}
+                      <TagPill tone="neutral" className="text-[9px]">
+                        {group.windowGroups.length} windows
+                      </TagPill>
+                    </div>
+                    <div className="space-y-3 pl-2.5">
+                      {group.windowGroups.map((windowGroup, index) => (
+                        <div key={`${windowGroup.sessionName}:${windowGroup.windowIndex}`}>
+                          {index > 0 && <div className="border-latte-surface2/70 mb-3 border-t" />}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-latte-overlay1 truncate text-[11px] font-semibold uppercase tracking-wider">
+                                Window {windowGroup.windowIndex}
+                              </p>
+                              <p className="text-latte-subtext0 truncate text-[10px]">
+                                Session {windowGroup.sessionName}
+                              </p>
+                            </div>
+                            <TagPill tone="neutral" className="text-[9px]">
+                              {windowGroup.sessions.length} / {groupTotalPanes} panes
+                            </TagPill>
+                          </div>
+                          <div className="mt-2 space-y-2">
+                            {windowGroup.sessions.map((item) => {
+                              const displayTitle =
+                                item.customTitle ?? item.title ?? item.sessionName;
+                              const lastInputTone = getLastInputTone(
+                                item.lastInputAt ?? null,
+                                nowMs,
+                              );
+                              const statusMeta = statusIconMeta(item.state);
+                              const StatusIcon = statusMeta.icon;
+                              const isCurrent = currentPaneId === item.paneId;
+                              return (
+                                <SurfaceButton
+                                  key={item.paneId}
+                                  type="button"
+                                  onClick={() => onOpenLogModal(item.paneId)}
+                                  aria-current={isCurrent ? "true" : undefined}
+                                  className={`flex flex-col gap-1.5 ${
+                                    isCurrent
+                                      ? "border-latte-lavender/70 bg-latte-lavender/10 shadow-[0_0_0_1px_rgba(114,135,253,0.35),0_10px_20px_-12px_rgba(114,135,253,0.35)]"
+                                      : ""
+                                  }`}
+                                >
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span
+                                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${statusMeta.wrap}`}
+                                      aria-label={statusMeta.label}
+                                    >
+                                      <StatusIcon
+                                        className={`h-3.5 w-3.5 ${statusMeta.className}`}
+                                      />
+                                    </span>
+                                    <span className="text-latte-text min-w-0 truncate text-sm font-semibold">
+                                      {displayTitle}
+                                    </span>
+                                  </div>
+                                  <div className="flex w-full items-center gap-2">
+                                    {isKnownAgent(item.agent) && (
+                                      <Badge tone={agentToneFor(item.agent)} size="sm">
+                                        {agentLabelFor(item.agent)}
+                                      </Badge>
+                                    )}
+                                    <LastInputPill
+                                      tone={lastInputTone}
+                                      label={<Clock className="h-3 w-3" />}
+                                      srLabel="Last input"
+                                      value={formatRelativeTime(item.lastInputAt, nowMs)}
+                                      size="xs"
+                                      showDot={false}
+                                      className="ml-auto"
+                                    />
+                                  </div>
+                                </SurfaceButton>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </Card>

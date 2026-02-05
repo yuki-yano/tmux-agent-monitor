@@ -67,7 +67,7 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
               label={<Clock className="h-2.5 w-2.5" />}
               srLabel="Last input"
               value={formatRelativeTime(session.lastInputAt, nowMs)}
-              size="sm"
+              size="xs"
               showDot={false}
             />
           </span>

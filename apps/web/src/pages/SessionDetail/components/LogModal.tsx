@@ -150,7 +150,7 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
   if (!open || !session) return null;
 
   return (
-    <div className="fixed bottom-[76px] left-6 z-50 w-[calc(100vw-3rem)] max-w-[480px]">
+    <div className="fixed bottom-[76px] left-6 z-50 w-[calc(100vw-2rem)] max-w-[900px]">
       <Card className="font-body animate-panel-enter border-latte-lavender/30 bg-latte-mantle/85 relative rounded-3xl border-2 p-4 shadow-[0_25px_80px_-20px_rgba(114,135,253,0.4),0_0_0_1px_rgba(114,135,253,0.15)] ring-1 ring-inset ring-white/10 backdrop-blur-xl">
         <IconButton
           type="button"
@@ -208,7 +208,7 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
             rangeChanged={handleRangeChanged}
             components={{ Scroller: VirtuosoScroller, List: QuickLogList }}
             className="w-full min-w-0 max-w-full"
-            style={{ height: "72dvh", minHeight: "260px", maxHeight: "calc(100dvh - 10rem)" }}
+            style={{ height: "80dvh", minHeight: "280px", maxHeight: "calc(100dvh - 8rem)" }}
             itemContent={(_index, line) => (
               <div
                 className="min-h-4 whitespace-pre leading-5"

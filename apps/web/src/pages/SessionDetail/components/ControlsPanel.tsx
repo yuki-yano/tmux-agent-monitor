@@ -143,10 +143,12 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
   };
 
   const handleSendText = () => {
-    onSendText();
-    if (textInputRef.current) {
-      syncPromptHeight(textInputRef.current);
-    }
+    const result = onSendText();
+    void Promise.resolve(result).finally(() => {
+      if (textInputRef.current) {
+        syncPromptHeight(textInputRef.current);
+      }
+    });
   };
 
   useEffect(() => {
