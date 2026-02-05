@@ -30,6 +30,7 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
           session.state === "RUNNING" && "border-green-500/50 shadow-lg shadow-green-500/10",
           session.state === "WAITING_INPUT" && "border-amber-500/50 shadow-lg shadow-amber-500/10",
           session.state === "WAITING_PERMISSION" && "border-red-500/50 shadow-lg shadow-red-500/10",
+          session.state === "SHELL" && "border-blue-500/50 shadow-lg shadow-blue-500/10",
           session.state === "UNKNOWN" && "border-gray-400/50 shadow-lg shadow-gray-400/10",
         )}
       >
@@ -39,6 +40,7 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
             session.state === "RUNNING" && "from-green-500/5",
             session.state === "WAITING_INPUT" && "from-amber-500/5",
             session.state === "WAITING_PERMISSION" && "from-red-500/5",
+            session.state === "SHELL" && "from-blue-500/5",
             session.state === "UNKNOWN" && "from-gray-400/5",
           )}
         />

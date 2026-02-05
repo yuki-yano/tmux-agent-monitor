@@ -10,22 +10,22 @@ import { useTheme } from "@/state/theme-context";
 
 import { useSessionLogs } from "../SessionDetail/hooks/useSessionLogs";
 
-type SessionListFilter = "ALL" | "AGENT" | SessionStateValue;
+type SessionListFilter = "ALL" | "AGENT" | "SHELL" | "UNKNOWN";
 
-const FILTER_VALUES: SessionListFilter[] = [
-  "ALL",
-  "AGENT",
+const FILTER_VALUES: SessionListFilter[] = ["ALL", "AGENT", "SHELL", "UNKNOWN"];
+
+const FILTER_OPTIONS = FILTER_VALUES.map((value) => ({
+  value,
+  label: value.replace("_", " "),
+}));
+
+const STATUS_ORDER: SessionStateValue[] = [
   "RUNNING",
   "WAITING_INPUT",
   "WAITING_PERMISSION",
   "SHELL",
   "UNKNOWN",
 ];
-
-const FILTER_OPTIONS = FILTER_VALUES.map((value) => ({
-  value,
-  label: value.replace("_", " "),
-}));
 
 export const useSessionListVM = () => {
   const {
@@ -54,7 +54,27 @@ export const useSessionListVM = () => {
     });
   }, [filter, sessions]);
 
-  const groups = useMemo(() => buildSessionGroups(visibleSessions), [visibleSessions]);
+  const statusSections = useMemo(() => {
+    const buckets = new Map<SessionStateValue, typeof visibleSessions>();
+    STATUS_ORDER.forEach((state) => {
+      buckets.set(state, []);
+    });
+    visibleSessions.forEach((session) => {
+      const bucket = buckets.get(session.state);
+      if (bucket) {
+        bucket.push(session);
+      }
+    });
+    return STATUS_ORDER.map((state) => {
+      const sessionsForState = buckets.get(state) ?? [];
+      return {
+        state,
+        count: sessionsForState.length,
+        groups: buildSessionGroups(sessionsForState),
+      };
+    }).filter((section) => section.count > 0);
+  }, [visibleSessions]);
+
   const quickPanelGroups = useMemo(() => buildSessionGroups(visibleSessions), [visibleSessions]);
 
   const {
@@ -105,7 +125,8 @@ export const useSessionListVM = () => {
 
   return {
     sessions,
-    groups,
+    statusSections,
+    visibleSessionCount: visibleSessions.length,
     quickPanelGroups,
     filter,
     filterOptions: FILTER_OPTIONS,

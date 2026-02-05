@@ -7,15 +7,16 @@ import { LogModal } from "@/pages/SessionDetail/components/LogModal";
 import { QuickPanel } from "@/pages/SessionDetail/components/QuickPanel";
 import { SessionSidebar } from "@/pages/SessionDetail/components/SessionSidebar";
 
-import { SessionGroupSection } from "./components/SessionGroupSection";
 import { SessionListHeader } from "./components/SessionListHeader";
+import { SessionStatusSection } from "./components/SessionStatusSection";
 import type { SessionListVM } from "./useSessionListVM";
 
 export type SessionListViewProps = SessionListVM;
 
 export const SessionListView = ({
   sessions,
-  groups,
+  statusSections,
+  visibleSessionCount,
   quickPanelGroups,
   filter,
   filterOptions,
@@ -104,11 +105,11 @@ export const SessionListView = ({
                   }
                 />
               )}
-              {sessions.length > 0 && groups.length === 0 && (
+              {sessions.length > 0 && visibleSessionCount === 0 && (
                 <EmptyCard
                   icon={<Search className="text-latte-overlay1 h-8 w-8" />}
                   title="No Matching Sessions"
-                  description="No sessions match the selected filter. Try selecting a different status."
+                  description="No sessions match the selected scope. Try selecting a different scope."
                   className="py-12"
                   iconWrapperClassName="bg-latte-surface1/50 h-16 w-16"
                   titleClassName="text-lg"
@@ -124,10 +125,12 @@ export const SessionListView = ({
                   }
                 />
               )}
-              {groups.map((group) => (
-                <SessionGroupSection
-                  key={group.repoRoot ?? "no-repo"}
-                  group={group}
+              {statusSections.map((section) => (
+                <SessionStatusSection
+                  key={section.state}
+                  state={section.state}
+                  groups={section.groups}
+                  count={section.count}
                   nowMs={nowMs}
                 />
               ))}

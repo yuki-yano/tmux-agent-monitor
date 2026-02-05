@@ -101,28 +101,37 @@ const buildSession = (overrides: Partial<SessionSummary> = {}): SessionSummary =
   ...overrides,
 });
 
-const filterValues = [
-  "ALL",
-  "AGENT",
-  "RUNNING",
-  "WAITING_INPUT",
-  "WAITING_PERMISSION",
-  "SHELL",
-  "UNKNOWN",
-] as const;
+const filterValues = ["ALL", "AGENT", "SHELL", "UNKNOWN"] as const;
 
 const filterOptions = filterValues.map((value) => ({
   value,
   label: value.replace("_", " "),
 }));
 
+const statusOrder = ["RUNNING", "WAITING_INPUT", "WAITING_PERMISSION", "SHELL", "UNKNOWN"] as const;
+
+const buildStatusSections = (sessions: SessionSummary[]) => {
+  return statusOrder
+    .map((state) => {
+      const filtered = sessions.filter((session) => session.state === state);
+      return {
+        state,
+        count: filtered.length,
+        groups: buildSessionGroups(filtered),
+      };
+    })
+    .filter((section) => section.count > 0);
+};
+
 const createViewProps = (overrides: Partial<SessionListViewProps> = {}): SessionListViewProps => {
   const sessions = overrides.sessions ?? [];
-  const groups = overrides.groups ?? buildSessionGroups(sessions);
+  const statusSections = overrides.statusSections ?? buildStatusSections(sessions);
   const quickPanelGroups = overrides.quickPanelGroups ?? buildSessionGroups(sessions);
+  const visibleSessionCount = overrides.visibleSessionCount ?? sessions.length;
   return {
     sessions,
-    groups,
+    statusSections,
+    visibleSessionCount,
     quickPanelGroups,
     filter: "AGENT",
     filterOptions,
@@ -153,7 +162,12 @@ const createViewProps = (overrides: Partial<SessionListViewProps> = {}): Session
 
 describe("SessionListView", () => {
   it("renders empty state when no sessions", () => {
-    const props = createViewProps({ sessions: [], groups: [], quickPanelGroups: [] });
+    const props = createViewProps({
+      sessions: [],
+      statusSections: [],
+      visibleSessionCount: 0,
+      quickPanelGroups: [],
+    });
     renderWithRouter(<SessionListView {...props} />);
 
     expect(screen.getByText("No Active Sessions")).toBeTruthy();
@@ -166,7 +180,8 @@ describe("SessionListView", () => {
     const onFilterChange = vi.fn();
     const props = createViewProps({
       sessions: [session],
-      groups: [],
+      statusSections: [],
+      visibleSessionCount: 0,
       onFilterChange,
     });
     renderWithRouter(<SessionListView {...props} />);
@@ -199,16 +214,17 @@ describe("SessionListView", () => {
     const props = createViewProps({ onFilterChange });
     renderWithRouter(<SessionListView {...props} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "WAITING INPUT" }));
-    expect(onFilterChange).toHaveBeenCalledWith("WAITING_INPUT");
+    fireEvent.click(screen.getByRole("button", { name: "SHELL" }));
+    expect(onFilterChange).toHaveBeenCalledWith("SHELL");
   });
 
-  it("includes agent and shell status in filter buttons", () => {
+  it("includes scope filter buttons", () => {
     const props = createViewProps();
     renderWithRouter(<SessionListView {...props} />);
 
     expect(screen.getByRole("button", { name: "AGENT" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "SHELL" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "UNKNOWN" })).toBeTruthy();
   });
 
   it("renders repo group and session card", () => {
