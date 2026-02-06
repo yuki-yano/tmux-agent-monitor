@@ -502,7 +502,11 @@ describe("createApiRouter", () => {
       ).toBe(true);
       expect(data.attachment.insertText).toBe(`${data.attachment.path} `);
     } finally {
-      process.env.TMPDIR = originalTmpDir;
+      if (typeof originalTmpDir === "string") {
+        process.env.TMPDIR = originalTmpDir;
+      } else {
+        delete process.env.TMPDIR;
+      }
       await rm(tmpRoot, { recursive: true, force: true });
     }
   });
@@ -536,7 +540,11 @@ describe("createApiRouter", () => {
       const data = await res.json();
       expect(data.attachment.size).toBe(IMAGE_ATTACHMENT_MAX_BYTES);
     } finally {
-      process.env.TMPDIR = originalTmpDir;
+      if (typeof originalTmpDir === "string") {
+        process.env.TMPDIR = originalTmpDir;
+      } else {
+        delete process.env.TMPDIR;
+      }
       await rm(tmpRoot, { recursive: true, force: true });
     }
   });

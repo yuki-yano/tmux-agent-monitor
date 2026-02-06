@@ -33,6 +33,13 @@ const createImageFile = ({
 describe("saveImageAttachment", () => {
   const originalTmpDir = process.env.TMPDIR;
   const cleanupTargets = new Set<string>();
+  const restoreTmpDir = () => {
+    if (typeof originalTmpDir === "string") {
+      process.env.TMPDIR = originalTmpDir;
+      return;
+    }
+    delete process.env.TMPDIR;
+  };
 
   const makeTempDir = async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "vde-monitor-image-"));
@@ -41,11 +48,11 @@ describe("saveImageAttachment", () => {
   };
 
   beforeEach(() => {
-    process.env.TMPDIR = originalTmpDir;
+    restoreTmpDir();
   });
 
   afterEach(async () => {
-    process.env.TMPDIR = originalTmpDir;
+    restoreTmpDir();
     await Promise.all(
       Array.from(cleanupTargets).map((target) => rm(target, { recursive: true, force: true })),
     );
