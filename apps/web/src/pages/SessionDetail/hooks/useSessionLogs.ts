@@ -26,6 +26,30 @@ type UseSessionLogsParams = {
   highlightCorrections?: HighlightCorrectionConfig;
 };
 
+const findSessionByPaneId = (sessions: SessionSummary[], paneId: string | null) => {
+  if (!paneId) {
+    return null;
+  }
+  return sessions.find((item) => item.paneId === paneId) ?? null;
+};
+
+const pickCacheEntryByPaneId = <T>(cache: Record<string, T>, paneId: string | null) => {
+  if (!paneId) {
+    return null;
+  }
+  return cache[paneId] ?? null;
+};
+
+const isPaneLoading = (paneId: string | null, loading: Record<string, boolean>) =>
+  Boolean(paneId && loading[paneId]);
+
+const pickPaneError = (paneId: string | null, errors: Record<string, string | null>) => {
+  if (!paneId) {
+    return null;
+  }
+  return errors[paneId] ?? null;
+};
+
 export const useSessionLogs = ({
   connected,
   connectionIssue,
@@ -55,12 +79,11 @@ export const useSessionLogs = ({
   });
 
   const selectedSession = useMemo(
-    () =>
-      selectedPaneId ? (sessions.find((item) => item.paneId === selectedPaneId) ?? null) : null,
+    () => findSessionByPaneId(sessions, selectedPaneId),
     [selectedPaneId, sessions],
   );
 
-  const selectedLogEntry = selectedPaneId ? (logCache[selectedPaneId] ?? null) : null;
+  const selectedLogEntry = pickCacheEntryByPaneId(logCache, selectedPaneId);
 
   const selectedLogLines = useMemo(() => {
     if (!selectedLogEntry) return [];
@@ -72,8 +95,8 @@ export const useSessionLogs = ({
     return renderAnsiLines(text, resolvedTheme, { agent, highlightCorrections });
   }, [selectedLogEntry, resolvedTheme, selectedSession?.agent, highlightCorrections]);
 
-  const selectedLogLoading = Boolean(selectedPaneId && logLoading[selectedPaneId]);
-  const selectedLogError = selectedPaneId ? (logError[selectedPaneId] ?? null) : null;
+  const selectedLogLoading = isPaneLoading(selectedPaneId, logLoading);
+  const selectedLogError = pickPaneError(selectedPaneId, logError);
 
   const fetchLog = useCallback(
     async (paneId: string) => {

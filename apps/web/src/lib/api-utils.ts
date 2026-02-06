@@ -20,13 +20,15 @@ export const requestJson = async <T>(request: Promise<Response>) => {
   return { res, data };
 };
 
+const isUnauthorizedStatus = (status: number) => status === 401 || status === 403;
+
 export const extractErrorMessage = (
   res: Response,
   data: ApiEnvelope<unknown> | null,
   fallback: string,
   options?: ErrorMessageOptions,
 ) => {
-  if (res.status === 401 || res.status === 403) {
+  if (isUnauthorizedStatus(res.status)) {
     return API_ERROR_MESSAGES.unauthorized;
   }
   if (data?.error?.message) {
