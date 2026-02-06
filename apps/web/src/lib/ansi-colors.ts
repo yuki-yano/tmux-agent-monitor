@@ -1,34 +1,47 @@
 export type Rgb = [number, number, number];
 
-export const parseColor = (value: string | null): Rgb | null => {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (trimmed.startsWith("#")) {
-    const hex = trimmed.slice(1);
-    if (hex.length === 3) {
-      const rHex = hex[0] ?? "0";
-      const gHex = hex[1] ?? "0";
-      const bHex = hex[2] ?? "0";
-      const r = Number.parseInt(rHex + rHex, 16);
-      const g = Number.parseInt(gHex + gHex, 16);
-      const b = Number.parseInt(bHex + bHex, 16);
-      return [r, g, b];
-    }
-    if (hex.length === 6) {
-      const r = Number.parseInt(hex.slice(0, 2) || "00", 16);
-      const g = Number.parseInt(hex.slice(2, 4) || "00", 16);
-      const b = Number.parseInt(hex.slice(4, 6) || "00", 16);
-      return [r, g, b];
-    }
+const parseHexPair = (value: string, fallback: string) => Number.parseInt(value || fallback, 16);
+
+const parseHexColor = (hex: string): Rgb | null => {
+  if (hex.length === 3) {
+    const rHex = hex[0] ?? "0";
+    const gHex = hex[1] ?? "0";
+    const bHex = hex[2] ?? "0";
+    return [
+      Number.parseInt(rHex + rHex, 16),
+      Number.parseInt(gHex + gHex, 16),
+      Number.parseInt(bHex + bHex, 16),
+    ];
+  }
+  if (hex.length === 6) {
+    return [
+      parseHexPair(hex.slice(0, 2), "00"),
+      parseHexPair(hex.slice(2, 4), "00"),
+      parseHexPair(hex.slice(4, 6), "00"),
+    ];
+  }
+  return null;
+};
+
+const parseRgbFunction = (value: string): Rgb | null => {
+  const rgbMatch = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!rgbMatch) {
     return null;
   }
-  const rgbMatch = trimmed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-  if (!rgbMatch) return null;
   return [
     Number.parseInt(rgbMatch[1] ?? "0", 10),
     Number.parseInt(rgbMatch[2] ?? "0", 10),
     Number.parseInt(rgbMatch[3] ?? "0", 10),
   ];
+};
+
+export const parseColor = (value: string | null): Rgb | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (trimmed.startsWith("#")) {
+    return parseHexColor(trimmed.slice(1));
+  }
+  return parseRgbFunction(trimmed);
 };
 
 export const luminance = (rgb: Rgb) => {

@@ -104,4 +104,29 @@ describe("DiffSection", () => {
 
     expect(screen.getByText("+line-300")).toBeTruthy();
   });
+
+  it("renders repository reason callout", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary({ reason: "not_git" }),
+    });
+    const actions = buildActions();
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={actions} />, { wrapper });
+
+    expect(screen.getByText("Current directory is not a git repository.")).toBeTruthy();
+  });
+
+  it("shows no diff message when file patch is unavailable", () => {
+    const diffSummary = createDiffSummary();
+    const state = buildState({
+      diffSummary,
+      diffFiles: { "src/index.ts": createDiffFile({ patch: null, binary: false }) },
+      diffOpen: { "src/index.ts": true },
+    });
+    const actions = buildActions();
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={actions} />, { wrapper });
+
+    expect(screen.getByText("No diff available.")).toBeTruthy();
+  });
 });

@@ -23,6 +23,34 @@ type CommandResponseParams = {
   rawLimiter: CommandLimiter;
 };
 
+const resolveLimiter = (
+  payloadType: CommandPayload["type"],
+  sendLimiter: CommandLimiter,
+  rawLimiter: CommandLimiter,
+) => (payloadType === "send.raw" ? rawLimiter : sendLimiter);
+
+const executePayload = async (tmuxActions: TmuxActions, payload: CommandPayload) => {
+  switch (payload.type) {
+    case "send.text":
+      return {
+        paneId: payload.paneId,
+        result: await tmuxActions.sendText(payload.paneId, payload.text, payload.enter ?? true),
+      };
+    case "send.keys":
+      return {
+        paneId: payload.paneId,
+        result: await tmuxActions.sendKeys(payload.paneId, payload.keys),
+      };
+    case "send.raw":
+      return {
+        paneId: payload.paneId,
+        result: await tmuxActions.sendRaw(payload.paneId, payload.items, payload.unsafe ?? false),
+      };
+    default:
+      return null;
+  }
+};
+
 export const createCommandResponse = async ({
   config,
   monitor,
@@ -36,30 +64,17 @@ export const createCommandResponse = async ({
     return { ok: false, error: buildError("READ_ONLY", "read-only mode") };
   }
 
-  const limiter = payload.type === "send.raw" ? rawLimiter : sendLimiter;
+  const limiter = resolveLimiter(payload.type, sendLimiter, rawLimiter);
   if (!limiter(limiterKey)) {
     return { ok: false, error: buildError("RATE_LIMIT", "rate limited") };
   }
 
-  if (payload.type === "send.text") {
-    const result = await tmuxActions.sendText(payload.paneId, payload.text, payload.enter ?? true);
-    if (result.ok) {
-      monitor.recordInput(payload.paneId);
-    }
-    return result as CommandResponse;
+  const executed = await executePayload(tmuxActions, payload);
+  if (!executed) {
+    return { ok: false, error: buildError("INVALID_PAYLOAD", "unsupported command payload") };
   }
-
-  if (payload.type === "send.keys") {
-    const result = await tmuxActions.sendKeys(payload.paneId, payload.keys);
-    if (result.ok) {
-      monitor.recordInput(payload.paneId);
-    }
-    return result as CommandResponse;
+  if (executed.result.ok) {
+    monitor.recordInput(executed.paneId);
   }
-
-  const result = await tmuxActions.sendRaw(payload.paneId, payload.items, payload.unsafe ?? false);
-  if (result.ok) {
-    monitor.recordInput(payload.paneId);
-  }
-  return result as CommandResponse;
+  return executed.result as CommandResponse;
 };
