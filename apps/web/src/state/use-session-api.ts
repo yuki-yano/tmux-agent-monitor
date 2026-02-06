@@ -105,6 +105,87 @@ const runCommandResponseSideEffects = ({
   }
 };
 
+type SessionsResponseEnvelope = ApiEnvelope<{
+  sessions?: SessionSummary[];
+  clientConfig?: ClientConfig;
+}>;
+
+const applyRefreshSessionsSuccess = ({
+  res,
+  data,
+  onSessions,
+  onHighlightCorrections,
+  onConnectionIssue,
+}: {
+  res: Response;
+  data: SessionsResponseEnvelope;
+  onSessions: (sessions: SessionSummary[]) => void;
+  onHighlightCorrections: (config: HighlightCorrectionConfig) => void;
+  onConnectionIssue: (message: string | null) => void;
+}): RefreshSessionsResult => {
+  onSessions(data.sessions ?? []);
+  const nextHighlight = data.clientConfig?.screen?.highlightCorrection;
+  if (nextHighlight) {
+    onHighlightCorrections(nextHighlight);
+  }
+  onConnectionIssue(null);
+  return { ok: true, status: res.status };
+};
+
+const applyRefreshSessionsFailure = ({
+  res,
+  data,
+  onConnectionIssue,
+}: {
+  res: Response;
+  data: SessionsResponseEnvelope | null;
+  onConnectionIssue: (message: string | null) => void;
+}): RefreshSessionsResult => {
+  const fallback = res.ok ? API_ERROR_MESSAGES.invalidResponse : API_ERROR_MESSAGES.requestFailed;
+  onConnectionIssue(extractErrorMessage(res, data, fallback, { includeStatus: !res.ok }));
+  return buildRefreshFailureResult(res.status);
+};
+
+const resolveScreenMode = (options: { mode?: "text" | "image" }) => options.mode ?? "text";
+
+const buildScreenRequestKeys = ({
+  paneId,
+  normalizedMode,
+  lines,
+  cursor,
+}: {
+  paneId: string;
+  normalizedMode: "text" | "image";
+  lines?: number;
+  cursor?: string;
+}) => {
+  const cursorKey = normalizedMode === "text" ? (cursor ?? "") : "";
+  const linesKey = lines ?? "default";
+  const requestKey = `${paneId}:${normalizedMode}:${linesKey}:${cursorKey}`;
+  const fallbackKey =
+    normalizedMode === "text" && cursorKey ? `${paneId}:${normalizedMode}:${linesKey}:` : null;
+  return { requestKey, fallbackKey };
+};
+
+const resolveInflightScreenRequest = ({
+  inFlightMap,
+  requestKey,
+  fallbackKey,
+}: {
+  inFlightMap: Map<string, Promise<ScreenResponse>>;
+  requestKey: string;
+  fallbackKey: string | null;
+}) => {
+  const direct = inFlightMap.get(requestKey);
+  if (direct) {
+    return direct;
+  }
+  if (!fallbackKey) {
+    return null;
+  }
+  return inFlightMap.get(fallbackKey) ?? null;
+};
+
 export const useSessionApi = ({
   token,
   onSessions,
@@ -167,23 +248,17 @@ export const useSessionApi = ({
       return { ok: false, authError: true };
     }
     try {
-      const { res, data } = await requestJson<
-        ApiEnvelope<{ sessions?: SessionSummary[]; clientConfig?: ClientConfig }>
-      >(apiClient.sessions.$get());
+      const { res, data } = await requestJson<SessionsResponseEnvelope>(apiClient.sessions.$get());
       if (!res.ok || !data?.sessions) {
-        const fallback = res.ok
-          ? API_ERROR_MESSAGES.invalidResponse
-          : API_ERROR_MESSAGES.requestFailed;
-        onConnectionIssue(extractErrorMessage(res, data, fallback, { includeStatus: !res.ok }));
-        return buildRefreshFailureResult(res.status);
+        return applyRefreshSessionsFailure({ res, data, onConnectionIssue });
       }
-      onSessions(data.sessions);
-      const nextHighlight = data.clientConfig?.screen?.highlightCorrection;
-      if (nextHighlight) {
-        onHighlightCorrections(nextHighlight);
-      }
-      onConnectionIssue(null);
-      return { ok: true, status: res.status };
+      return applyRefreshSessionsSuccess({
+        res,
+        data,
+        onSessions,
+        onHighlightCorrections,
+        onConnectionIssue,
+      });
     } catch (err) {
       onConnectionIssue(resolveUnknownErrorMessage(err, "Network error. Reconnecting..."));
       return { ok: false };
@@ -365,15 +440,18 @@ export const useSessionApi = ({
       options: { lines?: number; mode?: "text" | "image"; cursor?: string },
     ): Promise<ScreenResponse> => {
       ensureToken();
-      const normalizedMode = options.mode ?? "text";
-      const cursorKey = normalizedMode === "text" ? (options.cursor ?? "") : "";
-      const linesKey = options.lines ?? "default";
-      const requestKey = `${paneId}:${normalizedMode}:${linesKey}:${cursorKey}`;
-      const fallbackKey =
-        normalizedMode === "text" && cursorKey ? `${paneId}:${normalizedMode}:${linesKey}:` : null;
-      const inflight =
-        screenInFlightRef.current.get(requestKey) ??
-        (fallbackKey ? screenInFlightRef.current.get(fallbackKey) : undefined);
+      const normalizedMode = resolveScreenMode(options);
+      const { requestKey, fallbackKey } = buildScreenRequestKeys({
+        paneId,
+        normalizedMode,
+        lines: options.lines,
+        cursor: options.cursor,
+      });
+      const inflight = resolveInflightScreenRequest({
+        inFlightMap: screenInFlightRef.current,
+        requestKey,
+        fallbackKey,
+      });
       if (inflight) {
         return inflight;
       }
