@@ -35,6 +35,50 @@ type FetchOptions = {
   lines?: number;
 };
 
+type FetchRequestArgs = {
+  paneId: string;
+  options: FetchOptions;
+  requestId: number;
+};
+
+const shouldUseCachedResponse = ({
+  cached,
+  options,
+  ttlMs,
+}: {
+  cached: ScreenCacheEntry | undefined;
+  options: FetchOptions;
+  ttlMs: number | null;
+}) =>
+  !options.force && ttlMs !== null && cached !== undefined && Date.now() - cached.updatedAt < ttlMs;
+
+const shouldShowLoadingState = (options: FetchOptions, cached: ScreenCacheEntry | undefined) =>
+  options.loading === "if-empty" ? !cached : true;
+
+const buildScreenCacheEntry = (response: ScreenResponse): ScreenCacheEntry => ({
+  screen: response.screen ?? "",
+  capturedAt: response.capturedAt,
+  truncated: response.truncated ?? null,
+  updatedAt: Date.now(),
+});
+
+const resolveDisconnectedMessage = (connectionIssue: string | null) =>
+  connectionIssue ?? DISCONNECTED_MESSAGE;
+
+const resolveRequestLines = (options: FetchOptions, lines?: number) => options.lines ?? lines;
+
+const resolveResponseErrorMessage = (response: ScreenResponse, fallback: string) =>
+  response.error?.message ?? fallback;
+
+const resolveThrownErrorMessage = (err: unknown, fallback: string) =>
+  err instanceof Error ? err.message : fallback;
+
+const isLatestRequest = (
+  latestRequests: Record<string, number>,
+  paneId: string,
+  requestId: number,
+) => latestRequests[paneId] === requestId;
+
 export const useScreenCache = ({
   connected,
   connectionIssue,
@@ -62,78 +106,43 @@ export const useScreenCache = ({
     cacheRef.current = cache;
   }, [cache]);
 
-  const fetchScreen = useCallback(
-    async (paneId: string, options: FetchOptions = {}) => {
-      if (!paneId) return;
-      if (!connected) {
-        setError((prev) => ({
-          ...prev,
-          [paneId]: connectionIssue ?? DISCONNECTED_MESSAGE,
-        }));
-        return;
-      }
-      if (inflightRef.current.has(paneId)) {
-        return;
-      }
-      const cached = cacheRef.current[paneId];
-      const shouldUseCache =
-        !options.force &&
-        ttlMs !== null &&
-        cached !== undefined &&
-        Date.now() - cached.updatedAt < ttlMs;
-      if (shouldUseCache) {
-        return;
-      }
-      inflightRef.current.add(paneId);
-      const requestId = (requestIdRef.current += 1);
-      latestRequestRef.current[paneId] = requestId;
-      const shouldShowLoading = options.loading === "if-empty" ? !cached : true;
-      if (shouldShowLoading) {
-        setLoading((prev) => ({ ...prev, [paneId]: true }));
-      }
-      setError((prev) => ({ ...prev, [paneId]: null }));
+  const executeFetchRequest = useCallback(
+    async ({ paneId, options, requestId }: FetchRequestArgs) => {
       try {
         const response = await requestScreen(paneId, {
           mode,
-          lines: options.lines ?? lines,
+          lines: resolveRequestLines(options, lines),
         });
-        if (latestRequestRef.current[paneId] !== requestId) {
+        if (!isLatestRequest(latestRequestRef.current, paneId, requestId)) {
           return;
         }
         if (!response.ok) {
           setError((prev) => ({
             ...prev,
-            [paneId]: response.error?.message ?? loadErrorMessage,
+            [paneId]: resolveResponseErrorMessage(response, loadErrorMessage),
           }));
           return;
         }
         setCache((prev) => ({
           ...prev,
-          [paneId]: {
-            screen: response.screen ?? "",
-            capturedAt: response.capturedAt,
-            truncated: response.truncated ?? null,
-            updatedAt: Date.now(),
-          },
+          [paneId]: buildScreenCacheEntry(response),
         }));
       } catch (err) {
-        if (latestRequestRef.current[paneId] !== requestId) {
+        if (!isLatestRequest(latestRequestRef.current, paneId, requestId)) {
           return;
         }
         setError((prev) => ({
           ...prev,
-          [paneId]: err instanceof Error ? err.message : requestFailedMessage,
+          [paneId]: resolveThrownErrorMessage(err, requestFailedMessage),
         }));
       } finally {
         inflightRef.current.delete(paneId);
-        if (latestRequestRef.current[paneId] === requestId) {
+        if (isLatestRequest(latestRequestRef.current, paneId, requestId)) {
           setLoading((prev) => ({ ...prev, [paneId]: false }));
         }
       }
     },
     [
-      connected,
-      connectionIssue,
       lines,
       loadErrorMessage,
       mode,
@@ -142,8 +151,36 @@ export const useScreenCache = ({
       setCache,
       setError,
       setLoading,
-      ttlMs,
     ],
+  );
+
+  const fetchScreen = useCallback(
+    async (paneId: string, options: FetchOptions = {}) => {
+      if (!paneId) return;
+      if (!connected) {
+        setError((prev) => ({
+          ...prev,
+          [paneId]: resolveDisconnectedMessage(connectionIssue),
+        }));
+        return;
+      }
+      if (inflightRef.current.has(paneId)) {
+        return;
+      }
+      const cached = cacheRef.current[paneId];
+      if (shouldUseCachedResponse({ cached, options, ttlMs })) {
+        return;
+      }
+      inflightRef.current.add(paneId);
+      const requestId = (requestIdRef.current += 1);
+      latestRequestRef.current[paneId] = requestId;
+      if (shouldShowLoadingState(options, cached)) {
+        setLoading((prev) => ({ ...prev, [paneId]: true }));
+      }
+      setError((prev) => ({ ...prev, [paneId]: null }));
+      await executeFetchRequest({ paneId, options, requestId });
+    },
+    [connected, connectionIssue, executeFetchRequest, setError, setLoading, ttlMs],
   );
 
   const clearCache = useCallback(

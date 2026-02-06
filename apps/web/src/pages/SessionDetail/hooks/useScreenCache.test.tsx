@@ -81,6 +81,30 @@ describe("useScreenCache", () => {
     });
   });
 
+  it("sets api error message when response is not ok", async () => {
+    const { result } = setup({
+      requestScreen: vi.fn().mockResolvedValue({
+        ok: false,
+        paneId: "pane-1",
+        mode: "text",
+        capturedAt: new Date(0).toISOString(),
+        error: {
+          code: "INTERNAL",
+          message: "Failed to read pane output",
+        },
+      }),
+    });
+
+    await act(async () => {
+      await result.current.fetchScreen("pane-1");
+    });
+
+    await waitFor(() => {
+      expect(result.current.error["pane-1"]).toBe("Failed to read pane output");
+      expect(result.current.loading["pane-1"]).toBe(false);
+    });
+  });
+
   it("isolates caches by cacheKey", async () => {
     const requestScreen = vi.fn().mockResolvedValue({
       ok: true,

@@ -1,4 +1,9 @@
-import type { AgentMonitorConfig, PaneMeta, SessionDetail } from "@vde-monitor/shared";
+import type {
+  AgentMonitorConfig,
+  HookStateSignal,
+  PaneMeta,
+  SessionDetail,
+} from "@vde-monitor/shared";
 
 import { resolvePaneAgent } from "./agent-resolver.js";
 import { isShellCommand } from "./agent-resolver-utils.js";
@@ -29,6 +34,90 @@ type ProcessPaneArgs = {
   resolveRepoRoot: (currentPath: string | null) => Promise<string | null>;
 };
 
+type EstimatedPaneState = {
+  state: SessionDetail["state"];
+  reason: string;
+};
+
+const resolvePaneKind = (agent: SessionDetail["agent"], pane: PaneMeta) => {
+  const isShellCommandPane =
+    isShellCommand(pane.paneStartCommand) || isShellCommand(pane.currentCommand);
+  return {
+    isAgent: agent !== "unknown",
+    isShell: agent === "unknown" && isShellCommandPane,
+  };
+};
+
+const resolvePipeStatus = async ({
+  isAgent,
+  pane,
+  paneLogManager,
+}: {
+  isAgent: boolean;
+  pane: PaneMeta;
+  paneLogManager: PaneLogManager;
+}) => {
+  if (!isAgent) {
+    return {
+      pipeAttached: false,
+      pipeConflict: false,
+      logPath: paneLogManager.getPaneLogPath(pane.paneId),
+    };
+  }
+  return paneLogManager.preparePaneLogging({
+    paneId: pane.paneId,
+    panePipe: pane.panePipe,
+    pipeTagValue: pane.pipeTagValue,
+  });
+};
+
+const resolveEstimatedState = ({
+  isAgent,
+  isShell,
+  agent,
+  paneDead,
+  outputAt,
+  hookState,
+  activity,
+  estimateState,
+}: {
+  isAgent: boolean;
+  isShell: boolean;
+  agent: SessionDetail["agent"];
+  paneDead: boolean;
+  outputAt: string | null;
+  hookState: HookStateSignal | null;
+  activity: AgentMonitorConfig["activity"];
+  estimateState: typeof estimateSessionState;
+}): EstimatedPaneState => {
+  if (isAgent) {
+    return estimateState({
+      agent,
+      paneDead,
+      lastOutputAt: outputAt,
+      hookState,
+      activity,
+    });
+  }
+  return {
+    state: isShell ? "SHELL" : "UNKNOWN",
+    reason: isShell ? "shell" : "process:unknown",
+  };
+};
+
+const resolveFinalPaneState = (
+  restoredSession: SessionDetail | null,
+  estimatedState: EstimatedPaneState,
+) => {
+  if (!restoredSession) {
+    return estimatedState;
+  }
+  return {
+    state: restoredSession.state,
+    reason: "restored",
+  };
+};
+
 export const processPane = async (
   {
     pane,
@@ -57,25 +146,12 @@ export const processPane = async (
     return null;
   }
 
-  const isShell =
-    agent === "unknown" &&
-    (isShellCommand(pane.paneStartCommand) || isShellCommand(pane.currentCommand));
-  const isAgent = agent !== "unknown";
-
-  let pipeAttached = false;
-  let pipeConflict = false;
-  let logPath = paneLogManager.getPaneLogPath(pane.paneId);
-
-  if (isAgent) {
-    const logging = await paneLogManager.preparePaneLogging({
-      paneId: pane.paneId,
-      panePipe: pane.panePipe,
-      pipeTagValue: pane.pipeTagValue,
-    });
-    pipeAttached = logging.pipeAttached;
-    pipeConflict = logging.pipeConflict;
-    logPath = logging.logPath;
-  }
+  const { isAgent, isShell } = resolvePaneKind(agent, pane);
+  const { pipeAttached, pipeConflict, logPath } = await resolvePipeStatus({
+    isAgent,
+    pane,
+    paneLogManager,
+  });
 
   const paneState = paneStates.get(pane.paneId);
   const { outputAt, hookState } = await updateOutput({
@@ -96,20 +172,17 @@ export const processPane = async (
   });
 
   const restoredSession = applyRestored(pane.paneId);
-  const estimated = isAgent
-    ? estimateState({
-        agent,
-        paneDead: pane.paneDead,
-        lastOutputAt: outputAt,
-        hookState,
-        activity: config.activity,
-      })
-    : {
-        state: isShell ? ("SHELL" as const) : ("UNKNOWN" as const),
-        reason: isShell ? "shell" : "process:unknown",
-      };
-  const finalState = restoredSession ? restoredSession.state : estimated.state;
-  const finalReason = restoredSession ? "restored" : estimated.reason;
+  const estimatedState = resolveEstimatedState({
+    isAgent,
+    isShell,
+    agent,
+    paneDead: pane.paneDead,
+    outputAt,
+    hookState,
+    activity: config.activity,
+    estimateState,
+  });
+  const finalState = resolveFinalPaneState(restoredSession, estimatedState);
 
   const customTitle = getCustomTitle(pane.paneId);
   const repoRoot = await resolveRepoRoot(pane.currentPath);
@@ -118,8 +191,8 @@ export const processPane = async (
   return buildSessionDetail({
     pane,
     agent,
-    state: finalState,
-    stateReason: finalReason,
+    state: finalState.state,
+    stateReason: finalState.reason,
     lastMessage: paneState.lastMessage,
     lastOutputAt: outputAt,
     lastEventAt: paneState.lastEventAt,

@@ -3,7 +3,7 @@ import { act, render } from "@testing-library/react";
 import { type ReactNode, useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { useStableVirtuosoScroll } from "./useStableVirtuosoScroll";
+import { __testables, useStableVirtuosoScroll } from "./useStableVirtuosoScroll";
 
 type Control = {
   scroller: HTMLDivElement;
@@ -142,6 +142,49 @@ describe("useStableVirtuosoScroll", () => {
     rectSpy.mockRestore();
   });
 
+  it("does not adjust scrollTop when already at bottom", () => {
+    const rectSpy = mockRects();
+    let control: Control | null = null;
+    const getControl = () => {
+      if (!control) throw new Error("control not ready");
+      return control;
+    };
+
+    const { rerender } = render(
+      <TestHarness
+        items={["A", "B", "C", "D"]}
+        isAtBottom
+        onReady={(next) => {
+          control = next;
+        }}
+      />,
+    );
+
+    getControl().handleRangeChanged({ startIndex: 1, endIndex: 3 });
+    rerender(
+      <TestHarness
+        items={["A", "B", "C", "D"]}
+        isAtBottom
+        onReady={(next) => {
+          control = next;
+        }}
+      />,
+    );
+    getControl().scroller.scrollTop = 15;
+    rerender(
+      <TestHarness
+        items={["X", "Y", "A", "B", "C", "D"]}
+        isAtBottom
+        onReady={(next) => {
+          control = next;
+        }}
+      />,
+    );
+
+    expect(getControl().scroller.scrollTop).toBe(15);
+    rectSpy.mockRestore();
+  });
+
   it("skips correction while user is scrolling and applies after scroll end", async () => {
     const rectSpy = mockRects();
     let control: Control | null = null;
@@ -211,6 +254,17 @@ describe("useStableVirtuosoScroll", () => {
     expect(getControl().scroller.scrollTop).toBe(10);
 
     rectSpy.mockRestore();
+  });
+
+  it("suppresses correction when internal scrolling is active even if external flag is false", () => {
+    expect(
+      __testables.shouldSuppressCorrection({
+        isInternalUserScrolling: true,
+        isExternalUserScrolling: false,
+        recentlyScrolled: false,
+        allowCorrectionOnce: true,
+      }),
+    ).toBe(true);
   });
 
   it("falls back to previous scrollTop when data-index is unavailable", () => {

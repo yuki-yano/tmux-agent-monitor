@@ -20,8 +20,46 @@ type SessionCardProps = {
   nowMs: number;
 };
 
+const sessionStateStyles: Record<
+  SessionSummary["state"],
+  {
+    card: string;
+    overlay: string;
+  }
+> = {
+  RUNNING: {
+    card: "border-green-500/50 shadow-lg shadow-green-500/10",
+    overlay: "from-green-500/5",
+  },
+  WAITING_INPUT: {
+    card: "border-amber-500/50 shadow-lg shadow-amber-500/10",
+    overlay: "from-amber-500/5",
+  },
+  WAITING_PERMISSION: {
+    card: "border-red-500/50 shadow-lg shadow-red-500/10",
+    overlay: "from-red-500/5",
+  },
+  SHELL: {
+    card: "border-blue-500/50 shadow-lg shadow-blue-500/10",
+    overlay: "from-blue-500/5",
+  },
+  UNKNOWN: {
+    card: "border-gray-400/50 shadow-lg shadow-gray-400/10",
+    overlay: "from-gray-400/5",
+  },
+};
+
+const resolveSessionTitle = (session: SessionSummary) => {
+  if (session.customTitle) return session.customTitle;
+  if (session.title) return session.title;
+  return session.sessionName;
+};
+
 export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
   const sessionTone = getLastInputTone(session.lastInputAt, nowMs);
+  const stateStyle = sessionStateStyles[session.state];
+  const sessionTitle = resolveSessionTitle(session);
+  const showAgentBadge = isKnownAgent(session.agent);
 
   return (
     <Link to="/sessions/$paneId" params={{ paneId: session.paneId }} className="group">
@@ -29,21 +67,13 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
         interactive
         className={cn(
           "relative flex h-full flex-col overflow-hidden p-4 transition-all",
-          session.state === "RUNNING" && "border-green-500/50 shadow-lg shadow-green-500/10",
-          session.state === "WAITING_INPUT" && "border-amber-500/50 shadow-lg shadow-amber-500/10",
-          session.state === "WAITING_PERMISSION" && "border-red-500/50 shadow-lg shadow-red-500/10",
-          session.state === "SHELL" && "border-blue-500/50 shadow-lg shadow-blue-500/10",
-          session.state === "UNKNOWN" && "border-gray-400/50 shadow-lg shadow-gray-400/10",
+          stateStyle.card,
         )}
       >
         <div
           className={cn(
             "pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br to-transparent opacity-50",
-            session.state === "RUNNING" && "from-green-500/5",
-            session.state === "WAITING_INPUT" && "from-amber-500/5",
-            session.state === "WAITING_PERMISSION" && "from-red-500/5",
-            session.state === "SHELL" && "from-blue-500/5",
-            session.state === "UNKNOWN" && "from-gray-400/5",
+            stateStyle.overlay,
           )}
         />
 
@@ -51,7 +81,7 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
           <Badge tone={stateTone(session.state)} size="sm">
             {formatStateLabel(session.state)}
           </Badge>
-          {isKnownAgent(session.agent) && (
+          {showAgentBadge && (
             <Badge tone={agentToneFor(session.agent)} size="sm">
               {agentLabelFor(session.agent)}
             </Badge>
@@ -75,7 +105,7 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
 
         <div className="relative mt-2.5 flex min-w-0 flex-1 flex-col">
           <h3 className="font-display text-latte-text truncate text-[15px] font-semibold leading-snug">
-            {session.customTitle ?? session.title ?? session.sessionName}
+            {sessionTitle}
           </h3>
           <p
             className="text-latte-subtext0 mt-1.5 line-clamp-2 font-mono text-[11px] leading-normal tracking-tight"

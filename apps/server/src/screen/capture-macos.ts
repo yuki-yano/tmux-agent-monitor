@@ -2,7 +2,7 @@ import { markPaneFocus } from "../activity-suppressor.js";
 import { cropPaneBounds } from "./crop.js";
 import { resolveBackendApp, type TerminalBackend } from "./macos-app.js";
 import { focusTerminalApp, isAppRunning, runAppleScript } from "./macos-applescript.js";
-import { buildTerminalBoundsScript, parseBoundsSet } from "./macos-bounds.js";
+import { type Bounds, buildTerminalBoundsScript, parseBoundsSet } from "./macos-bounds.js";
 import { captureRegion } from "./macos-screencapture.js";
 import { focusTmuxPane, getPaneGeometry, type TmuxOptions } from "./tmux-geometry.js";
 import { isValidTty } from "./tty.js";
@@ -16,10 +16,7 @@ export type CaptureOptions = {
   backend?: TerminalBackend;
 };
 
-export const captureTerminalScreenMacos = async (
-  tty: string | null | undefined,
-  options: CaptureOptions = {},
-) => {
+const resolveCaptureApp = async (tty: string | null | undefined, options: CaptureOptions) => {
   if (tty && !isValidTty(tty)) {
     return null;
   }
@@ -31,30 +28,67 @@ export const captureTerminalScreenMacos = async (
   if (!(await isAppRunning(app.appName))) {
     return null;
   }
-  await focusTerminalApp(app.appName);
+  return app;
+};
+
+const focusCaptureTarget = async (appName: string, options: CaptureOptions) => {
+  await focusTerminalApp(appName);
   await wait(200);
-  if (options.paneId) {
-    markPaneFocus(options.paneId);
-    await focusTmuxPane(options.paneId, options.tmux);
-    await wait(200);
+  if (!options.paneId) {
+    return;
   }
+  markPaneFocus(options.paneId);
+  await focusTmuxPane(options.paneId, options.tmux);
+  await wait(200);
+};
+
+const readTerminalBounds = async (appName: string) => {
+  const boundsRaw = await runAppleScript(buildTerminalBoundsScript(appName));
+  const boundsSet = boundsRaw ? parseBoundsSet(boundsRaw) : { content: null, window: null };
+  return boundsSet.content ?? boundsSet.window;
+};
+
+const resolvePaneGeometryForCapture = async (options: CaptureOptions) => {
+  if (options.cropPane === false || !options.paneId) {
+    return null;
+  }
+  return getPaneGeometry(options.paneId, options.tmux);
+};
+
+const captureWithBounds = async (bounds: Bounds, options: CaptureOptions) => {
+  const paneGeometry = await resolvePaneGeometryForCapture(options);
+  const croppedBounds = paneGeometry ? cropPaneBounds(bounds, paneGeometry) : null;
+  const targetBounds = croppedBounds ?? bounds;
+  const imageBase64 = await captureRegion(targetBounds);
+  if (!imageBase64) {
+    return null;
+  }
+  return { imageBase64, cropped: Boolean(croppedBounds) };
+};
+
+const captureAttempt = async (appName: string, options: CaptureOptions) => {
+  const bounds = await readTerminalBounds(appName);
+  if (!bounds) {
+    return null;
+  }
+  return captureWithBounds(bounds, options);
+};
+
+export const captureTerminalScreenMacos = async (
+  tty: string | null | undefined,
+  options: CaptureOptions = {},
+) => {
+  const app = await resolveCaptureApp(tty, options);
+  if (!app) {
+    return null;
+  }
+  await focusCaptureTarget(app.appName, options);
 
   const maxAttempts = 3;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const boundsRaw = await runAppleScript(buildTerminalBoundsScript(app.appName));
-    const boundsSet = boundsRaw ? parseBoundsSet(boundsRaw) : { content: null, window: null };
-    const bounds = boundsSet.content ?? boundsSet.window;
-    const paneGeometry =
-      options.cropPane !== false && options.paneId
-        ? await getPaneGeometry(options.paneId, options.tmux)
-        : null;
-    if (bounds) {
-      const croppedBounds = paneGeometry ? cropPaneBounds(bounds, paneGeometry) : null;
-      const targetBounds = croppedBounds ?? bounds;
-      const imageBase64 = await captureRegion(targetBounds);
-      if (imageBase64) {
-        return { imageBase64, cropped: Boolean(croppedBounds) };
-      }
+    const captureResult = await captureAttempt(app.appName, options);
+    if (captureResult) {
+      return captureResult;
     }
     if (attempt < maxAttempts - 1) {
       await wait(200);

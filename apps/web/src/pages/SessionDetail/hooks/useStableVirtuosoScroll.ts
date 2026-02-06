@@ -28,6 +28,54 @@ const clampIndex = (index: number, length: number) => {
   return index;
 };
 
+const getItem = (scroller: HTMLDivElement, index: number) =>
+  scroller.querySelector<HTMLElement>(`[data-index="${index}"]`);
+
+const getItemHeight = (item: HTMLElement | null) =>
+  item ? item.getBoundingClientRect().height : null;
+
+const resolveScrollDelta = ({
+  nextOffset,
+  prevOffset,
+  prevAnchorHeight,
+  nextHeight,
+  nextIndex,
+  anchorIndex,
+}: {
+  nextOffset: number | null;
+  prevOffset: number | null;
+  prevAnchorHeight: number | null;
+  nextHeight: number | null;
+  nextIndex: number;
+  anchorIndex: number;
+}) => {
+  if (nextOffset !== null && prevOffset !== null) {
+    return nextOffset - prevOffset;
+  }
+  const lineHeight = prevAnchorHeight ?? nextHeight;
+  if (!lineHeight || nextIndex === anchorIndex) {
+    return null;
+  }
+  return (nextIndex - anchorIndex) * lineHeight;
+};
+
+const shouldSuppressCorrection = ({
+  isInternalUserScrolling,
+  isExternalUserScrolling,
+  recentlyScrolled,
+  allowCorrectionOnce,
+}: {
+  isInternalUserScrolling: boolean;
+  isExternalUserScrolling: boolean;
+  recentlyScrolled: boolean;
+  allowCorrectionOnce: boolean;
+}) => {
+  if (isInternalUserScrolling || isExternalUserScrolling) {
+    return true;
+  }
+  return recentlyScrolled && !allowCorrectionOnce;
+};
+
 export const useStableVirtuosoScroll = ({
   items,
   isAtBottom,
@@ -61,9 +109,9 @@ export const useStableVirtuosoScroll = ({
       const scroller = scrollerRef.current;
       if (!scroller) return;
       const clamped = clampIndex(index, items.length);
-      const item = scroller.querySelector<HTMLElement>(`[data-index="${clamped}"]`);
+      const item = getItem(scroller, clamped);
       const offset = item ? getItemOffset(scroller, clamped) : null;
-      const height = item ? item.getBoundingClientRect().height : null;
+      const height = getItemHeight(item);
       prevAnchorOffsetRef.current = offset;
       prevAnchorHeightRef.current = height;
       prevAnchorIndexRef.current = clamped;
@@ -128,6 +176,59 @@ export const useStableVirtuosoScroll = ({
     [startUserScroll, updateBaseline],
   );
 
+  const withAdjustingScroll = useCallback((scroller: HTMLDivElement, nextScrollTop: number) => {
+    isAdjustingRef.current = true;
+    scroller.scrollTop = nextScrollTop;
+    window.requestAnimationFrame(() => {
+      isAdjustingRef.current = false;
+    });
+  }, []);
+
+  const applyAnchorCorrection = useCallback(
+    (scroller: HTMLDivElement, prevItems: string[]) => {
+      const anchorIndex = clampIndex(prevAnchorIndexRef.current, prevItems.length);
+      const nextIndex = mapAnchorIndex(prevItems, items, anchorIndex);
+      const nextItem = getItem(scroller, nextIndex);
+      const nextOffset = nextItem ? getItemOffset(scroller, nextIndex) : null;
+      const nextHeight = getItemHeight(nextItem);
+      const delta = resolveScrollDelta({
+        nextOffset,
+        prevOffset: prevAnchorOffsetRef.current,
+        prevAnchorHeight: prevAnchorHeightRef.current,
+        nextHeight,
+        nextIndex,
+        anchorIndex,
+      });
+
+      if (delta !== null && Math.abs(delta) >= 0.5) {
+        withAdjustingScroll(scroller, scroller.scrollTop + delta);
+        return;
+      }
+      if (prevScrollTopRef.current !== null) {
+        withAdjustingScroll(scroller, prevScrollTopRef.current);
+      }
+    },
+    [items, withAdjustingScroll],
+  );
+
+  const isScrollCorrectionSuppressed = useCallback(() => {
+    const recentlyScrolled = performance.now() - lastUserScrollAtRef.current < scrollSuppressMs;
+    return shouldSuppressCorrection({
+      isInternalUserScrolling: isUserScrollingRef.current,
+      isExternalUserScrolling: Boolean(isUserScrolling),
+      recentlyScrolled,
+      allowCorrectionOnce: allowCorrectionOnceRef.current,
+    });
+  }, [isUserScrolling]);
+
+  const resetStabilityState = useCallback(() => {
+    prevAnchorOffsetRef.current = null;
+    prevAnchorHeightRef.current = null;
+    prevScrollTopRef.current = null;
+    prevAnchorIndexRef.current = 0;
+    allowCorrectionOnceRef.current = false;
+  }, []);
+
   useLayoutEffect(() => {
     if (!enabled) return undefined;
     const scroller = scrollerRef.current;
@@ -155,51 +256,16 @@ export const useStableVirtuosoScroll = ({
   useLayoutEffect(() => {
     if (!enabled) {
       prevItemsRef.current = items;
-      prevAnchorOffsetRef.current = null;
-      prevAnchorHeightRef.current = null;
-      prevScrollTopRef.current = null;
-      prevAnchorIndexRef.current = 0;
-      allowCorrectionOnceRef.current = false;
+      resetStabilityState();
       return;
     }
 
     const scroller = scrollerRef.current;
     const prevItems = prevItemsRef.current;
     const itemsChanged = prevItems !== items;
-    const recentlyScrolled = performance.now() - lastUserScrollAtRef.current < scrollSuppressMs;
-    const allowCorrection = allowCorrectionOnceRef.current;
-    const isScrolling =
-      (isUserScrolling ?? isUserScrollingRef.current) || (recentlyScrolled && !allowCorrection);
-    if (itemsChanged && scroller && !isAtBottom && !isScrolling) {
-      const anchorIndex = clampIndex(prevAnchorIndexRef.current, prevItems.length);
-      const nextIndex = mapAnchorIndex(prevItems, items, anchorIndex);
-      const nextItem = scroller.querySelector<HTMLElement>(`[data-index="${nextIndex}"]`);
-      const nextOffset = nextItem ? getItemOffset(scroller, nextIndex) : null;
-      const prevOffset = prevAnchorOffsetRef.current;
-      const nextHeight = nextItem ? nextItem.getBoundingClientRect().height : null;
-      let delta: number | null = null;
-      if (nextOffset !== null && prevOffset !== null) {
-        delta = nextOffset - prevOffset;
-      } else {
-        const lineHeight = prevAnchorHeightRef.current ?? nextHeight;
-        if (lineHeight && nextIndex !== anchorIndex) {
-          delta = (nextIndex - anchorIndex) * lineHeight;
-        }
-      }
-
-      if (delta !== null && Math.abs(delta) >= 0.5) {
-        isAdjustingRef.current = true;
-        scroller.scrollTop += delta;
-        window.requestAnimationFrame(() => {
-          isAdjustingRef.current = false;
-        });
-      } else if (prevScrollTopRef.current !== null) {
-        isAdjustingRef.current = true;
-        scroller.scrollTop = prevScrollTopRef.current;
-        window.requestAnimationFrame(() => {
-          isAdjustingRef.current = false;
-        });
-      }
+    const canCorrect = itemsChanged && scroller && !isAtBottom && !isScrollCorrectionSuppressed();
+    if (canCorrect) {
+      applyAnchorCorrection(scroller, prevItems);
     }
 
     if (itemsChanged) {
@@ -212,10 +278,23 @@ export const useStableVirtuosoScroll = ({
     }
 
     prevItemsRef.current = items;
-  }, [items, isAtBottom, enabled, isUserScrolling, scrollerRef, updateBaseline]);
+  }, [
+    items,
+    isAtBottom,
+    enabled,
+    scrollerRef,
+    updateBaseline,
+    applyAnchorCorrection,
+    isScrollCorrectionSuppressed,
+    resetStabilityState,
+  ]);
 
   return {
     scrollerRef,
     handleRangeChanged,
   };
+};
+
+export const __testables = {
+  shouldSuppressCorrection,
 };

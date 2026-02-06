@@ -19,6 +19,18 @@ const matchesAt = (lines: string[], sequence: string[], startIndex: number) => {
   return true;
 };
 
+const matchesSequenceAt = (lines: string[], sequence: string[], startIndex: number) =>
+  lines[startIndex] === sequence[0] && matchesAt(lines, sequence, startIndex);
+
+const findSequenceInRange = (lines: string[], sequence: string[], start: number, end: number) => {
+  for (let i = start; i <= end; i += 1) {
+    if (matchesSequenceAt(lines, sequence, i)) {
+      return i;
+    }
+  }
+  return null;
+};
+
 const findSequenceIndex = (
   lines: string[],
   sequence: string[],
@@ -30,18 +42,12 @@ const findSequenceIndex = (
   if (expectedIndex !== null) {
     const windowStart = Math.max(0, expectedIndex - windowSize);
     const windowEnd = Math.min(maxStart, expectedIndex + windowSize);
-    for (let i = windowStart; i <= windowEnd; i += 1) {
-      if (lines[i] === sequence[0] && matchesAt(lines, sequence, i)) {
-        return i;
-      }
+    const nearbyMatch = findSequenceInRange(lines, sequence, windowStart, windowEnd);
+    if (nearbyMatch !== null) {
+      return nearbyMatch;
     }
   }
-  for (let i = 0; i <= maxStart; i += 1) {
-    if (lines[i] === sequence[0] && matchesAt(lines, sequence, i)) {
-      return i;
-    }
-  }
-  return null;
+  return findSequenceInRange(lines, sequence, 0, maxStart);
 };
 
 const findDropTop = (prev: string[], next: string[]) => {

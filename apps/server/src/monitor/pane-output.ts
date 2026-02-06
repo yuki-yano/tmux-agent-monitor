@@ -35,6 +35,111 @@ const defaultStatLogMtime = async (logPath: string) => {
   return stat.mtime.toISOString();
 };
 
+const createOutputAtTracker = (paneState: PaneRuntimeState) => {
+  let outputAt = paneState.lastOutputAt;
+  const setOutputAt = (next: string | null) => {
+    outputAt = updateOutputAt(paneState, next);
+  };
+  const getOutputAt = () => outputAt;
+  return { setOutputAt, getOutputAt };
+};
+
+const updateOutputAtFromLog = async ({
+  logPath,
+  statLogMtime,
+  setOutputAt,
+}: {
+  logPath: string;
+  statLogMtime: (logPath: string) => Promise<string | null>;
+  setOutputAt: (next: string | null) => void;
+}) => {
+  const logMtime = await statLogMtime(logPath);
+  if (logMtime) {
+    setOutputAt(logMtime);
+  }
+};
+
+const updateOutputAtFromActivity = ({
+  pane,
+  resolveActivityAt,
+  setOutputAt,
+}: {
+  pane: PaneOutputSnapshot;
+  resolveActivityAt: typeof resolveActivityTimestamp;
+  setOutputAt: (next: string | null) => void;
+}) => {
+  const activityAt = resolveActivityAt({
+    paneId: pane.paneId,
+    paneActivity: pane.paneActivity,
+    windowActivity: pane.windowActivity,
+    paneActive: pane.paneActive,
+  });
+  if (activityAt) {
+    setOutputAt(activityAt);
+  }
+};
+
+const updateOutputAtFromFingerprint = async ({
+  pane,
+  paneState,
+  captureFingerprint,
+  now,
+  setOutputAt,
+}: {
+  pane: PaneOutputSnapshot;
+  paneState: PaneRuntimeState;
+  captureFingerprint: PaneOutputDeps["captureFingerprint"];
+  now: () => Date;
+  setOutputAt: (next: string | null) => void;
+}) => {
+  if (pane.paneDead) {
+    return;
+  }
+  const fingerprint = await captureFingerprint(pane.paneId, pane.alternateOn);
+  if (!fingerprint || paneState.lastFingerprint === fingerprint) {
+    return;
+  }
+  paneState.lastFingerprint = fingerprint;
+  setOutputAt(now().toISOString());
+};
+
+const ensureFallbackOutputAt = ({
+  outputAt,
+  inactiveThresholdMs,
+  now,
+  setOutputAt,
+}: {
+  outputAt: string | null;
+  inactiveThresholdMs: number;
+  now: () => Date;
+  setOutputAt: (next: string | null) => void;
+}) => {
+  if (outputAt) {
+    return outputAt;
+  }
+  const fallbackTs = new Date(now().getTime() - inactiveThresholdMs - 1000).toISOString();
+  setOutputAt(fallbackTs);
+  return fallbackTs;
+};
+
+const shouldKeepHookState = (state: string) =>
+  state === "WAITING_INPUT" || state === "WAITING_PERMISSION";
+
+const resolveHookState = (paneState: PaneRuntimeState, outputAt: string | null) => {
+  const hookState = paneState.hookState;
+  if (!hookState || !outputAt || shouldKeepHookState(hookState.state)) {
+    return hookState;
+  }
+  const hookTs = Date.parse(hookState.at);
+  const outputTs = Date.parse(outputAt);
+  const hasAdvanced = !Number.isNaN(hookTs) && !Number.isNaN(outputTs) && outputTs > hookTs;
+  if (!hasAdvanced) {
+    return hookState;
+  }
+  paneState.hookState = null;
+  return null;
+};
+
 export const updatePaneOutputState = async ({
   pane,
   paneState,
@@ -46,53 +151,32 @@ export const updatePaneOutputState = async ({
   const resolveActivityAt = deps.resolveActivityAt ?? resolveActivityTimestamp;
   const now = deps.now ?? (() => new Date());
 
-  let outputAt = paneState.lastOutputAt;
-  const updateOutputAtLocal = (next: string | null) => {
-    outputAt = updateOutputAt(paneState, next);
-  };
-
-  const logMtime = await statLogMtime(logPath);
-  if (logMtime) {
-    updateOutputAtLocal(logMtime);
-  }
-
-  const activityAt = resolveActivityAt({
-    paneId: pane.paneId,
-    paneActivity: pane.paneActivity,
-    windowActivity: pane.windowActivity,
-    paneActive: pane.paneActive,
+  const outputAtTracker = createOutputAtTracker(paneState);
+  await updateOutputAtFromLog({
+    logPath,
+    statLogMtime,
+    setOutputAt: outputAtTracker.setOutputAt,
   });
-  if (activityAt) {
-    updateOutputAtLocal(activityAt);
-  }
+  updateOutputAtFromActivity({
+    pane,
+    resolveActivityAt,
+    setOutputAt: outputAtTracker.setOutputAt,
+  });
+  await updateOutputAtFromFingerprint({
+    pane,
+    paneState,
+    captureFingerprint: deps.captureFingerprint,
+    now,
+    setOutputAt: outputAtTracker.setOutputAt,
+  });
 
-  if (!pane.paneDead) {
-    const fingerprint = await deps.captureFingerprint(pane.paneId, pane.alternateOn);
-    if (fingerprint) {
-      const previous = paneState.lastFingerprint;
-      if (previous !== fingerprint) {
-        paneState.lastFingerprint = fingerprint;
-        updateOutputAtLocal(now().toISOString());
-      }
-    }
-  }
-
-  if (!outputAt) {
-    const fallbackTs = new Date(now().getTime() - inactiveThresholdMs - 1000).toISOString();
-    updateOutputAtLocal(fallbackTs);
-  }
-
-  let hookState = paneState.hookState;
-  if (hookState && outputAt) {
-    if (hookState.state !== "WAITING_INPUT" && hookState.state !== "WAITING_PERMISSION") {
-      const hookTs = Date.parse(hookState.at);
-      const outputTs = Date.parse(outputAt);
-      if (!Number.isNaN(hookTs) && !Number.isNaN(outputTs) && outputTs > hookTs) {
-        paneState.hookState = null;
-        hookState = null;
-      }
-    }
-  }
+  const outputAt = ensureFallbackOutputAt({
+    outputAt: outputAtTracker.getOutputAt(),
+    inactiveThresholdMs,
+    now,
+    setOutputAt: outputAtTracker.setOutputAt,
+  });
+  const hookState = resolveHookState(paneState, outputAt);
 
   return { outputAt, hookState };
 };

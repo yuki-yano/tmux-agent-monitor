@@ -14,6 +14,52 @@ const processSnapshotCache = {
   children: new Map<number, number[]>(),
 };
 
+type ProcessSnapshotEntry = {
+  pid: number;
+  ppid: number;
+  command: string;
+};
+
+const parseProcessSnapshotLine = (line: string): ProcessSnapshotEntry | null => {
+  const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/);
+  if (!match) {
+    return null;
+  }
+  const pid = Number.parseInt(match[1] ?? "", 10);
+  const ppid = Number.parseInt(match[2] ?? "", 10);
+  if (Number.isNaN(pid) || Number.isNaN(ppid)) {
+    return null;
+  }
+  return {
+    pid,
+    ppid,
+    command: match[3] ?? "",
+  };
+};
+
+const appendChildPid = (children: Map<number, number[]>, ppid: number, pid: number) => {
+  const list = children.get(ppid) ?? [];
+  list.push(pid);
+  children.set(ppid, list);
+};
+
+const buildProcessSnapshotMaps = (stdout: string) => {
+  const byPid = new Map<number, ProcessSnapshotEntry>();
+  const children = new Map<number, number[]>();
+  const lines = stdout.split("\n").filter((line) => line.trim().length > 0);
+
+  lines.forEach((line) => {
+    const entry = parseProcessSnapshotLine(line);
+    if (!entry) {
+      return;
+    }
+    byPid.set(entry.pid, entry);
+    appendChildPid(children, entry.ppid, entry.pid);
+  });
+
+  return { byPid, children };
+};
+
 export const getProcessCommand = async (pid: number | null) => {
   if (!pid) {
     return null;
@@ -43,26 +89,7 @@ const loadProcessSnapshot = async () => {
   }
   try {
     const result = await runPs(["-ax", "-o", "pid=,ppid=,command="], 2000);
-    const byPid = new Map<number, { pid: number; ppid: number; command: string }>();
-    const children = new Map<number, number[]>();
-    const lines = (result.stdout ?? "").split("\n").filter((line) => line.trim().length > 0);
-    for (const line of lines) {
-      const trimmed = line.trim();
-      const match = trimmed.match(/^(\d+)\s+(\d+)\s+(.*)$/);
-      if (!match) {
-        continue;
-      }
-      const pid = Number.parseInt(match[1] ?? "", 10);
-      const ppid = Number.parseInt(match[2] ?? "", 10);
-      if (Number.isNaN(pid) || Number.isNaN(ppid)) {
-        continue;
-      }
-      const command = match[3] ?? "";
-      byPid.set(pid, { pid, ppid, command });
-      const list = children.get(ppid) ?? [];
-      list.push(pid);
-      children.set(ppid, list);
-    }
+    const { byPid, children } = buildProcessSnapshotMaps(result.stdout ?? "");
     processSnapshotCache.at = nowMs;
     processSnapshotCache.byPid = byPid;
     processSnapshotCache.children = children;

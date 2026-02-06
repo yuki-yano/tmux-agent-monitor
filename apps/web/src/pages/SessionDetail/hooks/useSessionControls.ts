@@ -33,6 +33,54 @@ type UseSessionControlsParams = {
   scrollToBottom: (behavior?: "auto" | "smooth") => void;
 };
 
+const resolveCommandErrorMessage = (response: CommandResponse, fallback: string) =>
+  response.error?.message ?? fallback;
+
+const handleCommandFailure = (
+  response: CommandResponse,
+  fallback: string,
+  setScreenError: (error: string | null) => void,
+) => {
+  if (response.ok) {
+    return false;
+  }
+  setScreenError(resolveCommandErrorMessage(response, fallback));
+  return true;
+};
+
+const confirmDangerousKeySend = (mappedKey: string) => {
+  if (!defaultDangerKeys.includes(mappedKey as AllowedKey)) {
+    return true;
+  }
+  return window.confirm("Dangerous key detected. Send anyway?");
+};
+
+const readPromptValue = (textInputRef: { current: HTMLTextAreaElement | null }) =>
+  textInputRef.current?.value ?? "";
+
+const clearPromptValue = (textInputRef: { current: HTMLTextAreaElement | null }) => {
+  if (textInputRef.current) {
+    textInputRef.current.value = "";
+  }
+};
+
+const confirmDangerousTextSend = (value: string) => {
+  if (!isDangerousText(value)) {
+    return true;
+  }
+  return window.confirm("Dangerous command detected. Send anyway?");
+};
+
+const shouldSkipTextSend = ({
+  readOnly,
+  rawMode,
+  value,
+}: {
+  readOnly: boolean;
+  rawMode: boolean;
+  value: string;
+}) => readOnly || rawMode || !value.trim();
+
 export const useSessionControls = ({
   paneId,
   readOnly,
@@ -76,20 +124,12 @@ export const useSessionControls = ({
           [{ kind: "key", value: mapped as AllowedKey }],
           allowDangerKeys,
         );
-        if (!result.ok) {
-          setScreenError(result.error?.message ?? API_ERROR_MESSAGES.sendRaw);
-        }
+        handleCommandFailure(result, API_ERROR_MESSAGES.sendRaw, setScreenError);
         return;
       }
-      const hasDanger = defaultDangerKeys.includes(mapped);
-      if (hasDanger) {
-        const confirmed = window.confirm("Dangerous key detected. Send anyway?");
-        if (!confirmed) return;
-      }
+      if (!confirmDangerousKeySend(mapped)) return;
       const result = await sendKeys(paneId, [mapped as AllowedKey]);
-      if (!result.ok) {
-        setScreenError(result.error?.message ?? API_ERROR_MESSAGES.sendKeys);
-      }
+      handleCommandFailure(result, API_ERROR_MESSAGES.sendKeys, setScreenError);
     },
     [
       allowDangerKeys,
@@ -105,21 +145,14 @@ export const useSessionControls = ({
   );
 
   const handleSendText = useCallback(async () => {
-    if (readOnly || rawMode) return;
-    const currentValue = textInputRef.current?.value ?? "";
-    if (!currentValue.trim()) return;
-    if (isDangerousText(currentValue)) {
-      const confirmed = window.confirm("Dangerous command detected. Send anyway?");
-      if (!confirmed) return;
-    }
+    const currentValue = readPromptValue(textInputRef);
+    if (shouldSkipTextSend({ readOnly, rawMode, value: currentValue })) return;
+    if (!confirmDangerousTextSend(currentValue)) return;
     const result = await sendText(paneId, currentValue, autoEnter);
-    if (!result.ok) {
-      setScreenError(result.error?.message ?? API_ERROR_MESSAGES.sendText);
+    if (handleCommandFailure(result, API_ERROR_MESSAGES.sendText, setScreenError)) {
       return;
     }
-    if (textInputRef.current) {
-      textInputRef.current.value = "";
-    }
+    clearPromptValue(textInputRef);
     if (mode === "text") {
       scrollToBottom("auto");
     }

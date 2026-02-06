@@ -48,69 +48,73 @@ const resolveCommitCount = async (repoRoot: string) => {
   }
 };
 
+const toOptionalText = (value: string) => (value.trim().length > 0 ? value : null);
+
+const parseCommitLogRecord = (record: string): CommitSummary | null => {
+  const fields = record.split(FIELD_SEPARATOR);
+  const [
+    hash = "",
+    shortHash = "",
+    authorName = "",
+    authorEmailRaw = "",
+    authoredAt = "",
+    subject = "",
+    bodyRaw = "",
+  ] = fields;
+  if (!hash) {
+    return null;
+  }
+  return {
+    hash,
+    shortHash,
+    subject,
+    body: toOptionalText(bodyRaw),
+    authorName,
+    authorEmail: toOptionalText(authorEmailRaw),
+    authoredAt,
+  };
+};
+
 export const parseCommitLogOutput = (output: string): CommitSummary[] => {
   if (!output) return [];
   const records = output.split(RECORD_SEPARATOR).filter((record) => record.trim().length > 0);
-  const commits: CommitSummary[] = [];
-  for (const record of records) {
-    const fields = record.split(FIELD_SEPARATOR);
-    const [
-      hash = "",
-      shortHash = "",
-      authorName = "",
-      authorEmailRaw = "",
-      authoredAt = "",
-      subject = "",
-      bodyRaw = "",
-    ] = fields;
-    if (!hash) {
-      continue;
-    }
-    const body = bodyRaw.trim().length > 0 ? bodyRaw : null;
-    const authorEmail = authorEmailRaw.trim().length > 0 ? authorEmailRaw : null;
-    commits.push({
-      hash,
-      shortHash,
-      subject,
-      body,
-      authorName,
-      authorEmail,
-      authoredAt,
-    });
+  return records
+    .map((record) => parseCommitLogRecord(record))
+    .filter((commit): commit is CommitSummary => Boolean(commit));
+};
+
+const parseNameStatusLine = (line: string): CommitFile | null => {
+  const parts = line.split("\t");
+  if (parts.length < 2) {
+    return null;
   }
-  return commits;
+  const statusRaw = parts[0] ?? "";
+  const status = pickStatus(statusRaw);
+  if (status === "R" || status === "C") {
+    if (parts.length < 3) {
+      return null;
+    }
+    return {
+      status,
+      renamedFrom: parts[1] ?? undefined,
+      path: parts[2] ?? parts[1] ?? "",
+      additions: null,
+      deletions: null,
+    };
+  }
+  return {
+    status,
+    path: parts[1] ?? "",
+    additions: null,
+    deletions: null,
+  };
 };
 
 export const parseNameStatusOutput = (output: string): CommitFile[] => {
-  const files: CommitFile[] = [];
   const lines = output.split("\n").filter((line) => line.trim().length > 0);
-  for (const line of lines) {
-    const parts = line.split("\t");
-    if (parts.length < 2) {
-      continue;
-    }
-    const statusRaw = parts[0] ?? "";
-    const status = pickStatus(statusRaw);
-    if (status === "R" || status === "C") {
-      if (parts.length >= 3) {
-        files.push({
-          status,
-          renamedFrom: parts[1] ?? undefined,
-          path: parts[2] ?? parts[1] ?? "",
-          additions: null,
-          deletions: null,
-        });
-      }
-      continue;
-    }
-    files.push({
-      status,
-      path: parts[1] ?? "",
-      additions: null,
-      deletions: null,
-    });
-  }
-  return files.filter((file) => file.path.length > 0);
+  return lines
+    .map((line) => parseNameStatusLine(line))
+    .filter((file): file is CommitFile => Boolean(file && file.path.length > 0));
 };
 
 const findStatForFile = (
@@ -147,56 +151,138 @@ const buildCommitLogSignature = (log: CommitLog) => {
   });
 };
 
-export const fetchCommitLog = async (
-  cwd: string | null,
-  options?: { limit?: number; skip?: number; force?: boolean },
-): Promise<CommitLog> => {
+const createCommitLog = ({
+  repoRoot,
+  rev,
+  commits,
+  totalCount,
+  reason,
+}: {
+  repoRoot: string | null;
+  rev: string | null;
+  commits: CommitSummary[];
+  totalCount?: number | null;
+  reason?: "cwd_unknown" | "not_git" | "error";
+}): CommitLog => ({
+  repoRoot,
+  rev,
+  generatedAt: nowIso(),
+  commits,
+  totalCount,
+  reason,
+});
+
+const resolveCommitLogContext = async (cwd: string | null) => {
   if (!cwd) {
     return {
       repoRoot: null,
-      rev: null,
-      generatedAt: nowIso(),
-      commits: [],
-      reason: "cwd_unknown",
+      earlyResult: createCommitLog({
+        repoRoot: null,
+        rev: null,
+        commits: [],
+        reason: "cwd_unknown",
+      }),
     };
   }
+
   const repoRoot = await resolveRepoRoot(cwd);
   if (!repoRoot) {
     return {
       repoRoot: null,
-      rev: null,
-      generatedAt: nowIso(),
-      commits: [],
-      reason: "not_git",
+      earlyResult: createCommitLog({
+        repoRoot: null,
+        rev: null,
+        commits: [],
+        reason: "not_git",
+      }),
     };
   }
-  const limit = Math.max(1, Math.min(options?.limit ?? 10, 50));
-  const skip = Math.max(0, options?.skip ?? 0);
+
+  return { repoRoot, earlyResult: null as CommitLog | null };
+};
+
+const resolveCommitLogPaging = (options?: { limit?: number; skip?: number }) => ({
+  limit: Math.max(1, Math.min(options?.limit ?? 10, 50)),
+  skip: Math.max(0, options?.skip ?? 0),
+});
+
+const shouldUseCachedCommitLog = ({
+  force,
+  cached,
+  nowMs,
+  head,
+}: {
+  force: boolean | undefined;
+  cached: { at: number; rev: string | null; log: CommitLog; signature: string } | undefined;
+  nowMs: number;
+  head: string | null;
+}) => !force && cached && nowMs - cached.at < LOG_TTL_MS && cached.rev === head;
+
+const commitLogFormat = [
+  RECORD_SEPARATOR,
+  "%H",
+  FIELD_SEPARATOR,
+  "%h",
+  FIELD_SEPARATOR,
+  "%an",
+  FIELD_SEPARATOR,
+  "%ae",
+  FIELD_SEPARATOR,
+  "%ad",
+  FIELD_SEPARATOR,
+  "%s",
+  FIELD_SEPARATOR,
+  "%b",
+].join("");
+
+const loadCommitPatch = async (repoRoot: string, hash: string, file: CommitFile) => {
+  try {
+    const patch = await runGit(repoRoot, [
+      "show",
+      "--find-renames",
+      "--format=",
+      hash,
+      "--",
+      file.path,
+    ]);
+    if (patch || !file.renamedFrom) {
+      return patch;
+    }
+    return runGit(repoRoot, ["show", "--find-renames", "--format=", hash, "--", file.renamedFrom]);
+  } catch {
+    return "";
+  }
+};
+
+const truncateCommitPatch = (patch: string) => {
+  if (patch.length <= MAX_PATCH_BYTES) {
+    return { patch, truncated: false };
+  }
+  return {
+    patch: patch.slice(0, MAX_PATCH_BYTES),
+    truncated: true,
+  };
+};
+
+export const fetchCommitLog = async (
+  cwd: string | null,
+  options?: { limit?: number; skip?: number; force?: boolean },
+): Promise<CommitLog> => {
+  const context = await resolveCommitLogContext(cwd);
+  if (context.earlyResult) {
+    return context.earlyResult;
+  }
+  const repoRoot = context.repoRoot as string;
+  const { limit, skip } = resolveCommitLogPaging(options);
   const head = await resolveHead(repoRoot);
   const cacheKey = `${repoRoot}:${limit}:${skip}`;
   const cached = logCache.get(cacheKey);
   const nowMs = Date.now();
-  if (!options?.force && cached && nowMs - cached.at < LOG_TTL_MS && cached.rev === head) {
+  if (cached && shouldUseCachedCommitLog({ force: options?.force, cached, nowMs, head })) {
     return cached.log;
   }
   const totalCount = head ? await resolveCommitCount(repoRoot) : 0;
   try {
-    const format = [
-      RECORD_SEPARATOR,
-      "%H",
-      FIELD_SEPARATOR,
-      "%h",
-      FIELD_SEPARATOR,
-      "%an",
-      FIELD_SEPARATOR,
-      "%ae",
-      FIELD_SEPARATOR,
-      "%ad",
-      FIELD_SEPARATOR,
-      "%s",
-      FIELD_SEPARATOR,
-      "%b",
-    ].join("");
     const output = await runGit(repoRoot, [
       "log",
       "-n",
@@ -204,16 +290,15 @@ export const fetchCommitLog = async (
       "--skip",
       String(skip),
       "--date=iso-strict",
-      `--format=${format}`,
+      `--format=${commitLogFormat}`,
     ]);
     const commits = parseCommitLogOutput(output);
-    const log: CommitLog = {
+    const log = createCommitLog({
       repoRoot,
       rev: head,
-      generatedAt: nowIso(),
       commits,
       totalCount,
-    };
+    });
     logCache.set(cacheKey, {
       at: nowMs,
       rev: head,
@@ -222,14 +307,13 @@ export const fetchCommitLog = async (
     });
     return log;
   } catch {
-    return {
+    return createCommitLog({
       repoRoot,
       rev: head,
-      generatedAt: nowIso(),
       commits: [],
       totalCount,
       reason: "error",
-    };
+    });
   }
 };
 
@@ -307,32 +391,13 @@ export const fetchCommitFile = async (
   if (!options?.force && cached && nowMs - cached.at < FILE_TTL_MS) {
     return cached.file;
   }
-  let patch = "";
-  try {
-    patch = await runGit(repoRoot, ["show", "--find-renames", "--format=", hash, "--", file.path]);
-    if (!patch && file.renamedFrom) {
-      patch = await runGit(repoRoot, [
-        "show",
-        "--find-renames",
-        "--format=",
-        hash,
-        "--",
-        file.renamedFrom,
-      ]);
-    }
-  } catch {
-    patch = "";
-  }
+  const patch = await loadCommitPatch(repoRoot, hash, file);
   const binary = isBinaryPatch(patch) || file.additions === null || file.deletions === null;
-  let truncated = false;
-  if (patch.length > MAX_PATCH_BYTES) {
-    truncated = true;
-    patch = patch.slice(0, MAX_PATCH_BYTES);
-  }
+  const { patch: normalizedPatch, truncated } = truncateCommitPatch(patch);
   const diff: CommitFileDiff = {
     path: file.path,
     status: file.status,
-    patch: patch.length > 0 ? patch : null,
+    patch: normalizedPatch.length > 0 ? normalizedPatch : null,
     binary,
     truncated,
   };

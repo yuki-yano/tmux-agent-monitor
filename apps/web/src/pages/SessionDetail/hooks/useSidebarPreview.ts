@@ -51,6 +51,140 @@ const HOVER_PREVIEW_DELAY_MS = 320;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+type PreviewCacheMap = Partial<Record<string, { screen: string }>>;
+type PreviewLoadingMap = Partial<Record<string, boolean>>;
+type PreviewErrorMap = Partial<Record<string, string | null>>;
+
+type HoveredPaneData = {
+  session: SessionSummary | null;
+  previewEntry: { screen: string } | null;
+  previewText: string;
+  loading: boolean;
+  error: string | null;
+};
+
+const resolveHoveredPaneData = ({
+  hoveredPaneId,
+  sessionIndex,
+  previewCache,
+  previewLoading,
+  previewError,
+}: {
+  hoveredPaneId: string | null;
+  sessionIndex: Map<string, SessionSummary>;
+  previewCache: PreviewCacheMap;
+  previewLoading: PreviewLoadingMap;
+  previewError: PreviewErrorMap;
+}): HoveredPaneData => {
+  if (!hoveredPaneId) {
+    return {
+      session: null,
+      previewEntry: null,
+      previewText: "",
+      loading: false,
+      error: null,
+    };
+  }
+
+  const previewEntry = previewCache[hoveredPaneId] ?? null;
+  return {
+    session: sessionIndex.get(hoveredPaneId) ?? null,
+    previewEntry,
+    previewText: previewEntry?.screen ?? "",
+    loading: Boolean(previewLoading[hoveredPaneId]),
+    error: previewError[hoveredPaneId] ?? null,
+  };
+};
+
+const resolvePreviewAgent = (session: SessionSummary | null): "codex" | "claude" | "unknown" => {
+  if (session?.agent === "codex" || session?.agent === "claude") {
+    return session.agent;
+  }
+  return "unknown";
+};
+
+const buildPreviewLines = ({
+  hoveredPaneId,
+  previewEntry,
+  previewText,
+  session,
+  resolvedTheme,
+  highlightCorrections,
+}: {
+  hoveredPaneId: string | null;
+  previewEntry: { screen: string } | null;
+  previewText: string;
+  session: SessionSummary | null;
+  resolvedTheme: Theme;
+  highlightCorrections: HighlightCorrectionConfig | undefined;
+}) => {
+  if (!hoveredPaneId || !previewEntry) return [];
+  const text = previewText.length > 0 ? previewText : "No log data";
+  return renderAnsiLines(text, resolvedTheme, {
+    agent: resolvePreviewAgent(session),
+    highlightCorrections,
+  });
+};
+
+const selectVisibleLines = (previewFrame: PreviewFrame | null, lines: string[]) => {
+  if (!previewFrame || lines.length === 0) return [];
+  return lines.slice(-previewFrame.lines);
+};
+
+const resolvePreviewTitle = (session: SessionSummary | null) => {
+  if (session?.customTitle) return session.customTitle;
+  if (session?.title) return session.title;
+  if (session?.sessionName) return session.sessionName;
+  return "Session";
+};
+
+const resolvePreviewSessionMeta = (session: SessionSummary | null) => {
+  if (!session) {
+    return {
+      title: "Session",
+      sessionName: null,
+      windowIndex: null,
+    };
+  }
+  return {
+    title: resolvePreviewTitle(session),
+    sessionName: session.sessionName,
+    windowIndex: session.windowIndex,
+  };
+};
+
+const buildSidebarPreview = ({
+  hoveredPaneId,
+  previewFrame,
+  title,
+  sessionName,
+  windowIndex,
+  lines,
+  loading,
+  error,
+}: {
+  hoveredPaneId: string | null;
+  previewFrame: PreviewFrame | null;
+  title: string;
+  sessionName: string | null;
+  windowIndex: number | null;
+  lines: string[];
+  loading: boolean;
+  error: string | null;
+}): SidebarPreview | null => {
+  if (!hoveredPaneId || !previewFrame) return null;
+  return {
+    paneId: hoveredPaneId,
+    sessionName,
+    windowIndex,
+    frame: previewFrame,
+    title,
+    lines,
+    loading,
+    error,
+  };
+};
+
 export const useSidebarPreview = ({
   sessionIndex,
   currentPaneId,
@@ -73,28 +207,35 @@ export const useSidebarPreview = ({
   const pendingHoverRef = useRef<string | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const pendingPreviewPaneRef = useRef<string | null>(null);
-
-  const hoveredSession = hoveredPaneId ? (sessionIndex.get(hoveredPaneId) ?? null) : null;
-  const hoveredPreviewEntry = hoveredPaneId ? previewCache[hoveredPaneId] : null;
-  const hoveredPreviewText = hoveredPreviewEntry?.screen ?? "";
+  const hoveredPaneData = resolveHoveredPaneData({
+    hoveredPaneId,
+    sessionIndex,
+    previewCache,
+    previewLoading,
+    previewError,
+  });
+  const hoveredSession = hoveredPaneData.session;
+  const hoveredPreviewEntry = hoveredPaneData.previewEntry;
+  const hoveredPreviewText = hoveredPaneData.previewText;
+  const hoveredPreviewLoading = hoveredPaneData.loading;
+  const hoveredPreviewError = hoveredPaneData.error;
   const hoveredPreviewLines = useMemo(() => {
-    if (!hoveredPaneId || !hoveredPreviewEntry) return [];
-    const text = hoveredPreviewText.length > 0 ? hoveredPreviewText : "No log data";
-    const agent =
-      hoveredSession?.agent === "codex" || hoveredSession?.agent === "claude"
-        ? hoveredSession.agent
-        : "unknown";
-    return renderAnsiLines(text, resolvedTheme, { agent, highlightCorrections });
+    return buildPreviewLines({
+      hoveredPaneId,
+      previewEntry: hoveredPreviewEntry,
+      previewText: hoveredPreviewText,
+      session: hoveredSession,
+      resolvedTheme,
+      highlightCorrections,
+    });
   }, [
     highlightCorrections,
     hoveredPaneId,
     hoveredPreviewEntry,
     hoveredPreviewText,
-    hoveredSession?.agent,
+    hoveredSession,
     resolvedTheme,
   ]);
-  const hoveredPreviewLoading = hoveredPaneId ? Boolean(previewLoading[hoveredPaneId]) : false;
-  const hoveredPreviewError = hoveredPaneId ? (previewError[hoveredPaneId] ?? null) : null;
 
   const updatePreviewPosition = useCallback(
     (paneId: string) => {
@@ -260,42 +401,18 @@ export const useSidebarPreview = ({
     };
   }, [clearHoverTimer]);
 
-  const previewLines = useMemo(() => {
-    if (!previewFrame) return [];
-    if (hoveredPreviewLines.length === 0) return [];
-    return hoveredPreviewLines.slice(-previewFrame.lines);
-  }, [hoveredPreviewLines, previewFrame]);
-
-  const previewTitle =
-    hoveredSession?.customTitle ??
-    hoveredSession?.title ??
-    hoveredSession?.sessionName ??
-    "Session";
-  const previewSessionName = hoveredSession?.sessionName ?? null;
-  const previewWindowIndex = hoveredSession?.windowIndex ?? null;
-
-  const preview = useMemo<SidebarPreview | null>(() => {
-    if (!hoveredPaneId || !previewFrame) return null;
-    return {
-      paneId: hoveredPaneId,
-      sessionName: previewSessionName,
-      windowIndex: previewWindowIndex,
-      frame: previewFrame,
-      title: previewTitle,
-      lines: previewLines,
-      loading: hoveredPreviewLoading,
-      error: hoveredPreviewError,
-    };
-  }, [
+  const previewLines = selectVisibleLines(previewFrame, hoveredPreviewLines);
+  const previewSessionMeta = resolvePreviewSessionMeta(hoveredSession);
+  const preview = buildSidebarPreview({
     hoveredPaneId,
     previewFrame,
-    previewTitle,
-    previewLines,
-    hoveredPreviewLoading,
-    hoveredPreviewError,
-    previewSessionName,
-    previewWindowIndex,
-  ]);
+    title: previewSessionMeta.title,
+    sessionName: previewSessionMeta.sessionName,
+    windowIndex: previewSessionMeta.windowIndex,
+    lines: previewLines,
+    loading: hoveredPreviewLoading,
+    error: hoveredPreviewError,
+  });
 
   const handleListScroll = useCallback(() => {
     if (hoveredPaneId) {

@@ -40,6 +40,71 @@ export type RefreshSessionsResult = {
   rateLimited?: boolean;
 };
 
+const buildRefreshFailureResult = (status: number): RefreshSessionsResult => ({
+  ok: false,
+  status,
+  authError: status === 401 || status === 403,
+  rateLimited: status === 429,
+});
+
+const resolveUnknownErrorMessage = (err: unknown, fallback: string) =>
+  err instanceof Error ? err.message : fallback;
+
+const buildScreenErrorResponse = ({
+  paneId,
+  mode,
+  message,
+  apiError,
+  buildApiError,
+}: {
+  paneId: string;
+  mode: "text" | "image";
+  message: string;
+  apiError?: ApiError;
+  buildApiError: (code: ApiError["code"], message: string) => ApiError;
+}): ScreenResponse => ({
+  ok: false,
+  paneId,
+  mode,
+  capturedAt: new Date().toISOString(),
+  error: apiError ?? buildApiError("INTERNAL", message),
+});
+
+const buildScreenRequestJson = (
+  options: { lines?: number; mode?: "text" | "image"; cursor?: string },
+  normalizedMode: "text" | "image",
+) => {
+  const json: { mode?: "text" | "image"; lines?: number; cursor?: string } = {
+    mode: options.mode,
+    lines: options.lines,
+  };
+  if (normalizedMode !== "image" && options.cursor) {
+    json.cursor = options.cursor;
+  }
+  return json;
+};
+
+const runCommandResponseSideEffects = ({
+  response,
+  onReadOnly,
+  isPaneMissingError,
+  onSessionRemoved,
+  paneId,
+}: {
+  response: CommandResponse;
+  onReadOnly: () => void;
+  isPaneMissingError: (error?: ApiError | null) => boolean;
+  onSessionRemoved: (paneId: string) => void;
+  paneId: string;
+}) => {
+  if (response.error?.code === "READ_ONLY") {
+    onReadOnly();
+  }
+  if (isPaneMissingError(response.error)) {
+    onSessionRemoved(paneId);
+  }
+};
+
 export const useSessionApi = ({
   token,
   onSessions,
@@ -110,12 +175,7 @@ export const useSessionApi = ({
           ? API_ERROR_MESSAGES.invalidResponse
           : API_ERROR_MESSAGES.requestFailed;
         onConnectionIssue(extractErrorMessage(res, data, fallback, { includeStatus: !res.ok }));
-        return {
-          ok: false,
-          status: res.status,
-          authError: res.status === 401 || res.status === 403,
-          rateLimited: res.status === 429,
-        };
+        return buildRefreshFailureResult(res.status);
       }
       onSessions(data.sessions);
       const nextHighlight = data.clientConfig?.screen?.highlightCorrection;
@@ -125,7 +185,7 @@ export const useSessionApi = ({
       onConnectionIssue(null);
       return { ok: true, status: res.status };
     } catch (err) {
-      onConnectionIssue(err instanceof Error ? err.message : "Network error. Reconnecting...");
+      onConnectionIssue(resolveUnknownErrorMessage(err, "Network error. Reconnecting..."));
       return { ok: false };
     }
   }, [apiClient, onConnectionIssue, onHighlightCorrections, onSessions, token]);
@@ -320,13 +380,7 @@ export const useSessionApi = ({
 
       const executeRequest = async (): Promise<ScreenResponse> => {
         const param = { paneId: encodePaneId(paneId) };
-        const json: { mode?: "text" | "image"; lines?: number; cursor?: string } = {
-          mode: options.mode,
-          lines: options.lines,
-        };
-        if (normalizedMode !== "image" && options.cursor) {
-          json.cursor = options.cursor;
-        }
+        const json = buildScreenRequestJson(options, normalizedMode);
         try {
           const { res, data } = await requestJson<ApiEnvelope<{ screen?: ScreenResponse }>>(
             apiClient.sessions[":paneId"].screen.$post({ param, json }),
@@ -337,24 +391,23 @@ export const useSessionApi = ({
             });
             onConnectionIssue(message);
             handleSessionMissing(paneId, res, data);
-            return {
-              ok: false,
+            return buildScreenErrorResponse({
               paneId,
               mode: normalizedMode,
-              capturedAt: new Date().toISOString(),
-              error: data?.error ?? buildApiError("INTERNAL", message),
-            };
+              message,
+              apiError: data?.error,
+              buildApiError,
+            });
           }
           if (!data?.screen) {
             const message = API_ERROR_MESSAGES.invalidResponse;
             onConnectionIssue(message);
-            return {
-              ok: false,
+            return buildScreenErrorResponse({
               paneId,
               mode: normalizedMode,
-              capturedAt: new Date().toISOString(),
-              error: buildApiError("INTERNAL", message),
-            };
+              message,
+              buildApiError,
+            });
           }
           if (isPaneMissingError(data.screen.error)) {
             onSessionRemoved(paneId);
@@ -362,16 +415,14 @@ export const useSessionApi = ({
           onConnectionIssue(null);
           return data.screen;
         } catch (err) {
-          const message =
-            err instanceof Error ? err.message : API_ERROR_MESSAGES.screenRequestFailed;
+          const message = resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.screenRequestFailed);
           onConnectionIssue(message);
-          return {
-            ok: false,
+          return buildScreenErrorResponse({
             paneId,
             mode: normalizedMode,
-            capturedAt: new Date().toISOString(),
-            error: buildApiError("INTERNAL", message),
-          };
+            message,
+            buildApiError,
+          });
         }
       };
 
@@ -420,16 +471,17 @@ export const useSessionApi = ({
           onConnectionIssue(message);
           return { ok: false, error: buildApiError("INTERNAL", message) };
         }
-        if (data.command.error?.code === "READ_ONLY") {
-          onReadOnly();
-        }
-        if (isPaneMissingError(data.command.error)) {
-          onSessionRemoved(paneId);
-        }
+        runCommandResponseSideEffects({
+          response: data.command,
+          onReadOnly,
+          isPaneMissingError,
+          onSessionRemoved,
+          paneId,
+        });
         onConnectionIssue(null);
         return data.command;
       } catch (err) {
-        const message = err instanceof Error ? err.message : fallbackMessage;
+        const message = resolveUnknownErrorMessage(err, fallbackMessage);
         onConnectionIssue(message);
         return { ok: false, error: buildApiError("INTERNAL", message) };
       }

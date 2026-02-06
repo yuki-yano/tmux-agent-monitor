@@ -11,7 +11,14 @@ import { sidebarHoveredPaneIdAtom, sidebarPreviewFrameAtom } from "../atoms/side
 import { useSidebarPreview } from "./useSidebarPreview";
 
 const prefetchPreview = vi.fn();
-const previewCache = {
+const previewCache: Record<
+  string,
+  {
+    screen: string;
+    capturedAt: string;
+    updatedAt: number;
+  }
+> = {
   "pane-1": {
     screen: "line1\nline2",
     capturedAt: new Date(0).toISOString(),
@@ -36,6 +43,8 @@ vi.mock("@/lib/ansi", () => ({
 describe("useSidebarPreview", () => {
   afterEach(() => {
     prefetchPreview.mockClear();
+    previewCache["pane-1"]!.screen = "line1\nline2";
+    delete previewCache["pane-2"];
   });
 
   const createSession = (): SessionSummary => ({
@@ -158,5 +167,43 @@ describe("useSidebarPreview", () => {
     await waitFor(() => {
       expect(result.current.preview).toBeNull();
     });
+  });
+
+  it("falls back to default title and no log data text when metadata is missing", async () => {
+    previewCache["pane-2"] = {
+      screen: "",
+      capturedAt: new Date(0).toISOString(),
+      updatedAt: Date.now(),
+    };
+
+    const { result } = setup();
+    const node = document.createElement("div");
+    node.getBoundingClientRect = () =>
+      ({
+        width: 180,
+        height: 36,
+        top: 120,
+        left: 24,
+        right: 204,
+        bottom: 156,
+        x: 24,
+        y: 120,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    act(() => {
+      result.current.registerItemRef("pane-2", node);
+      result.current.handleFocus("pane-2");
+    });
+
+    await waitFor(() => {
+      expect(result.current.preview).not.toBeNull();
+    });
+
+    expect(result.current.preview?.title).toBe("Session");
+    expect(result.current.preview?.sessionName).toBeNull();
+    expect(result.current.preview?.windowIndex).toBeNull();
+    expect(result.current.preview?.lines).toEqual(["No log data"]);
+    expect(prefetchPreview).toHaveBeenCalledWith("pane-2");
   });
 });

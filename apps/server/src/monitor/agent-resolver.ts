@@ -27,36 +27,63 @@ type AgentResolution = {
   ignore: boolean;
 };
 
+const resolveEditorPaneContext = async (pane: PaneAgentHints, isEditorPane: boolean) => {
+  if (!isEditorPane) {
+    return { ignore: false, processCommand: null as string | null };
+  }
+  if (editorCommandHasAgentArg(pane.paneStartCommand) || hasAgentHint(pane.paneTitle)) {
+    return { ignore: true, processCommand: null as string | null };
+  }
+  const processCommand = await getProcessCommand(pane.panePid);
+  if (editorCommandHasAgentArg(processCommand)) {
+    return { ignore: true, processCommand };
+  }
+  return { ignore: false, processCommand };
+};
+
+const resolveFallbackAgent = async ({
+  agent,
+  processCommand,
+  pane,
+}: {
+  agent: AgentType;
+  processCommand: string | null;
+  pane: PaneAgentHints;
+}) => {
+  let resolved = agent;
+  let command = processCommand;
+  if (resolved === "unknown") {
+    if (!command) {
+      command = await getProcessCommand(pane.panePid);
+    }
+    if (command) {
+      resolved = buildAgent(command);
+    }
+  }
+  if (resolved === "unknown") {
+    resolved = await findAgentFromPidTree(pane.panePid);
+  }
+  if (resolved === "unknown") {
+    resolved = await getAgentFromTty(pane.paneTty);
+  }
+  return resolved;
+};
+
 export const resolvePaneAgent = async (pane: PaneAgentHints): Promise<AgentResolution> => {
   const baseHint = mergeHints(pane.currentCommand, pane.paneStartCommand, pane.paneTitle);
   const isEditorPane =
     isEditorCommand(pane.currentCommand) || isEditorCommand(pane.paneStartCommand);
-  let processCommand: string | null = null;
-  if (isEditorPane) {
-    if (editorCommandHasAgentArg(pane.paneStartCommand) || hasAgentHint(pane.paneTitle)) {
-      return { agent: "unknown", ignore: true };
-    }
-    processCommand = await getProcessCommand(pane.panePid);
-    if (editorCommandHasAgentArg(processCommand)) {
-      return { agent: "unknown", ignore: true };
-    }
+  const editorContext = await resolveEditorPaneContext(pane, isEditorPane);
+  if (editorContext.ignore) {
+    return { agent: "unknown", ignore: true };
   }
 
-  let agent = buildAgent(baseHint);
-  if (agent === "unknown") {
-    if (!processCommand) {
-      processCommand = await getProcessCommand(pane.panePid);
-    }
-    if (processCommand) {
-      agent = buildAgent(processCommand);
-    }
-  }
-  if (agent === "unknown") {
-    agent = await findAgentFromPidTree(pane.panePid);
-  }
-  if (agent === "unknown") {
-    agent = await getAgentFromTty(pane.paneTty);
-  }
+  const hintedAgent = buildAgent(baseHint);
+  const agent = await resolveFallbackAgent({
+    agent: hintedAgent,
+    processCommand: editorContext.processCommand,
+    pane,
+  });
 
   return { agent, ignore: false };
 };

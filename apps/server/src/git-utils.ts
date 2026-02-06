@@ -9,23 +9,39 @@ export type RunGitOptions = {
 const DEFAULT_TIMEOUT_MS = 5000;
 const DEFAULT_MAX_BUFFER = 20_000_000;
 
+const resolveRunGitOptions = (options?: RunGitOptions) => ({
+  timeoutMs: options?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  maxBuffer: options?.maxBuffer ?? DEFAULT_MAX_BUFFER,
+  allowStdoutOnError: options?.allowStdoutOnError ?? true,
+});
+
+const extractStdoutFromError = (err: unknown) => {
+  if (!err || typeof err !== "object" || !("stdout" in err)) {
+    return null;
+  }
+  const { stdout } = err as { stdout?: unknown };
+  return typeof stdout === "string" ? stdout : "";
+};
+
 export const runGit = async (
   cwd: string,
   args: string[],
   options?: RunGitOptions,
 ): Promise<string> => {
+  const runOptions = resolveRunGitOptions(options);
   try {
     const result = await execa("git", ["-C", cwd, ...args], {
-      timeout: options?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      maxBuffer: options?.maxBuffer ?? DEFAULT_MAX_BUFFER,
+      timeout: runOptions.timeoutMs,
+      maxBuffer: runOptions.maxBuffer,
     });
     return result.stdout ?? "";
   } catch (err) {
-    if (options?.allowStdoutOnError ?? true) {
-      if (err && typeof err === "object" && "stdout" in err) {
-        const stdout = (err as { stdout?: string }).stdout;
-        return stdout ?? "";
-      }
+    if (!runOptions.allowStdoutOnError) {
+      throw err;
+    }
+    const stdout = extractStdoutFromError(err);
+    if (stdout !== null) {
+      return stdout;
     }
     throw err;
   }

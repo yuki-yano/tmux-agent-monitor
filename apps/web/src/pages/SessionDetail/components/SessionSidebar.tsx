@@ -200,6 +200,51 @@ type SessionPreviewPopoverProps = {
   error: string | null;
 };
 
+const SessionPreviewMeta = ({
+  sessionName,
+  windowIndex,
+  paneId,
+}: {
+  sessionName: string | null;
+  windowIndex: number | null;
+  paneId: string;
+}) => (
+  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+    {sessionName && <TagPill tone="meta">Session {sessionName}</TagPill>}
+    {windowIndex !== null && <TagPill tone="meta">Window {windowIndex}</TagPill>}
+    <TagPill tone="meta">Pane {paneId}</TagPill>
+  </div>
+);
+
+const SessionPreviewBody = ({
+  lines,
+  loading,
+  error,
+}: {
+  lines: string[];
+  loading: boolean;
+  error: string | null;
+}) => (
+  <div className="border-latte-surface2/70 bg-latte-crust/70 mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border px-3 py-3 font-mono text-[12px] leading-[16px]">
+    {loading && <p className="text-latte-subtext0 text-xs">Loading preview...</p>}
+    {!loading && error && <p className="text-latte-red text-xs">{error}</p>}
+    {!loading && !error && lines.length === 0 && (
+      <p className="text-latte-subtext0 text-xs">Preview unavailable.</p>
+    )}
+    {!loading && !error && lines.length > 0 && (
+      <div className="flex min-h-full flex-col justify-end">
+        {lines.map((line, index) => (
+          <div
+            key={`preview-${index}`}
+            className="whitespace-pre"
+            dangerouslySetInnerHTML={{ __html: line || "&#x200B;" }}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 const SessionPreviewPopover = memo(
   ({
     frame,
@@ -225,31 +270,8 @@ const SessionPreviewPopover = memo(
         <div className="flex items-center justify-between gap-2">
           <p className="text-latte-text truncate text-sm font-semibold">{title}</p>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          {sessionName && <TagPill tone="meta">Session {sessionName}</TagPill>}
-          {windowIndex !== null && windowIndex !== undefined && (
-            <TagPill tone="meta">Window {windowIndex}</TagPill>
-          )}
-          <TagPill tone="meta">Pane {paneId}</TagPill>
-        </div>
-        <div className="border-latte-surface2/70 bg-latte-crust/70 mt-3 min-h-0 flex-1 overflow-hidden rounded-xl border px-3 py-3 font-mono text-[12px] leading-[16px]">
-          {loading && <p className="text-latte-subtext0 text-xs">Loading preview...</p>}
-          {!loading && error && <p className="text-latte-red text-xs">{error}</p>}
-          {!loading && !error && lines.length === 0 && (
-            <p className="text-latte-subtext0 text-xs">Preview unavailable.</p>
-          )}
-          {!loading && !error && lines.length > 0 && (
-            <div className="flex min-h-full flex-col justify-end">
-              {lines.map((line, index) => (
-                <div
-                  key={`preview-${index}`}
-                  className="whitespace-pre"
-                  dangerouslySetInnerHTML={{ __html: line || "&#x200B;" }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <SessionPreviewMeta sessionName={sessionName} windowIndex={windowIndex} paneId={paneId} />
+        <SessionPreviewBody lines={lines} loading={loading} error={error} />
         <div className="border-latte-surface1/70 bg-latte-base/90 absolute left-0 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t" />
       </div>
     </div>

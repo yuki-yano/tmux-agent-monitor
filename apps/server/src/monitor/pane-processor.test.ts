@@ -51,6 +51,29 @@ const baseConfig = {
 } as AgentMonitorConfig;
 
 describe("processPane", () => {
+  it("returns null when pane should be ignored", async () => {
+    const updatePaneOutputState = vi.fn();
+    const result = await processPane(
+      {
+        pane: basePane,
+        config: baseConfig,
+        paneStates: { get: () => createPaneState() },
+        paneLogManager: createPaneLogManager(),
+        capturePaneFingerprint: vi.fn(async () => null),
+        applyRestored: vi.fn(() => null),
+        getCustomTitle: vi.fn(() => null),
+        resolveRepoRoot: vi.fn(async () => null),
+      },
+      {
+        resolvePaneAgent: vi.fn(async () => ({ agent: "unknown" as const, ignore: true })),
+        updatePaneOutputState,
+      },
+    );
+
+    expect(result).toBeNull();
+    expect(updatePaneOutputState).not.toHaveBeenCalled();
+  });
+
   it("returns detail for shell panes and skips pipe logging", async () => {
     const preparePaneLogging = vi.fn(async () => ({
       pipeAttached: false,

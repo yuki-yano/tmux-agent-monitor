@@ -84,6 +84,79 @@ const KeyButton = ({
   </Button>
 );
 
+const RAW_MODE_INPUT_CLASS_DANGER =
+  "border-latte-red/90 bg-latte-base/90 ring-4 ring-latte-red/50 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-red)/0.25),0_0_24px_rgb(var(--ctp-red)/0.6),0_0_52px_rgb(var(--ctp-red)/0.28)]";
+const RAW_MODE_INPUT_CLASS_SAFE =
+  "border-latte-peach/90 bg-latte-base/90 ring-4 ring-latte-peach/55 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-peach)/0.25),0_0_24px_rgb(var(--ctp-peach)/0.6),0_0_52px_rgb(var(--ctp-peach)/0.28)]";
+const RAW_MODE_INPUT_CLASS_DEFAULT =
+  "focus-within:border-latte-lavender focus-within:ring-latte-lavender/30 focus-within:ring-2";
+const RAW_MODE_TOGGLE_CLASS_DANGER =
+  "border-latte-red/85 bg-latte-red/20 text-latte-red ring-2 ring-latte-red/40 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-red)/0.3),0_0_16px_rgb(var(--ctp-red)/0.45)]";
+const RAW_MODE_TOGGLE_CLASS_SAFE =
+  "border-latte-peach/85 bg-latte-peach/20 text-latte-peach ring-2 ring-latte-peach/45 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-peach)/0.3),0_0_16px_rgb(var(--ctp-peach)/0.45)]";
+const DANGER_TOGGLE_CLASS_ACTIVE = "border-latte-red/70 bg-latte-red/10 text-latte-red";
+const DANGER_TOGGLE_CLASS_DEFAULT = "border-latte-surface2/70 text-latte-subtext0";
+const MODIFIER_DOT_CLASS_ACTIVE = "bg-latte-lavender";
+const MODIFIER_DOT_CLASS_DEFAULT = "bg-latte-surface2";
+
+const resolveRawModeInputClass = (rawMode: boolean, allowDangerKeys: boolean) => {
+  if (!rawMode) return RAW_MODE_INPUT_CLASS_DEFAULT;
+  return allowDangerKeys ? RAW_MODE_INPUT_CLASS_DANGER : RAW_MODE_INPUT_CLASS_SAFE;
+};
+
+const resolveRawModeToggleClass = (rawMode: boolean, allowDangerKeys: boolean) => {
+  if (!rawMode) return undefined;
+  return allowDangerKeys ? RAW_MODE_TOGGLE_CLASS_DANGER : RAW_MODE_TOGGLE_CLASS_SAFE;
+};
+
+const resolveDangerToggleClass = (allowDangerKeys: boolean) =>
+  allowDangerKeys ? DANGER_TOGGLE_CLASS_ACTIVE : DANGER_TOGGLE_CLASS_DEFAULT;
+
+const resolveModifierDotClass = (active: boolean) =>
+  active ? MODIFIER_DOT_CLASS_ACTIVE : MODIFIER_DOT_CLASS_DEFAULT;
+
+const isSendShortcut = (event: KeyboardEvent<HTMLTextAreaElement>) =>
+  event.key === "Enter" && (event.ctrlKey || event.metaKey);
+
+const handlePromptInput = ({
+  event,
+  rawMode,
+  onRawInput,
+  syncPromptHeight,
+}: {
+  event: FormEvent<HTMLTextAreaElement>;
+  rawMode: boolean;
+  onRawInput: (event: FormEvent<HTMLTextAreaElement>) => void;
+  syncPromptHeight: (textarea: HTMLTextAreaElement) => void;
+}) => {
+  if (rawMode) {
+    onRawInput(event);
+  }
+  syncPromptHeight(event.currentTarget);
+};
+
+const handlePromptKeyDown = ({
+  event,
+  rawMode,
+  onRawKeyDown,
+  onSend,
+}: {
+  event: KeyboardEvent<HTMLTextAreaElement>;
+  rawMode: boolean;
+  onRawKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onSend: () => void;
+}) => {
+  if (rawMode) {
+    onRawKeyDown(event);
+    return;
+  }
+  if (!isSendShortcut(event)) {
+    return;
+  }
+  event.preventDefault();
+  onSend();
+};
+
 export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
   const {
     readOnly,
@@ -115,16 +188,11 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
   const tabLabel = "Tab";
   const inputWrapperRef = useRef<HTMLDivElement | null>(null);
   const placeholder = rawMode ? "Raw input (sent immediately)..." : "Type a prompt…";
-  const rawModeInputClass = rawMode
-    ? allowDangerKeys
-      ? "border-latte-red/90 bg-latte-base/90 ring-4 ring-latte-red/50 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-red)/0.25),0_0_24px_rgb(var(--ctp-red)/0.6),0_0_52px_rgb(var(--ctp-red)/0.28)]"
-      : "border-latte-peach/90 bg-latte-base/90 ring-4 ring-latte-peach/55 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-peach)/0.25),0_0_24px_rgb(var(--ctp-peach)/0.6),0_0_52px_rgb(var(--ctp-peach)/0.28)]"
-    : "focus-within:border-latte-lavender focus-within:ring-latte-lavender/30 focus-within:ring-2";
-  const rawModeToggleClass = rawMode
-    ? allowDangerKeys
-      ? "border-latte-red/85 bg-latte-red/20 text-latte-red ring-2 ring-latte-red/40 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-red)/0.3),0_0_16px_rgb(var(--ctp-red)/0.45)]"
-      : "border-latte-peach/85 bg-latte-peach/20 text-latte-peach ring-2 ring-latte-peach/45 ring-offset-2 ring-offset-latte-base/70 shadow-[0_0_0_1px_rgb(var(--ctp-peach)/0.3),0_0_16px_rgb(var(--ctp-peach)/0.45)]"
-    : undefined;
+  const rawModeInputClass = resolveRawModeInputClass(rawMode, allowDangerKeys);
+  const rawModeToggleClass = resolveRawModeToggleClass(rawMode, allowDangerKeys);
+  const dangerToggleClass = resolveDangerToggleClass(allowDangerKeys);
+  const shiftDotClass = resolveModifierDotClass(shiftHeld);
+  const ctrlDotClass = resolveModifierDotClass(ctrlHeld);
 
   const syncPromptHeight = useCallback((textarea: HTMLTextAreaElement) => {
     textarea.style.height = "auto";
@@ -134,23 +202,11 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
     }
   }, []);
 
-  const handleTextareaInput = (e: FormEvent<HTMLTextAreaElement>) => {
-    if (rawMode) {
-      onRawInput(e);
-    }
-    syncPromptHeight(e.currentTarget);
-  };
+  const handleTextareaInput = (e: FormEvent<HTMLTextAreaElement>) =>
+    handlePromptInput({ event: e, rawMode, onRawInput, syncPromptHeight });
 
-  const handleTextareaKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (rawMode) {
-      onRawKeyDown(event);
-      return;
-    }
-    if (event.key !== "Enter") return;
-    if (!event.ctrlKey && !event.metaKey) return;
-    event.preventDefault();
-    handleSendText();
-  };
+  const handleTextareaKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) =>
+    handlePromptKeyDown({ event, rawMode, onRawKeyDown, onSend: handleSendText });
 
   const handleSendText = () => {
     const result = onSendText();
@@ -243,11 +299,7 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
               onClick={onToggleAllowDangerKeys}
               active={allowDangerKeys}
               title="Allow dangerous keys"
-              className={
-                allowDangerKeys
-                  ? "border-latte-red/70 bg-latte-red/10 text-latte-red"
-                  : "border-latte-surface2/70 text-latte-subtext0"
-              }
+              className={dangerToggleClass}
             >
               Danger
             </PillToggle>
@@ -287,9 +339,7 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
               active={shiftHeld}
               className="px-2.5 py-1 text-[10px] tracking-[0.18em]"
             >
-              <span
-                className={`h-2 w-2 rounded-full transition-colors ${shiftHeld ? "bg-latte-lavender" : "bg-latte-surface2"}`}
-              />
+              <span className={`h-2 w-2 rounded-full transition-colors ${shiftDotClass}`} />
               Shift
             </ModifierToggle>
             <ModifierToggle
@@ -298,9 +348,7 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
               active={ctrlHeld}
               className="px-2.5 py-1 text-[10px] tracking-[0.18em]"
             >
-              <span
-                className={`h-2 w-2 rounded-full transition-colors ${ctrlHeld ? "bg-latte-lavender" : "bg-latte-surface2"}`}
-              />
+              <span className={`h-2 w-2 rounded-full transition-colors ${ctrlDotClass}`} />
               Ctrl
             </ModifierToggle>
           </div>
