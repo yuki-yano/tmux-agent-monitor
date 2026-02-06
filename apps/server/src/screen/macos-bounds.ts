@@ -1,4 +1,5 @@
 export type Bounds = { x: number; y: number; width: number; height: number };
+export type BoundsSet = { content: Bounds | null; window: Bounds | null };
 
 const parseBounds = (input: string): Bounds | null => {
   const parts = input
@@ -10,6 +11,9 @@ const parseBounds = (input: string): Bounds | null => {
   }
   const [x, y, width, height] = parts;
   if (x === undefined || y === undefined || width === undefined || height === undefined) {
+    return null;
+  }
+  if (width <= 0 || height <= 0) {
     return null;
   }
   return { x, y, width, height };
@@ -38,7 +42,7 @@ end tell
 return ""
 `;
 
-export const parseBoundsSet = (input: string) => {
+export const parseBoundsSet = (input: string): BoundsSet => {
   const [contentRaw, windowRaw] = input.split("|").map((part) => part.trim());
   const content = contentRaw ? parseBounds(contentRaw) : null;
   const window = windowRaw ? parseBounds(windowRaw) : null;

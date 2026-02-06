@@ -2,7 +2,12 @@ import { markPaneFocus } from "../activity-suppressor.js";
 import { cropPaneBounds } from "./crop.js";
 import { resolveBackendApp, type TerminalBackend } from "./macos-app.js";
 import { focusTerminalApp, isAppRunning, runAppleScript } from "./macos-applescript.js";
-import { type Bounds, buildTerminalBoundsScript, parseBoundsSet } from "./macos-bounds.js";
+import {
+  type Bounds,
+  type BoundsSet,
+  buildTerminalBoundsScript,
+  parseBoundsSet,
+} from "./macos-bounds.js";
 import { captureRegion } from "./macos-screencapture.js";
 import { focusTmuxPane, getPaneGeometry, type TmuxOptions } from "./tmux-geometry.js";
 import { isValidTty } from "./tty.js";
@@ -44,8 +49,7 @@ const focusCaptureTarget = async (appName: string, options: CaptureOptions) => {
 
 const readTerminalBounds = async (appName: string) => {
   const boundsRaw = await runAppleScript(buildTerminalBoundsScript(appName));
-  const boundsSet = boundsRaw ? parseBoundsSet(boundsRaw) : { content: null, window: null };
-  return boundsSet.content ?? boundsSet.window;
+  return boundsRaw ? parseBoundsSet(boundsRaw) : { content: null, window: null };
 };
 
 const resolvePaneGeometryForCapture = async (options: CaptureOptions) => {
@@ -55,24 +59,46 @@ const resolvePaneGeometryForCapture = async (options: CaptureOptions) => {
   return getPaneGeometry(options.paneId, options.tmux);
 };
 
-const captureWithBounds = async (bounds: Bounds, options: CaptureOptions) => {
+const captureWithBounds = async (
+  boundsSet: BoundsSet,
+  options: CaptureOptions,
+  allowWindowFallbackForCrop: boolean,
+) => {
   const paneGeometry = await resolvePaneGeometryForCapture(options);
-  const croppedBounds = paneGeometry ? cropPaneBounds(bounds, paneGeometry) : null;
-  const targetBounds = croppedBounds ?? bounds;
+  const contentBounds = boundsSet.content;
+  const windowBounds = boundsSet.window;
+
+  if (paneGeometry) {
+    if (contentBounds) {
+      const croppedBounds = cropPaneBounds(contentBounds, paneGeometry);
+      if (croppedBounds) {
+        const imageBase64 = await captureRegion(croppedBounds);
+        if (!imageBase64) {
+          return null;
+        }
+        return { imageBase64, cropped: true };
+      }
+    } else if (!allowWindowFallbackForCrop) {
+      return null;
+    }
+  }
+
+  const targetBounds: Bounds | null = contentBounds ?? windowBounds;
+  if (!targetBounds) {
+    return null;
+  }
   const imageBase64 = await captureRegion(targetBounds);
   if (!imageBase64) {
     return null;
   }
-  return { imageBase64, cropped: Boolean(croppedBounds) };
+  return { imageBase64, cropped: false };
 };
 
-const captureAttempt = async (appName: string, options: CaptureOptions) => {
-  const bounds = await readTerminalBounds(appName);
-  if (!bounds) {
-    return null;
-  }
-  return captureWithBounds(bounds, options);
-};
+const captureAttempt = async (
+  appName: string,
+  options: CaptureOptions,
+  allowWindowFallbackForCrop: boolean,
+) => captureWithBounds(await readTerminalBounds(appName), options, allowWindowFallbackForCrop);
 
 export const captureTerminalScreenMacos = async (
   tty: string | null | undefined,
@@ -86,7 +112,8 @@ export const captureTerminalScreenMacos = async (
 
   const maxAttempts = 3;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const captureResult = await captureAttempt(app.appName, options);
+    const allowWindowFallbackForCrop = attempt === maxAttempts - 1;
+    const captureResult = await captureAttempt(app.appName, options, allowWindowFallbackForCrop);
     if (captureResult) {
       return captureResult;
     }

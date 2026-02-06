@@ -114,6 +114,24 @@ describe("captureTerminalScreenMacos", () => {
     expect(captureRegion).toHaveBeenCalledWith(croppedBounds);
   });
 
+  it("falls back to uncropped window capture when content bounds are unavailable", async () => {
+    vi.mocked(parseBoundsSet).mockReturnValue({
+      content: null,
+      window: baseBounds,
+    });
+
+    const capturePromise = captureTerminalScreenMacos("/dev/ttys001", {
+      paneId: "%1",
+    });
+    const result = await settleCapture(capturePromise);
+
+    expect(result).toEqual({ imageBase64: "image-data", cropped: false });
+    expect(runAppleScript).toHaveBeenCalledTimes(3);
+    expect(cropPaneBounds).not.toHaveBeenCalled();
+    expect(captureRegion).toHaveBeenCalledTimes(1);
+    expect(captureRegion).toHaveBeenCalledWith(baseBounds);
+  });
+
   it("retries capture until image is available", async () => {
     vi.mocked(captureRegion).mockResolvedValueOnce(null).mockResolvedValueOnce("image-after-retry");
 

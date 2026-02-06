@@ -4,7 +4,20 @@ export const cropPaneBounds = (
   base: { x: number; y: number; width: number; height: number },
   geometry: PaneGeometry,
 ) => {
-  if (geometry.windowWidth <= 0 || geometry.windowHeight <= 0) {
+  if (
+    geometry.left < 0 ||
+    geometry.top < 0 ||
+    geometry.width <= 0 ||
+    geometry.height <= 0 ||
+    geometry.windowWidth <= 0 ||
+    geometry.windowHeight <= 0
+  ) {
+    return null;
+  }
+  if (
+    geometry.left + geometry.width > geometry.windowWidth ||
+    geometry.top + geometry.height > geometry.windowHeight
+  ) {
     return null;
   }
   const cellWidth = base.width / geometry.windowWidth;

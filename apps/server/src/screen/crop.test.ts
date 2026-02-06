@@ -33,4 +33,17 @@ describe("cropPaneBounds", () => {
     };
     expect(cropPaneBounds(base, geometry)).toBeNull();
   });
+
+  it("returns null when pane geometry exceeds tmux window geometry", () => {
+    const base = { x: 0, y: 0, width: 200, height: 100 };
+    const geometry = {
+      left: 80,
+      top: 0,
+      width: 30,
+      height: 10,
+      windowWidth: 100,
+      windowHeight: 50,
+    };
+    expect(cropPaneBounds(base, geometry)).toBeNull();
+  });
 });
