@@ -214,7 +214,7 @@ const ComposerActionsRow = ({
     actions;
 
   return (
-    <div className="border-latte-surface2/70 bg-latte-mantle/50 flex items-center justify-between border-t px-2 py-1">
+    <div className="border-latte-surface2/70 bg-latte-mantle/50 flex items-center justify-between border-t px-2 py-1.5">
       <div className="flex items-center gap-2">
         <Button
           type="button"
@@ -508,7 +508,7 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
         <div
           className={`min-w-0 overflow-hidden rounded-2xl border transition ${rawModeInputClass}`}
         >
-          <div ref={inputWrapperRef} className="min-h-[56px] overflow-hidden">
+          <div ref={inputWrapperRef} className="min-h-[64px] overflow-hidden">
             <textarea
               placeholder={placeholder}
               ref={textInputRef}
@@ -524,7 +524,7 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
                 transformOrigin: "top left",
                 width: `${PROMPT_SCALE_INVERSE * 100}%`,
               }}
-              className="text-latte-text min-h-[52px] w-full resize-none rounded-2xl bg-transparent px-3 py-1.5 text-base outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              className="text-latte-text min-h-[60px] w-full resize-none rounded-2xl bg-transparent px-3 py-1.5 text-base outline-none disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
           <ComposerActionsRow
