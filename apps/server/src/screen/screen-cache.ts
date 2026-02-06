@@ -56,6 +56,31 @@ export const createScreenCache = (limit = 10): ScreenCache => {
     truncated: boolean | null,
   ) => previous.alternateOn !== alternateOn || previous.truncated !== truncated;
 
+  const resolvePreviousSnapshot = (
+    cursor: string | undefined,
+    bucket: Map<string, ScreenSnapshot> | undefined,
+  ) => {
+    if (!cursor || !bucket) {
+      return null;
+    }
+    return bucket.get(cursor) ?? null;
+  };
+
+  const applyFallbackReason = (
+    response: ScreenResponse,
+    fallbackReason?: "image_failed" | "image_disabled",
+  ) => {
+    if (fallbackReason) {
+      response.fallbackReason = fallbackReason;
+    }
+    return response;
+  };
+
+  const shouldSendFullForMissingSnapshot = (
+    cursor: string | undefined,
+    previous: ScreenSnapshot | null,
+  ) => !cursor || !previous;
+
   const buildTextResponse = ({
     paneId,
     lineCount,
@@ -67,7 +92,7 @@ export const createScreenCache = (limit = 10): ScreenCache => {
   }: BuildTextResponseParams): ScreenResponse => {
     const cacheKey = getScreenCacheKey(paneId, lineCount);
     const bucket = screenCache.get(cacheKey);
-    const previous = cursor ? bucket?.get(cursor) : null;
+    const previous = resolvePreviousSnapshot(cursor, bucket);
 
     const nextLines = splitScreenLines(screen);
     const nextCursor = randomUUID();
@@ -88,11 +113,12 @@ export const createScreenCache = (limit = 10): ScreenCache => {
       alternateOn,
       cursor: nextCursor,
     };
-    if (fallbackReason) {
-      response.fallbackReason = fallbackReason;
-    }
+    applyFallbackReason(response, fallbackReason);
 
-    if (!cursor || !previous) {
+    if (shouldSendFullForMissingSnapshot(cursor, previous)) {
+      return setFullScreenResponse(response, screen);
+    }
+    if (!previous) {
       return setFullScreenResponse(response, screen);
     }
 

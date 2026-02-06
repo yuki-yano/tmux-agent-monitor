@@ -85,6 +85,9 @@ const isSegmentContinuation = ({
   return leadingWhitespaceLength(line) >= segmentIndent;
 };
 
+const ensureSegmentStart = (segmentStart: number, index: number) =>
+  segmentStart === -1 ? index : segmentStart;
+
 export const buildClaudeDiffMask = (lines: string[]) => {
   const mask = new Array(lines.length).fill(false);
   let segmentStart = -1;
@@ -98,16 +101,12 @@ export const buildClaudeDiffMask = (lines: string[]) => {
     const line = lines[i] ?? "";
     const parsed = parseLineNumberParts(line);
     if (parsed) {
-      if (segmentStart === -1) {
-        segmentStart = i;
-      }
+      segmentStart = ensureSegmentStart(segmentStart, i);
       segmentIndent = Math.max(1, leadingWhitespaceLength(line));
       continue;
     }
     if (isDiffCandidateLine(line)) {
-      if (segmentStart === -1) {
-        segmentStart = i;
-      }
+      segmentStart = ensureSegmentStart(segmentStart, i);
       continue;
     }
     if (isSegmentContinuation({ segmentStart, segmentIndent, line })) {
