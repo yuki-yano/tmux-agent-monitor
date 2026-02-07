@@ -77,21 +77,23 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
           )}
         />
 
-        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Badge tone={stateTone(session.state)} size="sm">
-            {formatStateLabel(session.state)}
-          </Badge>
-          {showAgentBadge && (
-            <Badge tone={agentToneFor(session.agent)} size="sm">
-              {agentLabelFor(session.agent)}
+        <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <Badge tone={stateTone(session.state)} size="sm">
+              {formatStateLabel(session.state)}
             </Badge>
-          )}
-          {session.pipeConflict && (
-            <TagPill tone="danger" className="text-[9px]">
-              Conflict
-            </TagPill>
-          )}
-          <span className="ml-auto">
+            {showAgentBadge && (
+              <Badge tone={agentToneFor(session.agent)} size="sm">
+                {agentLabelFor(session.agent)}
+              </Badge>
+            )}
+            {session.pipeConflict && (
+              <TagPill tone="danger" className="text-[9px]">
+                Conflict
+              </TagPill>
+            )}
+          </div>
+          <span className="justify-self-end self-center">
             <LastInputPill
               tone={sessionTone}
               label={<Clock className="h-2.5 w-2.5" />}
