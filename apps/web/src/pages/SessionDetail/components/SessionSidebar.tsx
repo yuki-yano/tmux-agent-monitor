@@ -60,6 +60,16 @@ type SessionSidebarProps = {
 const surfaceLinkClass =
   "border-latte-surface2/70 bg-latte-base/70 focus-visible:ring-latte-lavender block w-full rounded-2xl border px-3 py-3.5 text-left transition-all duration-200 hover:border-latte-lavender/50 hover:bg-latte-mantle/70 hover:shadow-[0_8px_18px_-10px_rgba(114,135,253,0.35)] focus-visible:outline-none focus-visible:ring-2";
 
+const sidebarSessionBorderClassByState: Record<SessionSummary["state"], string> = {
+  RUNNING: "border-green-500/50",
+  WAITING_INPUT: "border-amber-500/50",
+  WAITING_PERMISSION: "border-red-500/50",
+  SHELL: "border-blue-500/50",
+  UNKNOWN: "border-gray-400/50",
+};
+
+const sidebarEditorSessionBorderClass = "border-latte-maroon/55";
+
 const SidebarBackdrop = memo(() => (
   <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-none rounded-r-3xl">
     <div className="bg-latte-lavender/15 absolute -left-10 top-10 h-32 w-32 rounded-full blur-3xl" />
@@ -139,6 +149,9 @@ const SessionSidebarItem = memo(
           label: "EDITOR",
         }
       : statusIconMeta(item.state);
+    const sessionBorderClass = showEditorState
+      ? sidebarEditorSessionBorderClass
+      : sidebarSessionBorderClassByState[item.state];
     const StatusIcon = statusMeta.icon;
 
     const handleRef = useCallback(
@@ -197,8 +210,9 @@ const SessionSidebarItem = memo(
           className={cn(
             surfaceLinkClass,
             "min-w-0 flex-1 flex-col gap-3",
+            sessionBorderClass,
             isCurrent
-              ? "border-latte-lavender/80 bg-latte-lavender/20 ring-latte-lavender/40 hover:border-latte-lavender/90 hover:bg-latte-lavender/25 shadow-[0_0_0_1px_rgba(114,135,253,0.45),0_12px_24px_-12px_rgba(114,135,253,0.45)] ring-1 ring-inset"
+              ? "bg-latte-lavender/20 ring-latte-lavender/40 hover:bg-latte-lavender/25 shadow-[0_0_0_1px_rgba(114,135,253,0.45),0_12px_24px_-12px_rgba(114,135,253,0.45)] ring-1 ring-inset"
               : "hover:border-latte-lavender/60 hover:bg-latte-lavender/10",
           )}
         >
