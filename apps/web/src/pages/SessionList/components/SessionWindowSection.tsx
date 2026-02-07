@@ -40,7 +40,7 @@ export const SessionWindowSection = ({ group, totalPanes, nowMs }: SessionWindow
           </TagPill>
         </div>
       </div>
-      <div className="mt-3 grid gap-3 sm:gap-4 md:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+      <div className="mt-3 grid gap-3 sm:gap-4 md:grid-cols-2 lg:gap-5 xl:grid-cols-3 2xl:grid-cols-4">
         {group.sessions.map((session) => (
           <SessionCard key={session.paneId} session={session} nowMs={nowMs} />
         ))}
