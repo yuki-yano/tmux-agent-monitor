@@ -21,7 +21,6 @@ const textInputTypes = new Set<string>([
 
 type ResolveRawBeforeInputArgs = {
   rawMode: boolean;
-  readOnly: boolean;
   suppressNextBeforeInput: boolean;
   isComposing: boolean;
   inputType: string | null;
@@ -33,8 +32,7 @@ type ResolveRawBeforeInputResult =
   | { kind: "consumeSuppressFlag" }
   | { kind: "handle"; inputType: string; data: string | null };
 
-const isDisabledRawInput = ({ rawMode, readOnly }: { rawMode: boolean; readOnly: boolean }) =>
-  !rawMode || readOnly;
+const isDisabledRawInput = ({ rawMode }: { rawMode: boolean }) => !rawMode;
 
 const shouldIgnoreCompositionInput = ({
   isComposing,
@@ -56,13 +54,12 @@ const canHandleBeforeInput = ({ inputType, data }: { inputType: string; data: st
 
 export const resolveRawBeforeInput = ({
   rawMode,
-  readOnly,
   suppressNextBeforeInput,
   isComposing,
   inputType,
   data,
 }: ResolveRawBeforeInputArgs): ResolveRawBeforeInputResult => {
-  if (!inputType || isDisabledRawInput({ rawMode, readOnly })) {
+  if (!inputType || isDisabledRawInput({ rawMode })) {
     return { kind: "ignored" };
   }
   if (suppressNextBeforeInput) {

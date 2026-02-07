@@ -19,7 +19,6 @@ const mockSessionsContext = {
   connected: true,
   connectionStatus: "healthy",
   connectionIssue: null,
-  readOnly: false,
   highlightCorrections: { codex: false, claude: true },
   reconnect: vi.fn(),
   refreshSessions: vi.fn(),

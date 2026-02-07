@@ -14,7 +14,6 @@ import {
   connectionStatusAtom,
   currentSessionAtom,
   highlightCorrectionsAtom,
-  readOnlyAtom,
   resolvedThemeAtom,
   sessionApiAtom,
   sessionsAtom,
@@ -32,7 +31,6 @@ export const useSessionDetailVM = (paneId: string) => {
   const connected = useAtomValue(connectedAtom);
   const connectionStatus = useAtomValue(connectionStatusAtom);
   const connectionIssue = useAtomValue(connectionIssueAtom);
-  const readOnly = useAtomValue(readOnlyAtom);
   const highlightCorrections = useAtomValue(highlightCorrectionsAtom);
   const resolvedTheme = useAtomValue(resolvedThemeAtom);
   const session = useAtomValue(currentSessionAtom);
@@ -106,7 +104,6 @@ export const useSessionDetailVM = (paneId: string) => {
     toggleAllowDangerKeys,
   } = useSessionControls({
     paneId,
-    readOnly,
     mode,
     sendText,
     sendKeys,
@@ -192,7 +189,6 @@ export const useSessionDetailVM = (paneId: string) => {
   } = useSessionTitleEditor({
     session,
     paneId,
-    readOnly,
     updateSessionTitle,
   });
 
@@ -263,7 +259,6 @@ export const useSessionDetailVM = (paneId: string) => {
       nowMs,
       connected,
       connectionIssue,
-      readOnly,
     },
     sidebar: {
       sessionGroups,

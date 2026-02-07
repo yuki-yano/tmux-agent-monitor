@@ -9,7 +9,6 @@ import {
   connectionIssueAtom,
   highlightCorrectionsAtom,
   paneIdAtom,
-  readOnlyAtom,
   resolvedThemeAtom,
   sessionApiAtom,
   sessionsAtom,
@@ -197,7 +196,6 @@ describe("useSessionDetailVM", () => {
     store.set(sessionsAtom, [session]);
     store.set(connectedAtom, true);
     store.set(connectionIssueAtom, "issue");
-    store.set(readOnlyAtom, true);
     store.set(highlightCorrectionsAtom, { codex: false, claude: true });
     store.set(resolvedThemeAtom, "mocha");
     store.set(sessionApiAtom, sessionApi);
@@ -211,7 +209,6 @@ describe("useSessionDetailVM", () => {
     expect(result.current.meta.paneId).toBe("pane-1");
     expect(result.current.meta.connected).toBe(true);
     expect(result.current.meta.connectionIssue).toBe("issue");
-    expect(result.current.meta.readOnly).toBe(true);
     expect(result.current.meta.session?.paneId).toBe("pane-1");
     expect(result.current.sidebar.sessionGroups).toBe(sessionGroups);
   });

@@ -7,7 +7,7 @@ Monitor tmux sessions from a mobile-friendly web UI with a single CLI. Designed 
 - Live session list and activity state
 - Screen capture (text + optional image capture on macOS terminals)
 - Token-based access with optional static auth
-- Read-only mode and rate limits
+- Rate limits
 - QR code login on startup (when terminal height permits)
 - Claude hooks helper CLI for event logging
 

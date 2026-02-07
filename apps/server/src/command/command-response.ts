@@ -1,4 +1,4 @@
-import type { AgentMonitorConfig, AllowedKey, CommandResponse, RawItem } from "@vde-monitor/shared";
+import type { AllowedKey, CommandResponse, RawItem } from "@vde-monitor/shared";
 
 import { buildError } from "../http/helpers.js";
 import type { createSessionMonitor } from "../monitor.js";
@@ -14,7 +14,6 @@ type CommandPayload =
   | { type: "send.raw"; paneId: string; items: RawItem[]; unsafe?: boolean };
 
 type CommandResponseParams = {
-  config: AgentMonitorConfig;
   monitor: Monitor;
   tmuxActions: TmuxActions;
   payload: CommandPayload;
@@ -52,7 +51,6 @@ const executePayload = async (tmuxActions: TmuxActions, payload: CommandPayload)
 };
 
 export const createCommandResponse = async ({
-  config,
   monitor,
   tmuxActions,
   payload,
@@ -60,10 +58,6 @@ export const createCommandResponse = async ({
   sendLimiter,
   rawLimiter,
 }: CommandResponseParams): Promise<CommandResponse> => {
-  if (config.readOnly) {
-    return { ok: false, error: buildError("READ_ONLY", "read-only mode") };
-  }
-
   const limiter = resolveLimiter(payload.type, sendLimiter, rawLimiter);
   if (!limiter(limiterKey)) {
     return { ok: false, error: buildError("RATE_LIMIT", "rate limited") };

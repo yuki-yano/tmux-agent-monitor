@@ -63,7 +63,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue: vi.fn(),
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -116,7 +115,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue,
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -157,7 +155,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue,
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -194,7 +191,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue,
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -221,7 +217,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue: vi.fn(),
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved,
         onHighlightCorrections: vi.fn(),
@@ -247,7 +242,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue: vi.fn(),
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved,
         onHighlightCorrections: vi.fn(),
@@ -273,7 +267,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue: vi.fn(),
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved,
         onHighlightCorrections: vi.fn(),
@@ -305,7 +298,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions,
         onConnectionIssue: vi.fn(),
-        onReadOnly: vi.fn(),
         onSessionUpdated,
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -316,34 +308,6 @@ describe("useSessionApi", () => {
     expect(requestJsonMock).toHaveBeenCalledTimes(2);
     expect(onSessionUpdated).not.toHaveBeenCalled();
     expect(onSessions).toHaveBeenCalledWith([]);
-  });
-
-  it("marks read-only and throws unauthorized on title update 403", async () => {
-    const requestJsonMock = vi.mocked(requestJson);
-    const onReadOnly = vi.fn();
-    const onConnectionIssue = vi.fn();
-    requestJsonMock.mockResolvedValueOnce({
-      res: new Response(null, { status: 403 }),
-      data: { error: { code: "READ_ONLY", message: "read-only mode" } },
-    });
-
-    const { result } = renderHook(() =>
-      useSessionApi({
-        token: "token",
-        onSessions: vi.fn(),
-        onConnectionIssue,
-        onReadOnly,
-        onSessionUpdated: vi.fn(),
-        onSessionRemoved: vi.fn(),
-        onHighlightCorrections: vi.fn(),
-      }),
-    );
-
-    await expect(result.current.updateSessionTitle("pane-1", "next")).rejects.toThrow(
-      API_ERROR_MESSAGES.unauthorized,
-    );
-    expect(onReadOnly).toHaveBeenCalledTimes(1);
-    expect(onConnectionIssue).toHaveBeenCalledWith(API_ERROR_MESSAGES.unauthorized);
   });
 
   it("refreshes sessions when title update response has no session payload", async () => {
@@ -365,7 +329,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions,
         onConnectionIssue: vi.fn(),
-        onReadOnly: vi.fn(),
         onSessionUpdated,
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -399,7 +362,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue,
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -433,7 +395,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue,
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),
@@ -445,40 +406,6 @@ describe("useSessionApi", () => {
       "unsupported image MIME type",
     );
     expect(onConnectionIssue).toHaveBeenCalledWith("unsupported image MIME type");
-  });
-
-  it("notifies read-only handler when upload is rejected by read-only mode", async () => {
-    const requestJsonMock = vi.mocked(requestJson);
-    const onConnectionIssue = vi.fn();
-    const onReadOnly = vi.fn();
-    requestJsonMock.mockResolvedValueOnce({
-      res: new Response(null, { status: 403 }),
-      data: {
-        error: {
-          code: "READ_ONLY",
-          message: "read-only mode",
-        },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useSessionApi({
-        token: "token",
-        onSessions: vi.fn(),
-        onConnectionIssue,
-        onReadOnly,
-        onSessionUpdated: vi.fn(),
-        onSessionRemoved: vi.fn(),
-        onHighlightCorrections: vi.fn(),
-      }),
-    );
-
-    const file = new File([new Uint8Array([1, 2, 3])], "sample.png", { type: "image/png" });
-    await expect(result.current.uploadImageAttachment("pane-1", file)).rejects.toThrow(
-      API_ERROR_MESSAGES.unauthorized,
-    );
-    expect(onReadOnly).toHaveBeenCalledTimes(1);
-    expect(onConnectionIssue).toHaveBeenCalledWith(API_ERROR_MESSAGES.unauthorized);
   });
 
   it("throws invalid response when upload attachment payload does not match schema", async () => {
@@ -502,7 +429,6 @@ describe("useSessionApi", () => {
         token: "token",
         onSessions: vi.fn(),
         onConnectionIssue,
-        onReadOnly: vi.fn(),
         onSessionUpdated: vi.fn(),
         onSessionRemoved: vi.fn(),
         onHighlightCorrections: vi.fn(),

@@ -129,7 +129,6 @@ const createViewProps = (overrides: Partial<SessionListViewProps> = {}): Session
     filterOptions,
     connectionStatus: "healthy",
     connectionIssue: null,
-    readOnly: false,
     nowMs: Date.now(),
     sidebarWidth: 280,
     onFilterChange: vi.fn(),
@@ -279,14 +278,12 @@ describe("SessionListView", () => {
     expect(onOpenNewTab).toHaveBeenCalled();
   });
 
-  it("renders callouts for readOnly and connectionIssue", () => {
+  it("renders callout for connectionIssue", () => {
     const props = createViewProps({
-      readOnly: true,
       connectionIssue: "Connection unstable",
     });
     renderWithRouter(<SessionListView {...props} />);
 
-    expect(screen.getByText("Read-only mode is active. Actions are disabled.")).toBeTruthy();
     expect(screen.getByText("Connection unstable")).toBeTruthy();
   });
 

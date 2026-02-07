@@ -80,7 +80,6 @@ export const defaultDangerCommandPatterns = [
 export const defaultConfig: AgentMonitorConfigFile = {
   bind: "127.0.0.1",
   port: 11080,
-  readOnly: false,
   attachOnServe: true,
   staticAuth: false,
   allowedOrigins: [],

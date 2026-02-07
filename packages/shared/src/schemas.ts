@@ -17,7 +17,6 @@ export const apiErrorSchema = z.object({
     "INVALID_PANE",
     "INVALID_PAYLOAD",
     "DANGEROUS_COMMAND",
-    "READ_ONLY",
     "NOT_FOUND",
     "TMUX_UNAVAILABLE",
     "RATE_LIMIT",
@@ -218,7 +217,6 @@ export const claudeHookEventSchema = z.object({
 export const configSchema = z.object({
   bind: z.enum(["127.0.0.1", "0.0.0.0"]),
   port: z.number(),
-  readOnly: z.boolean(),
   attachOnServe: z.boolean(),
   staticAuth: z.boolean(),
   allowedOrigins: z.array(z.string()),

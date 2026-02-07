@@ -38,7 +38,6 @@ type SessionContextValue = {
   connected: boolean;
   connectionStatus: "healthy" | "degraded" | "disconnected";
   connectionIssue: string | null;
-  readOnly: boolean;
   highlightCorrections: HighlightCorrectionConfig;
   reconnect: () => void;
   refreshSessions: () => Promise<void>;
@@ -92,7 +91,6 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const { sessions, setSessions, updateSession, removeSession, getSessionDetail } =
     useSessionStore();
   const [connectionIssue, setConnectionIssue] = useState<string | null>(null);
-  const [readOnly, setReadOnly] = useState(false);
   const [highlightCorrections, setHighlightCorrections] = useState<HighlightCorrectionConfig>({
     codex: true,
     claude: true,
@@ -101,10 +99,6 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const [authBlocked, setAuthBlocked] = useState(false);
   const [pollBackoffMs, setPollBackoffMs] = useState(0);
   const backoffStepRef = useRef(0);
-
-  const markReadOnly = useCallback(() => {
-    setReadOnly(true);
-  }, []);
 
   const applyHighlightCorrections = useCallback((nextHighlight: HighlightCorrectionConfig) => {
     setHighlightCorrections((prev) => ({ ...prev, ...nextHighlight }));
@@ -156,7 +150,6 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     token,
     onSessions: setSessions,
     onConnectionIssue: setConnectionIssue,
-    onReadOnly: markReadOnly,
     onSessionUpdated: updateSession,
     onSessionRemoved: removeSession,
     onHighlightCorrections: applyHighlightCorrections,
@@ -240,7 +233,6 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         connected,
         connectionStatus,
         connectionIssue,
-        readOnly,
         highlightCorrections,
         reconnect,
         refreshSessions,

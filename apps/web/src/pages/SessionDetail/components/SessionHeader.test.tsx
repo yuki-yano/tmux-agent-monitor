@@ -41,7 +41,6 @@ describe("SessionHeader", () => {
 
   const buildState = (overrides: Partial<SessionHeaderState> = {}): SessionHeaderState => ({
     session: createSessionDetail(),
-    readOnly: false,
     connectionIssue: null,
     nowMs: Date.now(),
     titleDraft: "",
@@ -107,26 +106,6 @@ describe("SessionHeader", () => {
     expect(onCloseTitleEditor).toHaveBeenCalled();
   });
 
-  it("disables title editing when read-only", () => {
-    const session = createSessionDetail({ customTitle: "Custom Title" });
-    const onOpenTitleEditor = vi.fn();
-    const state = buildState({
-      session,
-      readOnly: true,
-      titleDraft: "Custom Title",
-    });
-    const actions = buildActions({ onOpenTitleEditor });
-    renderWithRouter(<SessionHeader state={state} actions={actions} />);
-
-    const titleButton = screen.getByRole("button", { name: "Edit session title" });
-    expect((titleButton as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(titleButton);
-    expect(onOpenTitleEditor).not.toHaveBeenCalled();
-
-    const pinButton = screen.getByLabelText("Pin session to top") as HTMLButtonElement;
-    expect(pinButton.disabled).toBe(true);
-  });
-
   it("calls touch handler when pin button is pressed", () => {
     const onTouchSession = vi.fn();
     const state = buildState({ session: createSessionDetail() });
@@ -137,11 +116,10 @@ describe("SessionHeader", () => {
     expect(onTouchSession).toHaveBeenCalled();
   });
 
-  it("renders alerts when read-only, pipe conflict, or connection issue", () => {
+  it("renders alerts when pipe conflict or connection issue exists", () => {
     const session = createSessionDetail({ pipeConflict: true });
     const state = buildState({
       session,
-      readOnly: true,
       connectionIssue: "Connection lost",
       titleDraft: "Custom Title",
       titleError: "Title error",
@@ -149,7 +127,6 @@ describe("SessionHeader", () => {
     const actions = buildActions();
     renderWithRouter(<SessionHeader state={state} actions={actions} />);
 
-    expect(screen.getByText("Read-only mode is active. Actions are disabled.")).toBeTruthy();
     expect(screen.getByText("Another pipe-pane is attached. Screen is capture-only.")).toBeTruthy();
     expect(screen.getByText("Connection lost")).toBeTruthy();
     expect(screen.getByText("Title error")).toBeTruthy();

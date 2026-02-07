@@ -62,7 +62,6 @@ describe("useRawInputHandlers", () => {
       ({ allowDangerKeys }: { allowDangerKeys: boolean }) =>
         useRawInputHandlers({
           paneId: "pane-1",
-          readOnly: false,
           rawMode: true,
           allowDangerKeys,
           ctrlHeld: false,
@@ -106,7 +105,6 @@ describe("useRawInputHandlers", () => {
     const { result } = renderHook(() =>
       useRawInputHandlers({
         paneId: "pane-1",
-        readOnly: false,
         rawMode: true,
         allowDangerKeys: false,
         ctrlHeld: false,
@@ -138,7 +136,6 @@ describe("useRawInputHandlers", () => {
     const { result } = renderHook(() =>
       useRawInputHandlers({
         paneId: "pane-1",
-        readOnly: false,
         rawMode: true,
         allowDangerKeys: false,
         ctrlHeld: false,
@@ -177,7 +174,7 @@ describe("useRawInputHandlers", () => {
     expect(sendRaw).toHaveBeenCalledWith("pane-1", [{ kind: "key", value: "C-a" }], false);
   });
 
-  it("ignores raw input events when readOnly is true", async () => {
+  it("ignores raw input events when raw mode is disabled", async () => {
     const sendRaw = vi.fn().mockResolvedValue({ ok: true });
     const setScreenError = vi.fn();
     const textarea = document.createElement("textarea");
@@ -185,8 +182,7 @@ describe("useRawInputHandlers", () => {
     const { result } = renderHook(() =>
       useRawInputHandlers({
         paneId: "pane-1",
-        readOnly: true,
-        rawMode: true,
+        rawMode: false,
         allowDangerKeys: false,
         ctrlHeld: false,
         shiftHeld: false,

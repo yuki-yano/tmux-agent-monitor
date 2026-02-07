@@ -63,7 +63,6 @@ const createViewProps = (overrides: SessionDetailViewOverrides = {}): SessionDet
       nowMs: 0,
       connected: false,
       connectionIssue: null,
-      readOnly: false,
     },
     sidebar: {
       sessionGroups: buildSessionGroups([]),

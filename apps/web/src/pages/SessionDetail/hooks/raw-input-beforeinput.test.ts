@@ -6,7 +6,6 @@ describe("resolveRawBeforeInput", () => {
   it("ignores when raw mode is disabled", () => {
     const result = resolveRawBeforeInput({
       rawMode: false,
-      readOnly: false,
       suppressNextBeforeInput: false,
       isComposing: false,
       inputType: "insertText",
@@ -18,7 +17,6 @@ describe("resolveRawBeforeInput", () => {
   it("consumes suppress-next-beforeinput flag", () => {
     const result = resolveRawBeforeInput({
       rawMode: true,
-      readOnly: false,
       suppressNextBeforeInput: true,
       isComposing: false,
       inputType: "insertText",
@@ -30,7 +28,6 @@ describe("resolveRawBeforeInput", () => {
   it("ignores insertCompositionText while composing", () => {
     const result = resolveRawBeforeInput({
       rawMode: true,
-      readOnly: false,
       suppressNextBeforeInput: false,
       isComposing: true,
       inputType: "insertCompositionText",
@@ -42,7 +39,6 @@ describe("resolveRawBeforeInput", () => {
   it("handles line-break input without data", () => {
     const result = resolveRawBeforeInput({
       rawMode: true,
-      readOnly: false,
       suppressNextBeforeInput: false,
       isComposing: false,
       inputType: "insertLineBreak",
@@ -58,7 +54,6 @@ describe("resolveRawBeforeInput", () => {
   it("handles text input with data", () => {
     const result = resolveRawBeforeInput({
       rawMode: true,
-      readOnly: false,
       suppressNextBeforeInput: false,
       isComposing: false,
       inputType: "insertText",
@@ -74,7 +69,6 @@ describe("resolveRawBeforeInput", () => {
   it("ignores text input without data", () => {
     const result = resolveRawBeforeInput({
       rawMode: true,
-      readOnly: false,
       suppressNextBeforeInput: false,
       isComposing: false,
       inputType: "insertReplacementText",

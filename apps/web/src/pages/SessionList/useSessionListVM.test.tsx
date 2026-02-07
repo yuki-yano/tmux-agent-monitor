@@ -113,7 +113,6 @@ describe("useSessionListVM", () => {
       connected: true,
       connectionStatus: "healthy",
       connectionIssue: null,
-      readOnly: false,
       refreshSessions: vi.fn(),
       requestScreen: vi.fn(),
       highlightCorrections: false,

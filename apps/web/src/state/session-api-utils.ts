@@ -77,20 +77,15 @@ export const buildScreenRequestJson = (
 
 export const runCommandResponseSideEffects = ({
   response,
-  onReadOnly,
   isPaneMissingError,
   onSessionRemoved,
   paneId,
 }: {
   response: CommandResponse;
-  onReadOnly: () => void;
   isPaneMissingError: (error?: ApiError | null) => boolean;
   onSessionRemoved: (paneId: string) => void;
   paneId: string;
 }) => {
-  if (response.error?.code === "READ_ONLY") {
-    onReadOnly();
-  }
   if (isPaneMissingError(response.error)) {
     onSessionRemoved(paneId);
   }

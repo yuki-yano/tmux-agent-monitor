@@ -22,7 +22,6 @@ export const SessionListView = ({
   filterOptions,
   connectionStatus,
   connectionIssue,
-  readOnly,
   nowMs,
   sidebarWidth,
   onFilterChange,
@@ -78,7 +77,6 @@ export const SessionListView = ({
           <SessionListHeader
             connectionStatus={connectionStatus}
             connectionIssue={connectionIssue}
-            readOnly={readOnly}
             filter={filter}
             filterOptions={filterOptions}
             onFilterChange={onFilterChange}

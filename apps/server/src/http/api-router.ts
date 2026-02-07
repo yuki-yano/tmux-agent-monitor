@@ -129,23 +129,6 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
     return { paneId, detail };
   };
 
-  const ensureWritable = (c: RouteContext): Response | null => {
-    if (!config.readOnly) {
-      return null;
-    }
-    return c.json({ error: buildError("READ_ONLY", "read-only mode") }, 403);
-  };
-
-  const resolveWritablePane = (
-    c: RouteContext,
-  ): { paneId: string; detail: SessionDetail } | Response => {
-    const readOnlyError = ensureWritable(c);
-    if (readOnlyError) {
-      return readOnlyError;
-    }
-    return resolvePane(c);
-  };
-
   const resolveTitleUpdate = (c: RouteContext, title: string | null) => {
     const trimmed = title ? title.trim() : null;
     if (trimmed && trimmed.length > 80) {
@@ -227,7 +210,6 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
     payload: CommandPayload,
   ) =>
     createCommandResponse({
-      config,
       monitor,
       tmuxActions,
       payload,
@@ -287,7 +269,7 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
     });
 
     api.put("/sessions/:paneId/title", zValidator("json", titleSchema), async (c) => {
-      const pane = resolveWritablePane(c);
+      const pane = resolvePane(c);
       if (pane instanceof Response) {
         return pane;
       }
@@ -302,7 +284,7 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
     });
 
     api.post("/sessions/:paneId/touch", (c) => {
-      const pane = resolveWritablePane(c);
+      const pane = resolvePane(c);
       if (pane instanceof Response) {
         return pane;
       }
@@ -312,7 +294,7 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
     });
 
     api.post("/sessions/:paneId/attachments/image", async (c) => {
-      const pane = resolveWritablePane(c);
+      const pane = resolvePane(c);
       if (pane instanceof Response) {
         return pane;
       }

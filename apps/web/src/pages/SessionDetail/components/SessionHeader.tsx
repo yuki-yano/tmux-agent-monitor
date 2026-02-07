@@ -22,7 +22,6 @@ import {
 
 type SessionHeaderState = {
   session: SessionSummary;
-  readOnly: boolean;
   connectionIssue: string | null;
   nowMs: number;
   titleDraft: string;
@@ -56,13 +55,11 @@ type SessionTitleInputProps = {
 
 type SessionTitleButtonProps = {
   sessionDisplayTitle: string;
-  readOnly: boolean;
   onOpenTitleEditor: () => void;
 };
 
 type SessionHeaderAlertsProps = {
   pipeConflict: boolean;
-  readOnly: boolean;
   connectionIssue: string | null;
 };
 
@@ -73,7 +70,6 @@ type SessionTitleAreaProps = {
   sessionAutoTitle: string;
   sessionDisplayTitle: string;
   sessionCustomTitle: string | null;
-  readOnly: boolean;
   currentPath: string | null;
   titleError: string | null;
   onTitleDraftChange: (value: string) => void;
@@ -136,38 +132,24 @@ const SessionTitleInput = ({
 
 const SessionTitleButton = ({
   sessionDisplayTitle,
-  readOnly,
   onOpenTitleEditor,
 }: SessionTitleButtonProps) => (
   <TextButton
     type="button"
     onClick={onOpenTitleEditor}
-    disabled={readOnly}
     variant="title"
-    className={cn(
-      "transition disabled:opacity-70",
-      readOnly ? "cursor-default" : "hover:text-latte-lavender cursor-default hover:cursor-pointer",
-    )}
+    className={cn("hover:text-latte-lavender cursor-default transition hover:cursor-pointer")}
     aria-label="Edit session title"
   >
     {sessionDisplayTitle}
   </TextButton>
 );
 
-const SessionHeaderAlerts = ({
-  pipeConflict,
-  readOnly,
-  connectionIssue,
-}: SessionHeaderAlertsProps) => (
+const SessionHeaderAlerts = ({ pipeConflict, connectionIssue }: SessionHeaderAlertsProps) => (
   <>
     {pipeConflict ? (
       <Callout tone="error" size="sm">
         Another pipe-pane is attached. Screen is capture-only.
-      </Callout>
-    ) : null}
-    {readOnly ? (
-      <Callout tone="warning" size="sm">
-        Read-only mode is active. Actions are disabled.
       </Callout>
     ) : null}
     {connectionIssue ? (
@@ -196,7 +178,6 @@ const SessionTitleArea = ({
   sessionAutoTitle,
   sessionDisplayTitle,
   sessionCustomTitle,
-  readOnly,
   currentPath,
   titleError,
   onTitleDraftChange,
@@ -205,7 +186,7 @@ const SessionTitleArea = ({
   onOpenTitleEditor,
   onCloseTitleEditor,
 }: SessionTitleAreaProps) => {
-  const showClearTitle = Boolean(sessionCustomTitle && !readOnly && !titleEditing);
+  const showClearTitle = Boolean(sessionCustomTitle && !titleEditing);
   return (
     <>
       <div className="flex flex-wrap items-center gap-1">
@@ -221,7 +202,6 @@ const SessionTitleArea = ({
         ) : (
           <SessionTitleButton
             sessionDisplayTitle={sessionDisplayTitle}
-            readOnly={readOnly}
             onOpenTitleEditor={onOpenTitleEditor}
           />
         )}
@@ -248,16 +228,8 @@ const SessionTitleArea = ({
 };
 
 export const SessionHeader = ({ state, actions }: SessionHeaderProps) => {
-  const {
-    session,
-    readOnly,
-    connectionIssue,
-    nowMs,
-    titleDraft,
-    titleEditing,
-    titleSaving,
-    titleError,
-  } = state;
+  const { session, connectionIssue, nowMs, titleDraft, titleEditing, titleSaving, titleError } =
+    state;
   const {
     onTitleDraftChange,
     onTitleSave,
@@ -291,7 +263,6 @@ export const SessionHeader = ({ state, actions }: SessionHeaderProps) => {
             sessionAutoTitle={sessionAutoTitle}
             sessionDisplayTitle={sessionDisplayTitle}
             sessionCustomTitle={sessionCustomTitle}
-            readOnly={readOnly}
             currentPath={session.currentPath}
             titleError={titleError}
             onTitleDraftChange={onTitleDraftChange}
@@ -322,7 +293,6 @@ export const SessionHeader = ({ state, actions }: SessionHeaderProps) => {
               type="button"
               size="xs"
               onClick={onTouchSession}
-              disabled={readOnly}
               className="ml-auto"
               aria-label="Pin session to top"
               title="Pin session to top"
@@ -333,7 +303,6 @@ export const SessionHeader = ({ state, actions }: SessionHeaderProps) => {
         </div>
         <SessionHeaderAlerts
           pipeConflict={session.pipeConflict}
-          readOnly={readOnly}
           connectionIssue={connectionIssue}
         />
       </header>

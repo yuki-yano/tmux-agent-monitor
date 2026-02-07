@@ -65,7 +65,6 @@ export const sessionsAtom = atom<SessionSummary[]>([]);
 export const connectedAtom = atom(false);
 export const connectionStatusAtom = atom<ConnectionStatus>("degraded");
 export const connectionIssueAtom = atom<string | null>(null);
-export const readOnlyAtom = atom(false);
 export const highlightCorrectionsAtom = atom<HighlightCorrectionConfig>({
   codex: true,
   claude: true,

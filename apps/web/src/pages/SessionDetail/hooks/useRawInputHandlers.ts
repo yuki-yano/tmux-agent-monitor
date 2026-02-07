@@ -26,7 +26,6 @@ const RAW_FLUSH_DELAY_MS = 16;
 
 type UseRawInputHandlersParams = {
   paneId: string;
-  readOnly: boolean;
   rawMode: boolean;
   allowDangerKeys: boolean;
   ctrlHeld: boolean;
@@ -77,7 +76,7 @@ const resolveRawInputAction = ({
   return { kind: "ignore" };
 };
 
-const shouldSkipRawInput = (rawMode: boolean, readOnly: boolean) => !rawMode || readOnly;
+const shouldSkipRawInput = (rawMode: boolean) => !rawMode;
 
 type RawInputPayload = {
   inputType: string | null;
@@ -97,7 +96,6 @@ const shouldHandleFallbackText = (payload: RawInputPayload) =>
 
 export const useRawInputHandlers = ({
   paneId,
-  readOnly,
   rawMode,
   allowDangerKeys,
   ctrlHeld,
@@ -167,7 +165,7 @@ export const useRawInputHandlers = ({
 
   const enqueueRawItems = useCallback(
     (items: RawItem[]) => {
-      if (readOnly || items.length === 0) return;
+      if (items.length === 0) return;
       rawQueueRef.current.push(...items);
       if (rawFlushTimerRef.current !== null) return;
       rawFlushTimerRef.current = window.setTimeout(() => {
@@ -197,7 +195,7 @@ export const useRawInputHandlers = ({
         });
       }, RAW_FLUSH_DELAY_MS);
     },
-    [paneId, readOnly, sendRaw, setScreenError],
+    [paneId, sendRaw, setScreenError],
   );
 
   const enqueueRawText = useCallback(
@@ -246,7 +244,6 @@ export const useRawInputHandlers = ({
       const inputEvent = event.nativeEvent as InputEvent | undefined;
       const resolution = resolveRawBeforeInput({
         rawMode,
-        readOnly,
         suppressNextBeforeInput: suppressNextBeforeInputRef.current,
         isComposing: isComposingRef.current,
         inputType: inputEvent?.inputType ?? null,
@@ -265,12 +262,12 @@ export const useRawInputHandlers = ({
       resetRawInputValue(event.currentTarget);
       scheduleClearSuppressedInput();
     },
-    [handleRawInputType, rawMode, readOnly, resetRawInputValue, scheduleClearSuppressedInput],
+    [handleRawInputType, rawMode, resetRawInputValue, scheduleClearSuppressedInput],
   );
 
   const handleRawInput = useCallback(
     (event: FormEvent<HTMLTextAreaElement>) => {
-      if (shouldSkipRawInput(rawMode, readOnly)) return;
+      if (shouldSkipRawInput(rawMode)) return;
       if (suppressNextInputRef.current) {
         suppressNextInputRef.current = false;
         resetRawInputValue(event.currentTarget);
@@ -285,12 +282,12 @@ export const useRawInputHandlers = ({
       handleRawInputType(payload.inputType, payload.fallbackText);
       resetRawInputValue(event.currentTarget);
     },
-    [enqueueRawText, handleRawInputType, rawMode, readOnly, resetRawInputValue],
+    [enqueueRawText, handleRawInputType, rawMode, resetRawInputValue],
   );
 
   const handleRawKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (!rawMode || readOnly) return;
+      if (!rawMode) return;
       if (event.nativeEvent.isComposing) return;
       const ctrlActive = ctrlHeld || event.ctrlKey;
       const shiftActive = shiftHeld || event.shiftKey;
@@ -315,7 +312,6 @@ export const useRawInputHandlers = ({
       ctrlHeld,
       enqueueRawKey,
       rawMode,
-      readOnly,
       resetRawInputValue,
       scheduleClearSuppressedBeforeInput,
       shiftHeld,
@@ -323,18 +319,18 @@ export const useRawInputHandlers = ({
   );
 
   const handleRawCompositionStart = useCallback(() => {
-    if (!rawMode || readOnly) return;
+    if (!rawMode) return;
     isComposingRef.current = true;
-  }, [rawMode, readOnly]);
+  }, [rawMode]);
 
   const handleRawCompositionEnd = useCallback(
     (event: CompositionEvent<HTMLTextAreaElement>) => {
-      if (!rawMode || readOnly) return;
+      if (!rawMode) return;
       isComposingRef.current = false;
       enqueueRawText(event.data);
       resetRawInputValue(event.currentTarget);
     },
-    [enqueueRawText, rawMode, readOnly, resetRawInputValue],
+    [enqueueRawText, rawMode, resetRawInputValue],
   );
 
   return {

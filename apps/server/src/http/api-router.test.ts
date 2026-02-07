@@ -208,39 +208,40 @@ describe("createApiRouter", () => {
     expect(secondData.screen.error.code).toBe("RATE_LIMIT");
   });
 
-  it("returns read-only error on send text", async () => {
-    const { api } = createTestContext({ readOnly: true });
+  it("sends text command", async () => {
+    const { api, tmuxActions } = createTestContext();
     const res = await api.request("/sessions/pane-1/send/text", {
       method: "POST",
       headers: { ...authHeaders, "content-type": "application/json" },
       body: JSON.stringify({ text: "ls", enter: true }),
     });
+    expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.command.ok).toBe(false);
-    expect(data.command.error.code).toBe("READ_ONLY");
+    expect(data.command.ok).toBe(true);
+    expect(tmuxActions.sendText).toHaveBeenCalledWith("pane-1", "ls", true);
   });
 
-  it("returns read-only error on title update", async () => {
-    const { api } = createTestContext({ readOnly: true });
+  it("updates custom title", async () => {
+    const { api, monitor } = createTestContext();
     const res = await api.request("/sessions/pane-1/title", {
       method: "PUT",
       headers: { ...authHeaders, "content-type": "application/json" },
       body: JSON.stringify({ title: "new title" }),
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.error.code).toBe("READ_ONLY");
+    expect(data.session.customTitle).toBe("new title");
+    expect(monitor.setCustomTitle).toHaveBeenCalledWith("pane-1", "new title");
   });
 
-  it("returns read-only error on touch", async () => {
-    const { api } = createTestContext({ readOnly: true });
+  it("touch updates session activity", async () => {
+    const { api, monitor } = createTestContext();
     const res = await api.request("/sessions/pane-1/touch", {
       method: "POST",
       headers: authHeaders,
     });
-    expect(res.status).toBe(403);
-    const data = await res.json();
-    expect(data.error.code).toBe("READ_ONLY");
+    expect(res.status).toBe(200);
+    expect(monitor.recordInput).toHaveBeenCalledWith("pane-1");
   });
 
   it("returns 404 when pane is missing on diff endpoint", async () => {
@@ -433,17 +434,6 @@ describe("createApiRouter", () => {
     const data = await res.json();
     expect(data.error.code).toBe("INVALID_PAYLOAD");
     expect(data.error.message).toBe("attachment exceeds content-length limit");
-  });
-
-  it("returns read-only error on image attachment upload", async () => {
-    const { api } = createTestContext({ readOnly: true });
-    const res = await api.request("/sessions/pane-1/attachments/image", {
-      method: "POST",
-      headers: authHeaders,
-    });
-    expect(res.status).toBe(403);
-    const data = await res.json();
-    expect(data.error.code).toBe("READ_ONLY");
   });
 
   it("returns 400 when image field is missing", async () => {

@@ -125,9 +125,9 @@ describe("ensureConfig", () => {
   it("does not rewrite existing config and only persists missing token", () => {
     setConfigFile(defaultConfig);
 
-    const result = ensureConfig({ readOnly: true });
+    const result = ensureConfig({ bind: "0.0.0.0" });
 
-    expect(result.readOnly).toBe(true);
+    expect(result.bind).toBe("0.0.0.0");
     expect(result.token).toMatch(/^[0-9a-f]{64}$/);
 
     const writtenPaths = mocks.writeFileSync.mock.calls.map((args) => args[0]);

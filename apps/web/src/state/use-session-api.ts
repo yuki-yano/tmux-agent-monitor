@@ -47,7 +47,6 @@ type UseSessionApiParams = {
   token: string | null;
   onSessions: (sessions: SessionSummary[]) => void;
   onConnectionIssue: (message: string | null) => void;
-  onReadOnly: () => void;
   onSessionUpdated: (session: SessionSummary) => void;
   onSessionRemoved: (paneId: string) => void;
   onHighlightCorrections: (config: HighlightCorrectionConfig) => void;
@@ -59,7 +58,6 @@ export const useSessionApi = ({
   token,
   onSessions,
   onConnectionIssue,
-  onReadOnly,
   onSessionUpdated,
   onSessionRemoved,
   onHighlightCorrections,
@@ -69,15 +67,6 @@ export const useSessionApi = ({
       throw new Error(API_ERROR_MESSAGES.missingToken);
     }
   }, [token]);
-
-  const notifyReadOnly = useCallback(
-    (data: ApiEnvelope<unknown> | null) => {
-      if (data?.error?.code === "READ_ONLY") {
-        onReadOnly();
-      }
-    },
-    [onReadOnly],
-  );
 
   const buildApiError = useCallback(
     (code: ApiError["code"], message: string): ApiError => ({ code, message }),
@@ -152,7 +141,6 @@ export const useSessionApi = ({
       try {
         const { res, data } = await requestJson<ApiEnvelope<T>>(request);
         if (!res.ok) {
-          notifyReadOnly(data);
           handleSessionMissing(paneId, res, data);
           const message = extractErrorMessage(res, data, fallbackMessage, { includeStatus });
           throw new Error(message);
@@ -166,7 +154,7 @@ export const useSessionApi = ({
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [ensureToken, handleSessionMissing, notifyReadOnly, onConnectionIssue],
+    [ensureToken, handleSessionMissing, onConnectionIssue],
   );
 
   const mutateSession = useCallback(
@@ -174,7 +162,6 @@ export const useSessionApi = ({
       ensureToken();
       const { res, data } = await requestJson<ApiEnvelope<{ session?: SessionSummary }>>(request);
       if (!res.ok) {
-        notifyReadOnly(data);
         const message = extractErrorMessage(res, data, fallbackMessage);
         onConnectionIssue(message);
         handleSessionMissing(paneId, res, data);
@@ -193,14 +180,7 @@ export const useSessionApi = ({
       await refreshSessions();
       return null;
     },
-    [
-      ensureToken,
-      handleSessionMissing,
-      notifyReadOnly,
-      onConnectionIssue,
-      onSessionUpdated,
-      refreshSessions,
-    ],
+    [ensureToken, handleSessionMissing, onConnectionIssue, onSessionUpdated, refreshSessions],
   );
 
   const requestDiffSummary = useCallback(
@@ -413,7 +393,6 @@ export const useSessionApi = ({
         if (!res.ok) {
           const message = extractErrorMessage(res, data, fallbackMessage, { includeStatus: true });
           onConnectionIssue(message);
-          notifyReadOnly(data);
           handleSessionMissing(paneId, res, data);
           return {
             ok: false,
@@ -427,7 +406,6 @@ export const useSessionApi = ({
         }
         runCommandResponseSideEffects({
           response: data.command,
-          onReadOnly,
           isPaneMissingError,
           onSessionRemoved,
           paneId,
@@ -445,9 +423,7 @@ export const useSessionApi = ({
       ensureToken,
       handleSessionMissing,
       isPaneMissingError,
-      notifyReadOnly,
       onConnectionIssue,
-      onReadOnly,
       onSessionRemoved,
     ],
   );

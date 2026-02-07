@@ -5,7 +5,6 @@ import { Button, Callout, ConnectionStatusPill, FilterToggleGroup, Toolbar } fro
 type SessionListHeaderProps = {
   connectionStatus: "healthy" | "degraded" | "disconnected";
   connectionIssue: string | null;
-  readOnly: boolean;
   filter: string;
   filterOptions: { value: string; label: string }[];
   onFilterChange: (value: string) => void;
@@ -15,7 +14,6 @@ type SessionListHeaderProps = {
 export const SessionListHeader = ({
   connectionStatus,
   connectionIssue,
-  readOnly,
   filter,
   filterOptions,
   onFilterChange,
@@ -46,11 +44,6 @@ export const SessionListHeader = ({
         buttonClassName="uppercase tracking-[0.14em] text-[11px] px-3 py-1"
         options={filterOptions}
       />
-      {readOnly && (
-        <Callout tone="warning" size="sm">
-          Read-only mode is active. Actions are disabled.
-        </Callout>
-      )}
       {connectionIssue && (
         <Callout tone="warning" size="sm">
           {connectionIssue}

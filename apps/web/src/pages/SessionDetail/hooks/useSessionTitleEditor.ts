@@ -13,14 +13,12 @@ import {
 type UseSessionTitleEditorParams = {
   session: SessionSummary | null;
   paneId: string;
-  readOnly: boolean;
   updateSessionTitle: (paneId: string, title: string | null) => Promise<void>;
 };
 
 export const useSessionTitleEditor = ({
   session,
   paneId,
-  readOnly,
   updateSessionTitle,
 }: UseSessionTitleEditorParams) => {
   const sessionCustomTitle = session?.customTitle ?? null;
@@ -42,11 +40,11 @@ export const useSessionTitleEditor = ({
   }, [sessionCustomTitle, titleEditing, setTitleDraft]);
 
   const openTitleEditor = useCallback(() => {
-    if (readOnly || !session) return;
+    if (!session) return;
     setTitleError(null);
     setTitleDraft(sessionCustomTitle ?? "");
     setTitleEditing(true);
-  }, [readOnly, session, sessionCustomTitle, setTitleDraft, setTitleEditing, setTitleError]);
+  }, [session, sessionCustomTitle, setTitleDraft, setTitleEditing, setTitleError]);
 
   const closeTitleEditor = useCallback(() => {
     setTitleEditing(false);

@@ -25,7 +25,6 @@ import { useRawInputHandlers } from "./useRawInputHandlers";
 
 type UseSessionControlsParams = {
   paneId: string;
-  readOnly: boolean;
   mode: ScreenMode;
   sendText: (paneId: string, text: string, enter?: boolean) => Promise<CommandResponse>;
   sendKeys: (paneId: string, keys: AllowedKey[]) => Promise<CommandResponse>;
@@ -73,15 +72,8 @@ const confirmDangerousTextSend = (value: string) => {
   return window.confirm("Dangerous command detected. Send anyway?");
 };
 
-const shouldSkipTextSend = ({
-  readOnly,
-  rawMode,
-  value,
-}: {
-  readOnly: boolean;
-  rawMode: boolean;
-  value: string;
-}) => readOnly || rawMode || !value.trim();
+const shouldSkipTextSend = ({ rawMode, value }: { rawMode: boolean; value: string }) =>
+  rawMode || !value.trim();
 
 export const insertIntoTextarea = (textarea: HTMLTextAreaElement, insertText: string) => {
   const start = textarea.selectionStart ?? textarea.value.length;
@@ -96,7 +88,6 @@ export const insertIntoTextarea = (textarea: HTMLTextAreaElement, insertText: st
 
 export const useSessionControls = ({
   paneId,
-  readOnly,
   mode,
   sendText,
   sendKeys,
@@ -139,16 +130,8 @@ export const useSessionControls = ({
     }
   }, [rawMode, setAutoEnter]);
 
-  useEffect(() => {
-    if (readOnly && rawMode) {
-      setRawMode(false);
-      setAllowDangerKeys(false);
-    }
-  }, [readOnly, rawMode, setAllowDangerKeys, setRawMode]);
-
   const handleSendKey = useCallback(
     async (key: string) => {
-      if (readOnly) return;
       const mapped = mapKeyWithModifiers(key, ctrlHeld, shiftHeld);
       if (rawMode) {
         const result = await sendRaw(
@@ -163,22 +146,12 @@ export const useSessionControls = ({
       const result = await sendKeys(paneId, [mapped as AllowedKey]);
       handleCommandFailure(result, API_ERROR_MESSAGES.sendKeys, setScreenError);
     },
-    [
-      allowDangerKeys,
-      ctrlHeld,
-      paneId,
-      rawMode,
-      readOnly,
-      sendKeys,
-      sendRaw,
-      setScreenError,
-      shiftHeld,
-    ],
+    [allowDangerKeys, ctrlHeld, paneId, rawMode, sendKeys, sendRaw, setScreenError, shiftHeld],
   );
 
   const handleSendText = useCallback(async () => {
     const currentValue = readPromptValue(textInputRef);
-    if (shouldSkipTextSend({ readOnly, rawMode, value: currentValue })) return;
+    if (shouldSkipTextSend({ rawMode, value: currentValue })) return;
     if (!confirmDangerousTextSend(currentValue)) return;
     const result = await sendText(paneId, currentValue, autoEnter);
     if (handleCommandFailure(result, API_ERROR_MESSAGES.sendText, setScreenError)) {
@@ -188,13 +161,10 @@ export const useSessionControls = ({
     if (mode === "text") {
       scrollToBottom("auto");
     }
-  }, [autoEnter, mode, paneId, rawMode, readOnly, scrollToBottom, sendText, setScreenError]);
+  }, [autoEnter, mode, paneId, rawMode, scrollToBottom, sendText, setScreenError]);
 
   const handleUploadImage = useCallback(
     async (file: File) => {
-      if (readOnly) {
-        return;
-      }
       const textarea = textInputRef.current;
       if (!textarea) {
         return;
@@ -211,7 +181,7 @@ export const useSessionControls = ({
         setScreenError(error instanceof Error ? error.message : API_ERROR_MESSAGES.uploadImage);
       }
     },
-    [paneId, readOnly, setScreenError, uploadImageAttachment],
+    [paneId, setScreenError, uploadImageAttachment],
   );
 
   const toggleAutoEnter = useCallback(() => {
@@ -255,7 +225,6 @@ export const useSessionControls = ({
     handleRawCompositionEnd,
   } = useRawInputHandlers({
     paneId,
-    readOnly,
     rawMode,
     allowDangerKeys,
     ctrlHeld,

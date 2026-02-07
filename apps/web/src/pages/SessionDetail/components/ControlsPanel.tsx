@@ -20,11 +20,10 @@ import {
   useRef,
 } from "react";
 
-import { Button, Callout, ModifierToggle, PillToggle } from "@/components/ui";
+import { Button, ModifierToggle, PillToggle } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 type ControlsPanelState = {
-  readOnly: boolean;
   interactive: boolean;
   textInputRef: RefObject<HTMLTextAreaElement | null>;
   autoEnter: boolean;
@@ -407,7 +406,6 @@ const KeysSection = ({
 
 export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
   const {
-    readOnly,
     interactive,
     textInputRef,
     autoEnter,
@@ -493,14 +491,6 @@ export const ControlsPanel = ({ state, actions }: ControlsPanelProps) => {
       syncPromptHeight(textInputRef.current);
     }
   }, [syncPromptHeight, textInputRef]);
-
-  if (readOnly) {
-    return (
-      <Callout tone="warning" size="sm">
-        Read-only mode is active. Interactive controls are hidden.
-      </Callout>
-    );
-  }
 
   return (
     <div className="space-y-3">

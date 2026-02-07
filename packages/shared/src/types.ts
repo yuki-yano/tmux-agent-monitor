@@ -181,7 +181,6 @@ export type ApiErrorCode =
   | "INVALID_PANE"
   | "INVALID_PAYLOAD"
   | "DANGEROUS_COMMAND"
-  | "READ_ONLY"
   | "NOT_FOUND"
   | "TMUX_UNAVAILABLE"
   | "RATE_LIMIT"
@@ -316,7 +315,6 @@ export type ServerHealth = {
 export type AgentMonitorConfigBase = {
   bind: "127.0.0.1" | "0.0.0.0";
   port: number;
-  readOnly: boolean;
   attachOnServe: boolean;
   staticAuth: boolean;
   allowedOrigins: string[];

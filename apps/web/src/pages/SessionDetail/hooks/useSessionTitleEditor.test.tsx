@@ -33,7 +33,6 @@ describe("useSessionTitleEditor", () => {
         useSessionTitleEditor({
           session,
           paneId: session.paneId,
-          readOnly: false,
           updateSessionTitle: vi.fn(),
         }),
       { wrapper },
@@ -52,7 +51,6 @@ describe("useSessionTitleEditor", () => {
         useSessionTitleEditor({
           session,
           paneId: session.paneId,
-          readOnly: false,
           updateSessionTitle,
         }),
       { wrapper },
@@ -80,7 +78,6 @@ describe("useSessionTitleEditor", () => {
         useSessionTitleEditor({
           session,
           paneId: session.paneId,
-          readOnly: false,
           updateSessionTitle,
         }),
       { wrapper },
@@ -107,7 +104,6 @@ describe("useSessionTitleEditor", () => {
         useSessionTitleEditor({
           session,
           paneId: session.paneId,
-          readOnly: false,
           updateSessionTitle,
         }),
       { wrapper },

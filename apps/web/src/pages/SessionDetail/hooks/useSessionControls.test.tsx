@@ -54,7 +54,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -100,7 +99,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -154,7 +152,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -195,7 +192,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -234,7 +230,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -259,45 +254,6 @@ describe("useSessionControls", () => {
     expect(setScreenError).toHaveBeenCalledWith(API_ERROR_MESSAGES.uploadImage);
   });
 
-  it("ignores image upload when read-only mode is enabled", async () => {
-    const sendText = vi.fn().mockResolvedValue({ ok: true });
-    const sendKeys = vi.fn().mockResolvedValue({ ok: true });
-    const sendRaw = vi.fn().mockResolvedValue({ ok: true });
-    const uploadImageAttachment = vi.fn();
-    const setScreenError = vi.fn();
-    const scrollToBottom = vi.fn();
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionControls({
-          paneId: "pane-1",
-          readOnly: true,
-          mode: "text",
-          sendText,
-          sendKeys,
-          sendRaw,
-          uploadImageAttachment,
-          setScreenError,
-          scrollToBottom,
-        }),
-      { wrapper },
-    );
-
-    const textarea = document.createElement("textarea");
-    textarea.value = "keep this";
-    act(() => {
-      result.current.textInputRef.current = textarea;
-    });
-
-    await act(async () => {
-      await result.current.handleUploadImage(createImageFile());
-    });
-
-    expect(uploadImageAttachment).not.toHaveBeenCalled();
-    expect(setScreenError).not.toHaveBeenCalled();
-    expect(textarea.value).toBe("keep this");
-  });
-
   it("blocks dangerous text when confirmation is canceled", async () => {
     const confirmSpy = vi.fn(() => false);
     vi.stubGlobal("confirm", confirmSpy);
@@ -313,7 +269,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -351,7 +306,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -395,7 +349,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -445,7 +398,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -493,7 +445,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -541,7 +492,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -597,7 +547,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -644,7 +593,6 @@ describe("useSessionControls", () => {
       () =>
         useSessionControls({
           paneId: "pane-1",
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,
@@ -684,7 +632,6 @@ describe("useSessionControls", () => {
       ({ paneId }: { paneId: string }) =>
         useSessionControls({
           paneId,
-          readOnly: false,
           mode: "text",
           sendText,
           sendKeys,

@@ -14,7 +14,7 @@ export const useSessionDetailViewSectionProps = ({
   title,
   actions,
 }: SessionDetailViewProps) => {
-  const { paneId, session, nowMs, connectionIssue, readOnly } = meta;
+  const { paneId, session, nowMs, connectionIssue } = meta;
   const { sessionGroups } = sidebar;
   const {
     timeline: stateTimeline,
@@ -333,7 +333,6 @@ export const useSessionDetailViewSectionProps = ({
     return {
       state: {
         session,
-        readOnly,
         connectionIssue,
         nowMs,
         titleDraft,
@@ -352,7 +351,6 @@ export const useSessionDetailViewSectionProps = ({
     };
   }, [
     session,
-    readOnly,
     connectionIssue,
     nowMs,
     titleDraft,
@@ -383,7 +381,6 @@ export const useSessionDetailViewSectionProps = ({
   const controlsPanelProps = useMemo(
     () => ({
       state: {
-        readOnly,
         interactive,
         textInputRef,
         autoEnter,
@@ -411,7 +408,6 @@ export const useSessionDetailViewSectionProps = ({
       },
     }),
     [
-      readOnly,
       interactive,
       textInputRef,
       autoEnter,

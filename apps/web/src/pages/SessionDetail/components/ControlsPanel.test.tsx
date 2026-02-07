@@ -9,7 +9,6 @@ describe("ControlsPanel", () => {
   type ControlsPanelActions = Parameters<typeof ControlsPanel>[0]["actions"];
 
   const buildState = (overrides: Partial<ControlsPanelState> = {}): ControlsPanelState => ({
-    readOnly: false,
     interactive: true,
     textInputRef: { current: null },
     autoEnter: true,
@@ -37,16 +36,6 @@ describe("ControlsPanel", () => {
     onRawCompositionStart: vi.fn(),
     onRawCompositionEnd: vi.fn(),
     ...overrides,
-  });
-
-  it("renders read-only banner when disabled", () => {
-    const state = buildState({ readOnly: true });
-    const actions = buildActions();
-    render(<ControlsPanel state={state} actions={actions} />);
-
-    expect(
-      screen.getByText("Read-only mode is active. Interactive controls are hidden."),
-    ).toBeTruthy();
   });
 
   it("invokes send and toggle handlers", () => {

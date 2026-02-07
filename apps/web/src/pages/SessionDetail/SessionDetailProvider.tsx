@@ -12,7 +12,6 @@ import {
   connectionStatusAtom,
   highlightCorrectionsAtom,
   paneIdAtom,
-  readOnlyAtom,
   resolvedThemeAtom,
   type SessionApi,
   sessionApiAtom,
@@ -30,7 +29,6 @@ const SessionDetailHydrator = ({ paneId }: { paneId: string }) => {
     connected,
     connectionStatus,
     connectionIssue,
-    readOnly,
     highlightCorrections,
     reconnect,
     requestDiffSummary,
@@ -54,7 +52,6 @@ const SessionDetailHydrator = ({ paneId }: { paneId: string }) => {
   const setConnected = useSetAtom(connectedAtom);
   const setConnectionStatus = useSetAtom(connectionStatusAtom);
   const setConnectionIssue = useSetAtom(connectionIssueAtom);
-  const setReadOnly = useSetAtom(readOnlyAtom);
   const setHighlightCorrections = useSetAtom(highlightCorrectionsAtom);
   const setResolvedTheme = useSetAtom(resolvedThemeAtom);
   const setSessionApi = useSetAtom(sessionApiAtom);
@@ -100,7 +97,6 @@ const SessionDetailHydrator = ({ paneId }: { paneId: string }) => {
     [connectedAtom, connected],
     [connectionStatusAtom, connectionStatus],
     [connectionIssueAtom, connectionIssue],
-    [readOnlyAtom, readOnly],
     [highlightCorrectionsAtom, highlightCorrections],
     [resolvedThemeAtom, resolvedTheme],
     [sessionApiAtom, sessionApi],
@@ -125,10 +121,6 @@ const SessionDetailHydrator = ({ paneId }: { paneId: string }) => {
   useEffect(() => {
     setConnectionIssue(connectionIssue);
   }, [connectionIssue, setConnectionIssue]);
-
-  useEffect(() => {
-    setReadOnly(readOnly);
-  }, [readOnly, setReadOnly]);
 
   useEffect(() => {
     setHighlightCorrections(highlightCorrections);
