@@ -78,4 +78,18 @@ describe("SessionCard", () => {
 
     expect(screen.getByText("Conflict")).toBeTruthy();
   });
+
+  it("keeps card width constrained for long titles", () => {
+    const longTitle = "long-title-".repeat(20);
+    const session = buildSession({ customTitle: null, title: longTitle });
+    renderWithRouter(<SessionCard session={session} nowMs={Date.now()} />);
+
+    const link = screen.getByRole("link");
+    const title = screen.getByText(longTitle);
+
+    expect(link.className).toContain("min-w-0");
+    expect(link.className).toContain("w-full");
+    expect(title.className).toContain("truncate");
+    expect(title.className).toContain("max-w-full");
+  });
 });

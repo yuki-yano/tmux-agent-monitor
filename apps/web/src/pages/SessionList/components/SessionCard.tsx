@@ -62,11 +62,15 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
   const showAgentBadge = isKnownAgent(session.agent);
 
   return (
-    <Link to="/sessions/$paneId" params={{ paneId: session.paneId }} className="group">
+    <Link
+      to="/sessions/$paneId"
+      params={{ paneId: session.paneId }}
+      className="group block w-full min-w-0 max-w-full"
+    >
       <Card
         interactive
         className={cn(
-          "relative flex h-full flex-col overflow-hidden p-4 transition-all",
+          "relative flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden p-4 transition-all",
           stateStyle.card,
         )}
       >
@@ -106,7 +110,7 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
         </div>
 
         <div className="relative mt-2.5 flex min-w-0 flex-1 flex-col">
-          <h3 className="font-display text-latte-text truncate text-[15px] font-semibold leading-snug">
+          <h3 className="font-display text-latte-text block w-full max-w-full truncate text-[15px] font-semibold leading-snug">
             {sessionTitle}
           </h3>
           <p
