@@ -39,6 +39,9 @@ export type ApiClientContract = {
       screen: {
         $post: (args: { param: PaneParam; json: ScreenRequestJson }) => Promise<Response>;
       };
+      focus: {
+        $post: (args: { param: PaneParam }) => Promise<Response>;
+      };
       attachments: {
         image: {
           $post: (args: { param: PaneParam; form: UploadImageForm }) => Promise<Response>;

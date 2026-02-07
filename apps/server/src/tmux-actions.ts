@@ -2,7 +2,11 @@ import type { AgentMonitorConfig, ApiError, RawItem } from "@vde-monitor/shared"
 import { allowedKeys, compileDangerPatterns, isDangerousCommand } from "@vde-monitor/shared";
 import type { TmuxAdapter } from "@vde-monitor/tmux";
 
+import { markPaneFocus } from "./activity-suppressor.js";
 import { setMapEntryWithLimit } from "./cache.js";
+import { resolveBackendApp } from "./screen/macos-app.js";
+import { focusTerminalApp, isAppRunning } from "./screen/macos-applescript.js";
+import { focusTmuxPane } from "./screen/tmux-geometry.js";
 
 const buildError = (code: ApiError["code"], message: string): ApiError => ({
   code,
@@ -238,5 +242,36 @@ export const createTmuxActions = (adapter: TmuxAdapter, config: AgentMonitorConf
     return okResult();
   };
 
-  return { sendText, sendKeys, sendRaw };
+  const focusPane = async (paneId: string): Promise<ActionResult> => {
+    if (!paneId) {
+      return invalidPayload("pane id is required");
+    }
+    if (process.platform !== "darwin") {
+      return invalidPayload("focus is only supported on macOS");
+    }
+    const app = resolveBackendApp(config.screen.image.backend);
+    if (!app) {
+      return invalidPayload("invalid terminal backend");
+    }
+
+    try {
+      const running = await isAppRunning(app.appName);
+      if (!running) {
+        return {
+          ok: false,
+          error: buildError("TMUX_UNAVAILABLE", "Terminal is not running"),
+        };
+      }
+
+      await focusTerminalApp(app.appName);
+      markPaneFocus(paneId);
+      await focusTmuxPane(paneId, config.tmux).catch(() => null);
+      return okResult();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "failed to focus pane";
+      return internalError(message);
+    }
+  };
+
+  return { sendText, sendKeys, sendRaw, focusPane };
 };

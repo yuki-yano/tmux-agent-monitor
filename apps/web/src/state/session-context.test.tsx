@@ -13,6 +13,7 @@ const apiMock = {
   requestCommitFile: vi.fn(),
   requestStateTimeline: vi.fn(),
   requestScreen: vi.fn(),
+  focusPane: vi.fn(),
   uploadImageAttachment: vi.fn(),
   sendText: vi.fn(),
   sendKeys: vi.fn(),

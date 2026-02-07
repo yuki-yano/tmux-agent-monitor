@@ -98,6 +98,7 @@ const createTestContext = (configOverrides: Partial<AgentMonitorConfig> = {}) =>
     sendText: vi.fn(async () => ({ ok: true })),
     sendKeys: vi.fn(async () => ({ ok: true })),
     sendRaw: vi.fn(async () => ({ ok: true })),
+    focusPane: vi.fn(async () => ({ ok: true })),
   } as unknown as TmuxActions;
   const api = createApiRouter({ config, monitor, tmuxActions });
   return { api, config, monitor, tmuxActions, detail, getStateTimeline };
@@ -221,6 +222,58 @@ describe("createApiRouter", () => {
     expect(tmuxActions.sendText).toHaveBeenCalledWith("pane-1", "ls", true);
   });
 
+  it("focuses pane via focus endpoint", async () => {
+    const { api, tmuxActions } = createTestContext();
+    const res = await api.request("/sessions/pane-1/focus", {
+      method: "POST",
+      headers: authHeaders,
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.command.ok).toBe(true);
+    expect(tmuxActions.focusPane).toHaveBeenCalledWith("pane-1");
+  });
+
+  it("returns rate limit error on repeated focus requests", async () => {
+    const { api, tmuxActions } = createTestContext({
+      rateLimit: { ...defaultConfig.rateLimit, send: { windowMs: 1000, max: 1 } },
+    });
+    const first = await api.request("/sessions/pane-1/focus", {
+      method: "POST",
+      headers: authHeaders,
+    });
+    const second = await api.request("/sessions/pane-1/focus", {
+      method: "POST",
+      headers: authHeaders,
+    });
+
+    const firstData = await first.json();
+    const secondData = await second.json();
+    expect(firstData.command.ok).toBe(true);
+    expect(secondData.command.ok).toBe(false);
+    expect(secondData.command.error.code).toBe("RATE_LIMIT");
+    expect(tmuxActions.focusPane).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns focus command errors from tmuxActions", async () => {
+    const { api, tmuxActions } = createTestContext();
+    vi.mocked(tmuxActions.focusPane).mockResolvedValueOnce({
+      ok: false,
+      error: { code: "TMUX_UNAVAILABLE", message: "Terminal is not running" },
+    });
+
+    const res = await api.request("/sessions/pane-1/focus", {
+      method: "POST",
+      headers: authHeaders,
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.command.ok).toBe(false);
+    expect(data.command.error.code).toBe("TMUX_UNAVAILABLE");
+  });
+
   it("updates custom title", async () => {
     const { api, monitor } = createTestContext();
     const res = await api.request("/sessions/pane-1/title", {
@@ -252,6 +305,19 @@ describe("createApiRouter", () => {
     expect(res.status).toBe(404);
     const data = await res.json();
     expect(data.error.code).toBe("INVALID_PANE");
+  });
+
+  it("returns 404 when pane is missing on focus endpoint", async () => {
+    const { api, tmuxActions } = createTestContext();
+    const res = await api.request("/sessions/missing/focus", {
+      method: "POST",
+      headers: authHeaders,
+    });
+
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data.error.code).toBe("INVALID_PANE");
+    expect(tmuxActions.focusPane).not.toHaveBeenCalled();
   });
 
   it("returns 400 when diff summary is unavailable", async () => {

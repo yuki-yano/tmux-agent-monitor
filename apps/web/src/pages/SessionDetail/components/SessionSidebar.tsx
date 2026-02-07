@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { SessionStateTimeline, SessionStateValue, SessionSummary } from "@vde-monitor/shared";
-import { Clock } from "lucide-react";
-import { memo, useCallback, useMemo } from "react";
+import { Clock, SquareTerminal } from "lucide-react";
+import { memo, type MouseEvent, useCallback, useMemo, useState } from "react";
 
-import { Badge, Card, LastInputPill, TagPill } from "@/components/ui";
+import { Badge, Card, IconButton, LastInputPill, TagPill } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatRepoDirLabel, statusIconMeta } from "@/lib/quick-panel-utils";
 import type { SessionGroup } from "@/lib/session-group";
@@ -34,6 +34,7 @@ type SessionSidebarState = {
 
 type SessionSidebarActions = {
   onSelectSession?: (paneId: string) => void;
+  onFocusPane?: (paneId: string) => Promise<void> | void;
 };
 
 type SessionSidebarProps = {
@@ -42,7 +43,7 @@ type SessionSidebarProps = {
 };
 
 const surfaceLinkClass =
-  "border-latte-surface2/70 bg-latte-base/70 focus-visible:ring-latte-lavender block w-full rounded-2xl border px-3 py-3 text-left transition-all duration-200 hover:border-latte-lavender/50 hover:bg-latte-mantle/70 hover:shadow-[0_8px_18px_-10px_rgba(114,135,253,0.35)] focus-visible:outline-none focus-visible:ring-2";
+  "border-latte-surface2/70 bg-latte-base/70 focus-visible:ring-latte-lavender block w-full rounded-2xl border px-3 py-3.5 text-left transition-all duration-200 hover:border-latte-lavender/50 hover:bg-latte-mantle/70 hover:shadow-[0_8px_18px_-10px_rgba(114,135,253,0.35)] focus-visible:outline-none focus-visible:ring-2";
 
 const SidebarBackdrop = memo(() => (
   <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-none rounded-r-3xl">
@@ -83,11 +84,13 @@ type SessionSidebarItemProps = {
   item: SessionSummary;
   nowMs: number;
   isCurrent: boolean;
+  isFocusPending: boolean;
   onHoverStart: (paneId: string) => void;
   onHoverEnd: (paneId: string) => void;
   onFocus: (paneId: string) => void;
   onBlur: (paneId: string) => void;
   onSelect: () => void;
+  onFocusPane?: (paneId: string) => Promise<void> | void;
   registerItemRef: (paneId: string, node: HTMLDivElement | null) => void;
 };
 
@@ -96,11 +99,13 @@ const SessionSidebarItem = memo(
     item,
     nowMs,
     isCurrent,
+    isFocusPending,
     onHoverStart,
     onHoverEnd,
     onFocus,
     onBlur,
     onSelect,
+    onFocusPane,
     registerItemRef,
   }: SessionSidebarItemProps) => {
     const displayTitle = item.customTitle ?? item.title ?? item.sessionName;
@@ -135,9 +140,21 @@ const SessionSidebarItem = memo(
       onBlur(item.paneId);
     }, [item.paneId, onBlur]);
 
+    const handleFocusButtonClick = useCallback(
+      (event: MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!onFocusPane || isFocusPending) {
+          return;
+        }
+        void onFocusPane(item.paneId);
+      },
+      [isFocusPending, item.paneId, onFocusPane],
+    );
+
     return (
       <div
-        className="relative"
+        className="flex items-center gap-2"
         ref={handleRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -151,7 +168,7 @@ const SessionSidebarItem = memo(
           onClick={onSelect}
           className={cn(
             surfaceLinkClass,
-            "flex flex-col gap-2",
+            "min-w-0 flex-1 flex-col gap-3",
             isCurrent
               ? "border-latte-lavender/80 bg-latte-lavender/20 ring-latte-lavender/40 hover:border-latte-lavender/90 hover:bg-latte-lavender/25 shadow-[0_0_0_1px_rgba(114,135,253,0.45),0_12px_24px_-12px_rgba(114,135,253,0.45)] ring-1 ring-inset"
               : "hover:border-latte-lavender/60 hover:bg-latte-lavender/10",
@@ -168,7 +185,7 @@ const SessionSidebarItem = memo(
               {displayTitle}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             {isKnownAgent(item.agent) && (
               <Badge tone={agentToneFor(item.agent)} size="sm">
                 {agentLabelFor(item.agent)}
@@ -184,6 +201,19 @@ const SessionSidebarItem = memo(
             />
           </div>
         </Link>
+        {onFocusPane ? (
+          <IconButton
+            type="button"
+            size="md"
+            variant="lavender"
+            aria-label="Focus terminal pane"
+            className="shrink-0"
+            onClick={handleFocusButtonClick}
+            disabled={isFocusPending}
+          >
+            <SquareTerminal className="h-4 w-4" />
+          </IconButton>
+        ) : null}
       </div>
     );
   },
@@ -391,10 +421,11 @@ SessionPreviewPopover.displayName = "SessionPreviewPopover";
 
 export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
   const { sessionGroups, nowMs, currentPaneId, className } = state;
-  const { onSelectSession } = actions;
+  const { onSelectSession, onFocusPane } = actions;
   const { connected, connectionIssue, requestStateTimeline, requestScreen, highlightCorrections } =
     useSessions();
   const { resolvedTheme } = useTheme();
+  const [focusPendingPaneIds, setFocusPendingPaneIds] = useState<Set<string>>(() => new Set());
 
   const agentGroups = useMemo(() => {
     return sessionGroups
@@ -457,6 +488,37 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
       handlePreviewSelect();
     },
     [handlePreviewSelect, onSelectSession],
+  );
+
+  const handleFocusPane = useCallback(
+    async (paneId: string) => {
+      if (!onFocusPane) {
+        return;
+      }
+      setFocusPendingPaneIds((prev) => {
+        if (prev.has(paneId)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.add(paneId);
+        return next;
+      });
+      try {
+        await onFocusPane(paneId);
+      } catch {
+        // Best-effort UI action: ignore unexpected handler failures.
+      } finally {
+        setFocusPendingPaneIds((prev) => {
+          if (!prev.has(paneId)) {
+            return prev;
+          }
+          const next = new Set(prev);
+          next.delete(paneId);
+          return next;
+        });
+      }
+    },
+    [onFocusPane],
   );
 
   return (
@@ -525,11 +587,13 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
                               item={item}
                               nowMs={nowMs}
                               isCurrent={currentPaneId === item.paneId}
+                              isFocusPending={focusPendingPaneIds.has(item.paneId)}
                               onHoverStart={handleHoverStart}
                               onHoverEnd={handleHoverEnd}
                               onFocus={handleFocus}
                               onBlur={handleBlur}
                               onSelect={() => handleSelect(item.paneId)}
+                              onFocusPane={handleFocusPane}
                               registerItemRef={registerItemRef}
                             />
                           ))}

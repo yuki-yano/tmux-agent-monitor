@@ -1,7 +1,34 @@
 import { defaultConfig } from "@vde-monitor/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { markPaneFocus } from "./activity-suppressor.js";
+import { resolveBackendApp } from "./screen/macos-app.js";
+import { focusTerminalApp, isAppRunning } from "./screen/macos-applescript.js";
+import { focusTmuxPane } from "./screen/tmux-geometry.js";
 import { createTmuxActions } from "./tmux-actions.js";
+
+vi.mock("./screen/macos-app.js", () => ({
+  resolveBackendApp: vi.fn(),
+}));
+
+vi.mock("./screen/macos-applescript.js", () => ({
+  isAppRunning: vi.fn(),
+  focusTerminalApp: vi.fn(),
+}));
+
+vi.mock("./screen/tmux-geometry.js", () => ({
+  focusTmuxPane: vi.fn(),
+}));
+
+vi.mock("./activity-suppressor.js", () => ({
+  markPaneFocus: vi.fn(),
+}));
+
+const originalPlatformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+
+const setProcessPlatform = (platform: NodeJS.Platform) => {
+  Object.defineProperty(process, "platform", { value: platform, configurable: true });
+};
 
 describe("createTmuxActions.sendText", () => {
   it("sends enter key after text when enabled", async () => {
@@ -78,6 +105,75 @@ describe("createTmuxActions.sendText", () => {
     expect(second.ok).toBe(false);
     expect(second.error?.code).toBe("DANGEROUS_COMMAND");
     expect(adapter.run).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createTmuxActions.focusPane", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setProcessPlatform("darwin");
+    vi.mocked(resolveBackendApp).mockReturnValue({
+      key: "terminal",
+      appName: "Terminal",
+    });
+    vi.mocked(isAppRunning).mockResolvedValue(true);
+    vi.mocked(focusTerminalApp).mockResolvedValue();
+    vi.mocked(markPaneFocus).mockImplementation(() => undefined);
+    vi.mocked(focusTmuxPane).mockResolvedValue();
+  });
+
+  afterEach(() => {
+    if (originalPlatformDescriptor) {
+      Object.defineProperty(process, "platform", originalPlatformDescriptor);
+    }
+  });
+
+  it("rejects focus on non-macOS", async () => {
+    setProcessPlatform("linux");
+    const adapter = {
+      run: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
+    };
+    const tmuxActions = createTmuxActions(adapter, { ...defaultConfig, token: "test-token" });
+
+    const result = await tmuxActions.focusPane("%1");
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("INVALID_PAYLOAD");
+    expect(focusTerminalApp).not.toHaveBeenCalled();
+  });
+
+  it("returns TMUX_UNAVAILABLE when backend app is not running", async () => {
+    vi.mocked(isAppRunning).mockResolvedValue(false);
+    const adapter = {
+      run: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
+    };
+    const tmuxActions = createTmuxActions(adapter, { ...defaultConfig, token: "test-token" });
+
+    const result = await tmuxActions.focusPane("%1");
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("TMUX_UNAVAILABLE");
+    expect(focusTerminalApp).not.toHaveBeenCalled();
+    expect(markPaneFocus).not.toHaveBeenCalled();
+    expect(focusTmuxPane).not.toHaveBeenCalled();
+  });
+
+  it("returns ok even when tmux pane focusing fails", async () => {
+    vi.mocked(focusTmuxPane).mockRejectedValue(new Error("failed"));
+    const adapter = {
+      run: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
+    };
+    const config = { ...defaultConfig, token: "test-token" };
+    const tmuxActions = createTmuxActions(adapter, config);
+
+    const result = await tmuxActions.focusPane("%1");
+
+    expect(result.ok).toBe(true);
+    expect(resolveBackendApp).toHaveBeenCalledWith(config.screen.image.backend);
+    expect(isAppRunning).toHaveBeenCalledWith("Terminal");
+    expect(focusTerminalApp).toHaveBeenCalledWith("Terminal");
+    expect(markPaneFocus).toHaveBeenCalledWith("%1");
+    expect(focusTmuxPane).toHaveBeenCalledWith("%1", config.tmux);
   });
 });
 

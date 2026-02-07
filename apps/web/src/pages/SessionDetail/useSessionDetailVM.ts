@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 import { useCallback, useMemo } from "react";
 
+import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { buildSessionGroups } from "@/lib/session-group";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { useNowMs } from "@/lib/use-now-ms";
@@ -46,6 +47,7 @@ export const useSessionDetailVM = (paneId: string) => {
     requestDiffSummary,
     requestStateTimeline,
     requestScreen,
+    focusPane,
     uploadImageAttachment,
     sendText,
     sendKeys,
@@ -238,6 +240,16 @@ export const useSessionDetailVM = (paneId: string) => {
     void touchSession(paneId).catch(() => null);
   }, [paneId, touchSession]);
 
+  const handleFocusPane = useCallback(
+    async (targetPaneId: string) => {
+      const result = await focusPane(targetPaneId);
+      if (!result.ok) {
+        setScreenError(result.error?.message ?? API_ERROR_MESSAGES.focusPane);
+      }
+    },
+    [focusPane, setScreenError],
+  );
+
   const handleOpenPaneHere = useCallback(
     (targetPaneId: string) => {
       closeQuickPanel();
@@ -377,6 +389,7 @@ export const useSessionDetailVM = (paneId: string) => {
       clearTitle,
     },
     actions: {
+      handleFocusPane,
       handleOpenPaneHere,
       handleOpenHere,
       handleOpenInNewTab,

@@ -6,7 +6,7 @@ import { usePointerDrag } from "./use-pointer-drag";
 const STORAGE_KEY = "vde.sidebar-width";
 const DEFAULT_WIDTH = 300;
 const MIN_WIDTH = 240;
-const MAX_WIDTH = 420;
+const MAX_WIDTH = 460;
 
 const clamp = (value: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, value));
 

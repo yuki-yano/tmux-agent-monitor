@@ -440,6 +440,18 @@ export const useSessionApi = ({
     [apiClient, requestCommand],
   );
 
+  const focusPane = useCallback(
+    async (paneId: string): Promise<CommandResponse> => {
+      const param = { paneId: encodePaneId(paneId) };
+      return requestCommand(
+        paneId,
+        apiClient.sessions[":paneId"].focus.$post({ param }),
+        API_ERROR_MESSAGES.focusPane,
+      );
+    },
+    [apiClient, requestCommand],
+  );
+
   const uploadImageAttachment = useCallback(
     async (paneId: string, file: File): Promise<ImageAttachment> => {
       const param = { paneId: encodePaneId(paneId) };
@@ -525,6 +537,7 @@ export const useSessionApi = ({
     requestStateTimeline,
     requestScreen,
     sendText,
+    focusPane,
     uploadImageAttachment,
     sendKeys,
     sendRaw,

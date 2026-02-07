@@ -93,7 +93,7 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
               </TagPill>
             )}
           </div>
-          <span className="justify-self-end self-center">
+          <span className="self-center justify-self-end">
             <LastInputPill
               tone={sessionTone}
               label={<Clock className="h-2.5 w-2.5" />}

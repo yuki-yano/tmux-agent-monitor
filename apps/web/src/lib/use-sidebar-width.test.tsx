@@ -51,6 +51,6 @@ describe("useSidebarWidth", () => {
       window.dispatchEvent(new PointerEvent("pointerup"));
     });
 
-    expect(result.current.sidebarWidth).toBe(420);
+    expect(result.current.sidebarWidth).toBe(460);
   });
 });

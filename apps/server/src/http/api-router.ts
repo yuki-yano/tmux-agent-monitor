@@ -391,6 +391,23 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
       });
       return c.json({ command });
     });
+
+    api.post("/sessions/:paneId/focus", async (c) => {
+      const pane = resolvePane(c);
+      if (pane instanceof Response) {
+        return pane;
+      }
+      if (!sendLimiter(getLimiterKey(c))) {
+        return c.json({
+          command: {
+            ok: false,
+            error: buildError("RATE_LIMIT", "rate limited"),
+          },
+        });
+      }
+      const command = await tmuxActions.focusPane(pane.paneId);
+      return c.json({ command });
+    });
   };
 
   const registerGitRoutes = () => {

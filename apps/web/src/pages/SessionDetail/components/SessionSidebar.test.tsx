@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterContextProvider,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -139,5 +139,35 @@ describe("SessionSidebar", () => {
     renderWithRouter(<SessionSidebar state={state} actions={buildActions()} />);
 
     expect(screen.getByText("No agent sessions available.")).toBeTruthy();
+  });
+
+  it("calls onFocusPane without triggering session selection", () => {
+    const sessionOne = createSessionDetail({
+      paneId: "pane-1",
+      title: "Codex Session",
+      agent: "codex",
+      windowIndex: 1,
+      sessionName: "alpha",
+    });
+    const onSelectSession = vi.fn();
+    const onFocusPane = vi.fn();
+    const state = buildState({
+      currentPaneId: "pane-2",
+      sessionGroups: [
+        {
+          repoRoot: "/Users/test/repo",
+          sessions: [sessionOne],
+          lastInputAt: sessionOne.lastInputAt,
+        },
+      ],
+    });
+
+    renderWithRouter(<SessionSidebar state={state} actions={{ onSelectSession, onFocusPane }} />);
+
+    const focusButton = screen.getByRole("button", { name: "Focus terminal pane" });
+    fireEvent.click(focusButton);
+
+    expect(onFocusPane).toHaveBeenCalledWith("pane-1");
+    expect(onSelectSession).not.toHaveBeenCalled();
   });
 });

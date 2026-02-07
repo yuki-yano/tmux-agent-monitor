@@ -71,6 +71,7 @@ type SessionContextValue = {
     paneId: string,
     options: { lines?: number; mode?: "text" | "image"; cursor?: string },
   ) => Promise<ScreenResponse>;
+  focusPane: (paneId: string) => Promise<CommandResponse>;
   uploadImageAttachment: (paneId: string, file: File) => Promise<ImageAttachment>;
   sendText: (paneId: string, text: string, enter?: boolean) => Promise<CommandResponse>;
   sendKeys: (paneId: string, keys: AllowedKey[]) => Promise<CommandResponse>;
@@ -140,6 +141,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     requestCommitFile,
     requestStateTimeline,
     requestScreen,
+    focusPane,
     uploadImageAttachment,
     sendText,
     sendKeys,
@@ -243,6 +245,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         requestCommitFile,
         requestStateTimeline,
         requestScreen,
+        focusPane,
         uploadImageAttachment,
         sendText,
         sendKeys,

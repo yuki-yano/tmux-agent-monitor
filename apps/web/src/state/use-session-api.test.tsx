@@ -16,6 +16,7 @@ const mockApiClient = {
     $get: mockGet,
     ":paneId": {
       screen: { $post: mockPost },
+      focus: { $post: mockPost },
       attachments: { image: { $post: mockPost } },
       title: { $put: mockPut },
       touch: { $post: mockPost },
@@ -440,5 +441,60 @@ describe("useSessionApi", () => {
       API_ERROR_MESSAGES.invalidResponse,
     );
     expect(onConnectionIssue).toHaveBeenCalledWith(API_ERROR_MESSAGES.invalidResponse);
+  });
+
+  it("focuses pane and clears connection issue on success", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const onConnectionIssue = vi.fn();
+    requestJsonMock.mockResolvedValueOnce({
+      res: new Response(null, { status: 200 }),
+      data: { command: { ok: true } },
+    });
+
+    const { result } = renderHook(() =>
+      useSessionApi({
+        token: "token",
+        onSessions: vi.fn(),
+        onConnectionIssue,
+        onSessionUpdated: vi.fn(),
+        onSessionRemoved: vi.fn(),
+        onHighlightCorrections: vi.fn(),
+      }),
+    );
+
+    await expect(result.current.focusPane("pane-1")).resolves.toEqual({ ok: true });
+    expect(mockPost).toHaveBeenCalledWith({ param: { paneId: "pane-1" } });
+    expect(onConnectionIssue).toHaveBeenCalledWith(null);
+  });
+
+  it("returns command response when focus endpoint returns logical error", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const onConnectionIssue = vi.fn();
+    requestJsonMock.mockResolvedValueOnce({
+      res: new Response(null, { status: 200 }),
+      data: {
+        command: {
+          ok: false,
+          error: { code: "RATE_LIMIT", message: "rate limited" },
+        },
+      },
+    });
+
+    const { result } = renderHook(() =>
+      useSessionApi({
+        token: "token",
+        onSessions: vi.fn(),
+        onConnectionIssue,
+        onSessionUpdated: vi.fn(),
+        onSessionRemoved: vi.fn(),
+        onHighlightCorrections: vi.fn(),
+      }),
+    );
+
+    await expect(result.current.focusPane("pane-1")).resolves.toMatchObject({
+      ok: false,
+      error: { code: "RATE_LIMIT", message: "rate limited" },
+    });
+    expect(onConnectionIssue).toHaveBeenCalledWith(null);
   });
 });

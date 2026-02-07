@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { createStore, Provider as JotaiProvider } from "jotai";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -18,6 +18,7 @@ import { useSessionDetailVM } from "./useSessionDetailVM";
 
 const session = createSessionDetail({ paneId: "pane-1" });
 const sessionGroups = [{ repoRoot: null, sessions: [session] }];
+const setScreenErrorMock = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
@@ -54,7 +55,7 @@ vi.mock("./hooks/useSessionScreen", () => ({
     imageBase64: null,
     fallbackReason: null,
     error: null,
-    setScreenError: vi.fn(),
+    setScreenError: setScreenErrorMock,
     isScreenLoading: false,
     isAtBottom: true,
     handleAtBottomChange: vi.fn(),
@@ -183,6 +184,7 @@ describe("useSessionDetailVM", () => {
       requestCommitFile: vi.fn(),
       requestStateTimeline: vi.fn(),
       requestScreen: vi.fn(),
+      focusPane: vi.fn(),
       uploadImageAttachment: vi.fn(),
       sendText: vi.fn(),
       sendKeys: vi.fn(),
@@ -211,5 +213,52 @@ describe("useSessionDetailVM", () => {
     expect(result.current.meta.connectionIssue).toBe("issue");
     expect(result.current.meta.session?.paneId).toBe("pane-1");
     expect(result.current.sidebar.sessionGroups).toBe(sessionGroups);
+  });
+
+  it("sets screen error when focus pane command fails", async () => {
+    setScreenErrorMock.mockClear();
+    const focusPane = vi.fn().mockResolvedValue({
+      ok: false,
+      error: { code: "RATE_LIMIT", message: "rate limited" },
+    });
+    const sessionApi = {
+      reconnect: vi.fn(),
+      requestDiffSummary: vi.fn(),
+      requestDiffFile: vi.fn(),
+      requestCommitLog: vi.fn(),
+      requestCommitDetail: vi.fn(),
+      requestCommitFile: vi.fn(),
+      requestStateTimeline: vi.fn(),
+      requestScreen: vi.fn(),
+      focusPane,
+      uploadImageAttachment: vi.fn(),
+      sendText: vi.fn(),
+      sendKeys: vi.fn(),
+      sendRaw: vi.fn(),
+      touchSession: vi.fn(),
+      updateSessionTitle: vi.fn(),
+    };
+
+    const store = createStore();
+    store.set(paneIdAtom, "pane-1");
+    store.set(sessionsAtom, [session]);
+    store.set(connectedAtom, true);
+    store.set(connectionIssueAtom, null);
+    store.set(highlightCorrectionsAtom, { codex: false, claude: true });
+    store.set(resolvedThemeAtom, "mocha");
+    store.set(sessionApiAtom, sessionApi);
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <JotaiProvider store={store}>{children}</JotaiProvider>
+    );
+
+    const { result } = renderHook(() => useSessionDetailVM("pane-1"), { wrapper });
+
+    await act(async () => {
+      await result.current.actions.handleFocusPane("pane-1");
+    });
+
+    expect(focusPane).toHaveBeenCalledWith("pane-1");
+    expect(setScreenErrorMock).toHaveBeenCalledWith("rate limited");
   });
 });

@@ -121,7 +121,7 @@ export const useSessionDetailViewSectionProps = ({
     saveTitle,
     clearTitle,
   } = title;
-  const { handleOpenPaneHere, handleOpenHere, handleOpenInNewTab } = actions;
+  const { handleFocusPane, handleOpenPaneHere, handleOpenHere, handleOpenInNewTab } = actions;
 
   const diffSectionProps = useMemo(
     () => ({
@@ -373,9 +373,11 @@ export const useSessionDetailViewSectionProps = ({
         currentPaneId: paneId,
         className: "border-latte-surface1/80 h-full w-full rounded-none rounded-r-3xl border-r",
       },
-      actions: {},
+      actions: {
+        onFocusPane: handleFocusPane,
+      },
     }),
-    [sessionGroups, nowMs, paneId],
+    [sessionGroups, nowMs, paneId, handleFocusPane],
   );
 
   const controlsPanelProps = useMemo(
