@@ -34,11 +34,11 @@ export const SessionGroupSection = ({ group, nowMs, allSessions }: SessionGroupS
   return (
     <GlowCard contentClassName="gap-3 sm:gap-4">
       <GlassPanel
-        className="px-4 py-3 sm:px-5 sm:py-4"
+        className="px-3 py-3 sm:px-4 sm:py-4"
         contentClassName="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex min-w-0 items-start gap-3">
-          <div className="border-latte-surface2/70 from-latte-crust/70 via-latte-surface0/70 to-latte-mantle/80 relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br">
+          <div className="border-latte-surface2/70 from-latte-crust/70 via-latte-surface0/70 to-latte-mantle/80 relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br">
             <div className="bg-latte-lavender/30 pointer-events-none absolute -bottom-3 -right-3 h-8 w-8 rounded-full blur-xl" />
             <FolderGit2 className="text-latte-lavender h-5 w-5" />
           </div>
