@@ -10,23 +10,22 @@ import { rotateToken } from "./config.js";
 import { createApiRouter } from "./http/api-router.js";
 import { buildError, isOriginAllowed, requireAuth } from "./http/helpers.js";
 import type { createSessionMonitor } from "./monitor.js";
-import type { createTmuxActions } from "./tmux-actions.js";
+import type { MultiplexerInputActions } from "./multiplexer/types.js";
 
 type Monitor = ReturnType<typeof createSessionMonitor>;
-type TmuxActions = ReturnType<typeof createTmuxActions>;
 
 type AppContext = {
   config: AgentMonitorConfig;
   monitor: Monitor;
-  tmuxActions: TmuxActions;
+  actions: MultiplexerInputActions;
 };
 
 export type ApiAppType = ReturnType<typeof createApiRouter>;
 
-export const createApp = ({ config, monitor, tmuxActions }: AppContext) => {
+export const createApp = ({ config, monitor, actions }: AppContext) => {
   const app = new Hono();
 
-  const api = createApiRouter({ config, monitor, tmuxActions });
+  const api = createApiRouter({ config, monitor, actions });
   app.route("/api", api);
 
   app.use("/api/admin/*", async (c, next) => {

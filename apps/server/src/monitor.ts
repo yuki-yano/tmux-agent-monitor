@@ -4,19 +4,11 @@ import path from "node:path";
 
 import {
   type AgentMonitorConfig,
-  resolveServerKey,
   type SessionStateTimelineRange,
   type SessionStateTimelineSource,
 } from "@vde-monitor/shared";
-import {
-  createInspector,
-  createPipeManager,
-  createScreenCapture,
-  type TmuxAdapter,
-} from "@vde-monitor/tmux";
 
 import { createJsonlTailer, createLogActivityPoller, ensureDir } from "./logs.js";
-import { createFingerprintCapture } from "./monitor/fingerprint.js";
 import { handleHookLine, type HookEventContext } from "./monitor/hook-tailer.js";
 import { createMonitorLoop } from "./monitor/loop.js";
 import { createPaneLogManager } from "./monitor/pane-log-manager.js";
@@ -25,11 +17,41 @@ import { processPane } from "./monitor/pane-processor.js";
 import { createPaneStateStore } from "./monitor/pane-state.js";
 import { cleanupRegistry } from "./monitor/registry-cleanup.js";
 import { resolveRepoRootCached } from "./monitor/repo-root.js";
+import type { MultiplexerRuntime } from "./multiplexer/types.js";
 import { createSessionRegistry } from "./session-registry.js";
 import { restoreSessions, restoreTimeline, saveState } from "./state-store.js";
 import { createSessionTimelineStore } from "./state-timeline/store.js";
 
 const baseDir = path.join(os.homedir(), ".vde-monitor");
+const PANE_PROCESS_CONCURRENCY = 8;
+
+export const mapWithConcurrencyLimit = async <T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> => {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const results = new Array<R>(items.length);
+  const workerCount = Math.min(items.length, Math.max(1, Math.floor(limit)));
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (true) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      if (currentIndex >= items.length) {
+        return;
+      }
+      results[currentIndex] = await mapper(items[currentIndex] as T, currentIndex);
+    }
+  };
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+};
 
 const resolveTimelineSource = (reason: string): SessionStateTimelineSource => {
   if (reason === "restored") {
@@ -41,19 +63,18 @@ const resolveTimelineSource = (reason: string): SessionStateTimelineSource => {
   return "poll";
 };
 
-export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorConfig) => {
-  const inspector = createInspector(adapter);
-  const pipeManager = createPipeManager(adapter);
-  const screenCapture = createScreenCapture(adapter);
+export const createSessionMonitor = (runtime: MultiplexerRuntime, config: AgentMonitorConfig) => {
+  const inspector = runtime.inspector;
+  const screenCapture = runtime.screenCapture;
   const registry = createSessionRegistry();
   const stateTimeline = createSessionTimelineStore();
-  const capturePaneFingerprint = createFingerprintCapture(adapter);
+  const capturePaneFingerprint = runtime.captureFingerprint;
   const paneStates = createPaneStateStore();
   const customTitles = new Map<string, string>();
   const restored = restoreSessions();
   const restoredTimeline = restoreTimeline();
   const restoredReason = new Set<string>();
-  const serverKey = resolveServerKey(config.tmux.socketName, config.tmux.socketPath);
+  const serverKey = runtime.serverKey;
   const eventsDir = path.join(baseDir, "events", serverKey);
   const eventLogPath = path.join(eventsDir, "claude.jsonl");
   const logActivity = createLogActivityPoller(config.activity.pollIntervalMs);
@@ -61,7 +82,8 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
     baseDir,
     serverKey,
     config,
-    pipeManager,
+    pipeSupport: runtime.pipeSupport,
+    pipeManager: runtime.pipeManager,
     logActivity,
   });
   const jsonlTailer = createJsonlTailer(config.activity.pollIntervalMs);
@@ -103,22 +125,29 @@ export const createSessionMonitor = (adapter: TmuxAdapter, config: AgentMonitorC
     const panes = await inspector.listPanes();
     const activePaneIds = new Set<string>();
 
-    for (const pane of panes) {
-      const preparedPane = await ensurePipeTagValue(pane, {
-        readUserOption: inspector.readUserOption,
-      });
+    const paneResults = await mapWithConcurrencyLimit(
+      panes,
+      PANE_PROCESS_CONCURRENCY,
+      async (pane) => {
+        const preparedPane = await ensurePipeTagValue(pane, {
+          readUserOption: inspector.readUserOption,
+        });
 
-      const detail = await processPane({
-        pane: preparedPane,
-        config,
-        paneStates,
-        paneLogManager,
-        capturePaneFingerprint,
-        applyRestored,
-        getCustomTitle: (paneId) => customTitles.get(paneId) ?? null,
-        resolveRepoRoot: resolveRepoRootCached,
-      });
+        const detail = await processPane({
+          pane: preparedPane,
+          config,
+          paneStates,
+          paneLogManager,
+          capturePaneFingerprint,
+          applyRestored,
+          getCustomTitle: (paneId) => customTitles.get(paneId) ?? null,
+          resolveRepoRoot: resolveRepoRootCached,
+        });
+        return { preparedPane, detail };
+      },
+    );
 
+    for (const { preparedPane, detail } of paneResults) {
       if (!detail) {
         continue;
       }

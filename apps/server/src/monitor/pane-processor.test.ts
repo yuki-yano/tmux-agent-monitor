@@ -16,6 +16,7 @@ const createPaneState = (overrides: Partial<PaneRuntimeState> = {}): PaneRuntime
 });
 
 const createPaneLogManager = (overrides: Partial<PaneLogManager> = {}): PaneLogManager => ({
+  pipeSupport: "tmux-pipe",
   getPaneLogPath: vi.fn(() => "/tmp/log"),
   ensureLogFiles: vi.fn(async () => {}),
   preparePaneLogging: vi.fn(async () => ({
@@ -108,6 +109,32 @@ describe("processPane", () => {
     expect(updatePaneOutputState).toHaveBeenCalledWith(
       expect.objectContaining({ logPath: "/tmp/log" }),
     );
+  });
+
+  it("passes null logPath for shell pane when pipe support is none", async () => {
+    const updatePaneOutputState = vi.fn(async () => ({
+      outputAt: "2024-01-01T00:00:00.000Z",
+      hookState: null,
+    }));
+
+    await processPane(
+      {
+        pane: basePane,
+        config: baseConfig,
+        paneStates: { get: () => createPaneState() },
+        paneLogManager: createPaneLogManager({ pipeSupport: "none" }),
+        capturePaneFingerprint: vi.fn(async () => null),
+        applyRestored: vi.fn(() => null),
+        getCustomTitle: vi.fn(() => null),
+        resolveRepoRoot: vi.fn(async () => null),
+      },
+      {
+        resolvePaneAgent: vi.fn(async () => ({ agent: "unknown" as const, ignore: false })),
+        updatePaneOutputState,
+      },
+    );
+
+    expect(updatePaneOutputState).toHaveBeenCalledWith(expect.objectContaining({ logPath: null }));
   });
 
   it("returns detail with restored state when available", async () => {

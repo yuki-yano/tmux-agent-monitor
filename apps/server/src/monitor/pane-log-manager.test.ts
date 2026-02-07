@@ -18,6 +18,7 @@ describe("pane-log-manager", () => {
       baseDir: "/base",
       serverKey: "key",
       config,
+      pipeSupport: "tmux-pipe",
       pipeManager,
       logActivity,
       deps: {
@@ -63,6 +64,7 @@ describe("pane-log-manager", () => {
       baseDir: "/base",
       serverKey: "key",
       config,
+      pipeSupport: "tmux-pipe",
       pipeManager,
       logActivity,
       deps: {
@@ -87,5 +89,51 @@ describe("pane-log-manager", () => {
 
     expect(pipeManager.attachPipe).not.toHaveBeenCalled();
     expect(result.pipeConflict).toBe(true);
+  });
+
+  it("skips pipe and log registration when pipe support is none", async () => {
+    const pipeManager = {
+      hasConflict: vi.fn(() => false),
+      attachPipe: vi.fn(async () => ({ attached: true, conflict: false })),
+    };
+    const logActivity = { register: vi.fn() };
+    const config = {
+      attachOnServe: true,
+      logs: { maxPaneLogBytes: 10, retainRotations: 1 },
+    } as AgentMonitorConfig;
+    const manager = createPaneLogManager({
+      baseDir: "/base",
+      serverKey: "key",
+      config,
+      pipeSupport: "none",
+      pipeManager,
+      logActivity,
+      deps: {
+        resolveLogPaths: (_base, _key, paneId) => ({
+          paneIdEncoded: paneId,
+          panesDir: "/logs",
+          eventsDir: "/logs",
+          paneLogPath: `/logs/${paneId}.log`,
+          eventLogPath: "/logs/events.log",
+        }),
+        ensureDir: vi.fn(async () => {}),
+        rotateLogIfNeeded: vi.fn(async () => {}),
+        openLogFile: vi.fn(async () => {}),
+      },
+    });
+
+    const result = await manager.preparePaneLogging({
+      paneId: "2",
+      panePipe: false,
+      pipeTagValue: null,
+    });
+
+    expect(pipeManager.attachPipe).not.toHaveBeenCalled();
+    expect(logActivity.register).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      pipeAttached: false,
+      pipeConflict: false,
+      logPath: null,
+    });
   });
 });

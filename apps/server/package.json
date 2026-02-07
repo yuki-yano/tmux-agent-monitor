@@ -14,6 +14,7 @@
     "@vde-monitor/agents": "workspace:*",
     "@vde-monitor/shared": "workspace:*",
     "@vde-monitor/tmux": "workspace:*",
+    "@vde-monitor/wezterm": "workspace:*",
     "@hono/node-server": "^1.19.4",
     "@hono/zod-validator": "^0.7.6",
     "execa": "^9.6.0",

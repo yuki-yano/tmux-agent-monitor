@@ -183,6 +183,7 @@ export type ApiErrorCode =
   | "DANGEROUS_COMMAND"
   | "NOT_FOUND"
   | "TMUX_UNAVAILABLE"
+  | "WEZTERM_UNAVAILABLE"
   | "RATE_LIMIT"
   | "INTERNAL";
 
@@ -351,6 +352,13 @@ export type AgentMonitorConfigBase = {
     };
   };
   logs: { maxPaneLogBytes: number; maxEventLogBytes: number; retainRotations: number };
+  multiplexer: {
+    backend: "tmux" | "wezterm";
+    wezterm: {
+      cliPath: string;
+      target: string | null;
+    };
+  };
   tmux: { socketName: string | null; socketPath: string | null; primaryClient: string | null };
 };
 

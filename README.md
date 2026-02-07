@@ -1,7 +1,7 @@
 # vde-monitor
 
-Monitor tmux sessions from a web UI with a single CLI.  
-Built for Codex CLI and Claude Code workflows running inside tmux panes.
+Monitor terminal multiplexer sessions from a web UI with a single CLI.  
+Built for Codex CLI and Claude Code workflows running inside tmux/WezTerm panes.
 
 ## Purpose
 
@@ -11,7 +11,7 @@ Built for Codex CLI and Claude Code workflows running inside tmux panes.
 
 ## Scope
 
-- Discover and track tmux pane/session state in near real time
+- Discover and track tmux/WezTerm pane/session state in near real time
 - Expose authenticated HTTP APIs for session inspection and interaction
 - Provide a web UI for monitoring, input dispatch, timeline tracking, and Git context checks
 - Persist session metadata and timeline history across restarts
@@ -26,10 +26,10 @@ Built for Codex CLI and Claude Code workflows running inside tmux panes.
 
 ## Architecture at a glance
 
-- `@vde-monitor/server`: tmux integration, monitor loop, API routes, auth/rate limiting, persistence
+- `@vde-monitor/server`: multiplexer integration, monitor loop, API routes, auth/rate limiting, persistence
 - `@vde-monitor/web`: session list/detail UI, controls, timeline, diff/commit panels
 - `vde-monitor-hook`: CLI helper that writes Claude hook JSONL events
-- `@vde-monitor/shared` and `@vde-monitor/tmux`: shared contracts/config/schema and tmux adapter utilities
+- `@vde-monitor/shared`, `@vde-monitor/tmux`, and `@vde-monitor/wezterm`: shared contracts/config/schema and multiplexer adapter utilities
 
 ## Who should use this
 
@@ -54,7 +54,7 @@ Built for Codex CLI and Claude Code workflows running inside tmux panes.
 ## Requirements
 
 - Node.js `24+`
-- tmux `2.0+` with a running tmux server
+- tmux `2.0+` or WezTerm with `wezterm cli` available
 - macOS-only features (image capture and pane focus) require terminal automation via `osascript`
 - On macOS, Screen Recording and Accessibility permissions may be required
 
@@ -95,6 +95,9 @@ Recommended remote access:
 --web-port <p>  Override the displayed web port in the printed URL
 --socket-name   tmux socket name
 --socket-path   tmux socket path
+--multiplexer  multiplexer backend (`tmux` or `wezterm`)
+--wezterm-cli  wezterm binary path (default: `wezterm`)
+--wezterm-target wezterm CLI target (`auto` or explicit target name)
 ```
 
 Host resolution notes:
@@ -158,6 +161,13 @@ Minimal example:
       "timeoutMs": 5000
     }
   },
+  "multiplexer": {
+    "backend": "tmux",
+    "wezterm": {
+      "cliPath": "wezterm",
+      "target": "auto"
+    }
+  },
   "tmux": {
     "socketName": null,
     "socketPath": null,
@@ -165,6 +175,9 @@ Minimal example:
   }
 }
 ```
+
+Supported multiplexer backends:
+`tmux`, `wezterm`
 
 Supported image backends:
 `alacritty`, `terminal`, `iterm`, `wezterm`, `ghostty`

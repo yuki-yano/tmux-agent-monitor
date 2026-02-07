@@ -19,6 +19,7 @@ export const apiErrorSchema = z.object({
     "DANGEROUS_COMMAND",
     "NOT_FOUND",
     "TMUX_UNAVAILABLE",
+    "WEZTERM_UNAVAILABLE",
     "RATE_LIMIT",
     "INTERNAL",
   ]),
@@ -261,6 +262,26 @@ export const configSchema = z.object({
     maxEventLogBytes: z.number(),
     retainRotations: z.number(),
   }),
+  multiplexer: z
+    .object({
+      backend: z.enum(["tmux", "wezterm"]).default("tmux"),
+      wezterm: z
+        .object({
+          cliPath: z.string().default("wezterm"),
+          target: z.string().nullable().default("auto"),
+        })
+        .default({
+          cliPath: "wezterm",
+          target: "auto",
+        }),
+    })
+    .default({
+      backend: "tmux",
+      wezterm: {
+        cliPath: "wezterm",
+        target: "auto",
+      },
+    }),
   tmux: z.object({
     socketName: z.string().nullable(),
     socketPath: z.string().nullable(),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveHosts } from "./cli.js";
+import { resolveHosts, resolveMultiplexerOverrides } from "./cli.js";
 
 const makeFlags = (entries: Array<[string, string | boolean]>) => new Map(entries);
 
@@ -65,5 +65,41 @@ describe("resolveHosts", () => {
         flags: makeFlags([["--tailscale", true]]),
       }),
     ).toThrow(/Tailscale IP not found/);
+  });
+});
+
+describe("resolveMultiplexerOverrides", () => {
+  it("resolves multiplexer and wezterm flags", () => {
+    const flags = makeFlags([
+      ["--multiplexer", "wezterm"],
+      ["--wezterm-cli", "/opt/homebrew/bin/wezterm"],
+      ["--wezterm-target", " dev "],
+    ]);
+
+    const result = resolveMultiplexerOverrides(flags);
+
+    expect(result).toEqual({
+      backend: "wezterm",
+      weztermCliPath: "/opt/homebrew/bin/wezterm",
+      weztermTarget: " dev ",
+    });
+  });
+
+  it("rejects invalid multiplexer values", () => {
+    expect(() => resolveMultiplexerOverrides(makeFlags([["--multiplexer", "foo"]]))).toThrow(
+      /--multiplexer must be one of/,
+    );
+  });
+
+  it("rejects missing values for required multiplexer flags", () => {
+    expect(() => resolveMultiplexerOverrides(makeFlags([["--multiplexer", true]]))).toThrow(
+      /--multiplexer requires a value/,
+    );
+    expect(() => resolveMultiplexerOverrides(makeFlags([["--wezterm-cli", true]]))).toThrow(
+      /--wezterm-cli requires a value/,
+    );
+    expect(() => resolveMultiplexerOverrides(makeFlags([["--wezterm-target", true]]))).toThrow(
+      /--wezterm-target requires a value/,
+    );
   });
 });

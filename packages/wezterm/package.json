@@ -1,0 +1,13 @@
+{
+  "name": "@vde-monitor/wezterm",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@vde-monitor/shared": "workspace:*",
+    "execa": "^9.6.0"
+  }
+}

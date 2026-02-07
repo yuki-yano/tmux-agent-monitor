@@ -85,6 +85,9 @@ export const createScreenResponse = async ({
     if (!config.screen.image.enabled) {
       return captureTextResponse("image_disabled", false);
     }
+    if (config.multiplexer.backend !== "tmux") {
+      return captureTextResponse("image_disabled", false);
+    }
     const imageResult = await captureTerminalScreen(target.paneTty, {
       paneId: target.paneId,
       tmux: config.tmux,

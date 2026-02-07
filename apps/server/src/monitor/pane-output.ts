@@ -22,7 +22,7 @@ type PaneOutputDeps = {
 type UpdatePaneOutputArgs = {
   pane: PaneOutputSnapshot;
   paneState: PaneRuntimeState;
-  logPath: string;
+  logPath: string | null;
   inactiveThresholdMs: number;
   deps: PaneOutputDeps;
 };
@@ -49,10 +49,13 @@ const updateOutputAtFromLog = async ({
   statLogMtime,
   setOutputAt,
 }: {
-  logPath: string;
+  logPath: string | null;
   statLogMtime: (logPath: string) => Promise<string | null>;
   setOutputAt: (next: string | null) => void;
 }) => {
+  if (!logPath) {
+    return;
+  }
   const logMtime = await statLogMtime(logPath);
   if (logMtime) {
     setOutputAt(logMtime);

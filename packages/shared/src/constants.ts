@@ -123,6 +123,13 @@ export const defaultConfig: AgentMonitorConfigFile = {
     maxEventLogBytes: 2_000_000,
     retainRotations: 5,
   },
+  multiplexer: {
+    backend: "tmux",
+    wezterm: {
+      cliPath: "wezterm",
+      target: "auto",
+    },
+  },
   tmux: {
     socketName: null,
     socketPath: null,

@@ -105,6 +105,9 @@ importers:
       '@vde-monitor/tmux':
         specifier: workspace:*
         version: link:../../packages/tmux
+      '@vde-monitor/wezterm':
+        specifier: workspace:*
+        version: link:../../packages/wezterm
       execa:
         specifier: ^9.6.0
         version: 9.6.1
@@ -211,6 +214,15 @@ importers:
 
   packages/tmux:
     dependencies:
+      execa:
+        specifier: ^9.6.0
+        version: 9.6.1
+
+  packages/wezterm:
+    dependencies:
+      '@vde-monitor/shared':
+        specifier: workspace:*
+        version: link:../shared
       execa:
         specifier: ^9.6.0
         version: 9.6.1

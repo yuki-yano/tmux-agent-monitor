@@ -61,7 +61,8 @@ const resolvePipeStatus = async ({
     return {
       pipeAttached: false,
       pipeConflict: false,
-      logPath: paneLogManager.getPaneLogPath(pane.paneId),
+      logPath:
+        paneLogManager.pipeSupport === "none" ? null : paneLogManager.getPaneLogPath(pane.paneId),
     };
   }
   return paneLogManager.preparePaneLogging({

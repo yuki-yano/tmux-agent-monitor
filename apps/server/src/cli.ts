@@ -13,6 +13,12 @@ export type ResolvedHosts = {
   displayHost: string;
 };
 
+export type MultiplexerOverrides = {
+  backend?: AgentMonitorConfig["multiplexer"]["backend"];
+  weztermCliPath?: string;
+  weztermTarget?: string;
+};
+
 type ResolveHostsOptions = {
   flags: Map<string, string | boolean>;
   configBind: AgentMonitorConfig["bind"];
@@ -175,4 +181,47 @@ export const resolveHosts = ({
   });
 
   return { bindHost, displayHost };
+};
+
+const resolveRequiredStringFlag = (
+  flags: Map<string, string | boolean>,
+  flag: string,
+): string | null => {
+  if (!flags.has(flag)) {
+    return null;
+  }
+  const value = flags.get(flag);
+  if (value === true || value === undefined) {
+    throw new Error(`${flag} requires a value.`);
+  }
+  if (typeof value !== "string") {
+    throw new Error(`${flag} requires a value.`);
+  }
+  return value;
+};
+
+export const resolveMultiplexerOverrides = (
+  flags: Map<string, string | boolean>,
+): MultiplexerOverrides => {
+  const overrides: MultiplexerOverrides = {};
+
+  const backend = resolveRequiredStringFlag(flags, "--multiplexer");
+  if (backend) {
+    if (backend !== "tmux" && backend !== "wezterm") {
+      throw new Error(`--multiplexer must be one of: tmux, wezterm. (received: ${backend})`);
+    }
+    overrides.backend = backend;
+  }
+
+  const weztermCliPath = resolveRequiredStringFlag(flags, "--wezterm-cli");
+  if (weztermCliPath) {
+    overrides.weztermCliPath = weztermCliPath;
+  }
+
+  const weztermTarget = resolveRequiredStringFlag(flags, "--wezterm-target");
+  if (weztermTarget) {
+    overrides.weztermTarget = weztermTarget;
+  }
+
+  return overrides;
 };

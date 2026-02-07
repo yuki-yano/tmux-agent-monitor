@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 import { serve } from "@hono/node-server";
 import { createTmuxAdapter } from "@vde-monitor/tmux";
+import { createWeztermAdapter, normalizeWeztermTarget } from "@vde-monitor/wezterm";
 import qrcode from "qrcode-terminal";
 
 import { createApp } from "./app.js";
-import { parseArgs, parsePort, resolveHosts } from "./cli.js";
+import { parseArgs, parsePort, resolveHosts, resolveMultiplexerOverrides } from "./cli.js";
 import { ensureConfig, rotateToken } from "./config.js";
 import { createSessionMonitor } from "./monitor.js";
+import { createMultiplexerRuntime } from "./multiplexer/runtime.js";
 import { getLocalIP, getTailscaleIP } from "./network.js";
 import { findAvailablePort } from "./ports.js";
-import { createTmuxActions } from "./tmux-actions.js";
 
 const printHooksSnippet = () => {
   const snippet = {
@@ -36,7 +37,7 @@ const printHooksSnippet = () => {
   console.log(JSON.stringify(snippet, null, 2));
 };
 
-const ensureTmuxAvailable = async (adapter: ReturnType<typeof createTmuxAdapter>) => {
+export const ensureTmuxAvailable = async (adapter: ReturnType<typeof createTmuxAdapter>) => {
   const version = await adapter.run(["-V"]);
   if (version.exitCode !== 0) {
     throw new Error("tmux not available");
@@ -47,13 +48,39 @@ const ensureTmuxAvailable = async (adapter: ReturnType<typeof createTmuxAdapter>
   }
 };
 
-const runServe = async (flags: Map<string, string | boolean>) => {
+export const ensureWeztermAvailable = async (adapter: ReturnType<typeof createWeztermAdapter>) => {
+  const result = await adapter.run(["list", "--format", "json"]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || "wezterm server not running");
+  }
+};
+
+export const ensureBackendAvailable = async (
+  config: ReturnType<typeof ensureConfig>,
+): Promise<void> => {
+  if (config.multiplexer.backend === "tmux") {
+    const tmuxAdapter = createTmuxAdapter({
+      socketName: config.tmux.socketName,
+      socketPath: config.tmux.socketPath,
+    });
+    await ensureTmuxAvailable(tmuxAdapter);
+    return;
+  }
+  const weztermAdapter = createWeztermAdapter({
+    cliPath: config.multiplexer.wezterm.cliPath,
+    target: config.multiplexer.wezterm.target,
+  });
+  await ensureWeztermAvailable(weztermAdapter);
+};
+
+export const runServe = async (flags: Map<string, string | boolean>) => {
   const config = ensureConfig();
   const noAttach = flags.has("--no-attach");
   const portFlag = flags.get("--port");
   const webPortFlag = flags.get("--web-port");
   const socketName = flags.get("--socket-name");
   const socketPath = flags.get("--socket-path");
+  const multiplexerOverrides = resolveMultiplexerOverrides(flags);
 
   const { bindHost, displayHost } = resolveHosts({
     flags,
@@ -73,22 +100,27 @@ const runServe = async (flags: Map<string, string | boolean>) => {
   if (typeof socketPath === "string") {
     config.tmux.socketPath = socketPath;
   }
+  if (multiplexerOverrides.backend) {
+    config.multiplexer.backend = multiplexerOverrides.backend;
+  }
+  if (multiplexerOverrides.weztermCliPath) {
+    config.multiplexer.wezterm.cliPath = multiplexerOverrides.weztermCliPath;
+  }
+  if (multiplexerOverrides.weztermTarget) {
+    config.multiplexer.wezterm.target = multiplexerOverrides.weztermTarget;
+  }
+  config.multiplexer.wezterm.target = normalizeWeztermTarget(config.multiplexer.wezterm.target);
 
   const host = bindHost;
   const port = await findAvailablePort(config.port, host, 10);
 
-  const adapter = createTmuxAdapter({
-    socketName: config.tmux.socketName,
-    socketPath: config.tmux.socketPath,
-  });
+  await ensureBackendAvailable(config);
 
-  await ensureTmuxAvailable(adapter);
-
-  const monitor = createSessionMonitor(adapter, config);
+  const runtime = createMultiplexerRuntime(config);
+  const monitor = createSessionMonitor(runtime, config);
   await monitor.start();
 
-  const tmuxActions = createTmuxActions(adapter, config);
-  const { app } = createApp({ config, monitor, tmuxActions });
+  const { app } = createApp({ config, monitor, actions: runtime.actions });
 
   serve({
     fetch: app.fetch,
@@ -108,7 +140,7 @@ const runServe = async (flags: Map<string, string | boolean>) => {
   });
 };
 
-const main = async () => {
+export const main = async () => {
   const { command, positional, flags } = parseArgs();
   if (command === "token" && positional[0] === "rotate") {
     const next = rotateToken();
@@ -123,7 +155,9 @@ const main = async () => {
   await runServe(flags);
 };
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== "test") {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

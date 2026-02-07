@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "./constants.js";
 import {
+  apiErrorSchema,
   claudeHookEventSchema,
   configSchema,
   imageAttachmentSchema,
@@ -180,6 +181,16 @@ describe("screenResponseSchema", () => {
       capturedAt: "2025-01-01T00:00:00Z",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("apiErrorSchema", () => {
+  it("accepts WEZTERM_UNAVAILABLE error code", () => {
+    const result = apiErrorSchema.safeParse({
+      code: "WEZTERM_UNAVAILABLE",
+      message: "wezterm is not running",
+    });
+    expect(result.success).toBe(true);
   });
 });
 
@@ -413,6 +424,90 @@ describe("configSchema", () => {
     if (result.success) {
       expect(result.data.rateLimit.raw).toEqual(defaultConfig.rateLimit.raw);
     }
+  });
+
+  it("fills default multiplexer config when missing", () => {
+    const result = configSchema.safeParse({
+      ...defaultConfig,
+      multiplexer: undefined,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.multiplexer).toEqual(defaultConfig.multiplexer);
+    }
+  });
+
+  it("accepts multiplexer backend values", () => {
+    const backends = ["tmux", "wezterm"] as const;
+    for (const backend of backends) {
+      const result = configSchema.safeParse({
+        ...defaultConfig,
+        multiplexer: {
+          ...defaultConfig.multiplexer,
+          backend,
+        },
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("fills default wezterm config when missing", () => {
+    const result = configSchema.safeParse({
+      ...defaultConfig,
+      multiplexer: {
+        ...defaultConfig.multiplexer,
+        wezterm: undefined,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.multiplexer.wezterm).toEqual(defaultConfig.multiplexer.wezterm);
+    }
+  });
+
+  it("accepts nullable wezterm target", () => {
+    const result = configSchema.safeParse({
+      ...defaultConfig,
+      multiplexer: {
+        ...defaultConfig.multiplexer,
+        wezterm: {
+          ...defaultConfig.multiplexer.wezterm,
+          target: null,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("fills default wezterm target when missing", () => {
+    const result = configSchema.safeParse({
+      ...defaultConfig,
+      multiplexer: {
+        ...defaultConfig.multiplexer,
+        wezterm: {
+          ...defaultConfig.multiplexer.wezterm,
+          target: undefined,
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.multiplexer.wezterm.target).toBe(defaultConfig.multiplexer.wezterm.target);
+    }
+  });
+
+  it("rejects invalid wezterm cliPath", () => {
+    const result = configSchema.safeParse({
+      ...defaultConfig,
+      multiplexer: {
+        ...defaultConfig.multiplexer,
+        wezterm: {
+          cliPath: 123,
+          target: "auto",
+        },
+      },
+    });
+    expect(result.success).toBe(false);
   });
 
   it("accepts supported image backends", () => {

@@ -111,6 +111,42 @@ describe("createScreenResponse", () => {
     expect(response.fallbackReason).toBe("image_disabled");
   });
 
+  it("falls back to text when multiplexer backend is wezterm", async () => {
+    vi.mocked(captureTerminalScreen).mockClear();
+    const captureText = vi.fn(async () => ({
+      screen: "hello",
+      alternateOn: false,
+      truncated: null,
+    }));
+    const monitor = {
+      getScreenCapture: () => ({ captureText }),
+    } as unknown as Monitor;
+    const target = { paneId: "%1", paneTty: "tty1", alternateOn: false } as SessionDetail;
+    const screenCache = createScreenCache();
+
+    const response = await createScreenResponse({
+      config: {
+        ...baseConfig,
+        multiplexer: {
+          ...baseConfig.multiplexer,
+          backend: "wezterm",
+        },
+      },
+      monitor,
+      target,
+      mode: "image",
+      lines: 5,
+      screenLimiter: () => true,
+      limiterKey: "rest",
+      buildTextResponse: screenCache.buildTextResponse,
+    });
+
+    expect(captureTerminalScreen).not.toHaveBeenCalled();
+    expect(captureText).toHaveBeenCalled();
+    expect(response.ok).toBe(true);
+    expect(response.mode).toBe("text");
+  });
+
   it("falls back to text when image capture fails", async () => {
     const captureText = vi.fn(async () => ({
       screen: "hello",

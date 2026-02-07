@@ -18,6 +18,7 @@ type PaneLogManagerArgs = {
   baseDir: string;
   serverKey: string;
   config: AgentMonitorConfig;
+  pipeSupport: "tmux-pipe" | "none";
   pipeManager: {
     hasConflict: (state: { panePipe: boolean; pipeTagValue: string | null }) => boolean;
     attachPipe: (
@@ -69,6 +70,7 @@ export const createPaneLogManager = ({
   baseDir,
   serverKey,
   config,
+  pipeSupport,
   pipeManager,
   logActivity,
   deps,
@@ -110,6 +112,10 @@ export const createPaneLogManager = ({
   };
 
   const preparePaneLogging = async ({ paneId, panePipe, pipeTagValue }: PreparePaneLoggingArgs) => {
+    if (pipeSupport === "none") {
+      return { pipeAttached: false, pipeConflict: false, logPath: null };
+    }
+
     const logPath = getPaneLogPath(paneId);
     const pipeState = { panePipe, pipeTagValue };
 
@@ -135,5 +141,5 @@ export const createPaneLogManager = ({
     return { pipeAttached, pipeConflict, logPath };
   };
 
-  return { getPaneLogPath, ensureLogFiles, preparePaneLogging };
+  return { pipeSupport, getPaneLogPath, ensureLogFiles, preparePaneLogging };
 };

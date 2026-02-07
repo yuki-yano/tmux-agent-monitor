@@ -14,9 +14,9 @@ import { fetchCommitDetail, fetchCommitFile, fetchCommitLog } from "../git-commi
 import { fetchDiffFile, fetchDiffSummary } from "../git-diff.js";
 import { createRateLimiter } from "../limits/rate-limit.js";
 import type { createSessionMonitor } from "../monitor.js";
+import type { MultiplexerInputActions } from "../multiplexer/types.js";
 import { createScreenCache } from "../screen/screen-cache.js";
 import { createScreenResponse } from "../screen/screen-response.js";
-import type { createTmuxActions } from "../tmux-actions.js";
 import { buildError, isOriginAllowed, nowIso, requireAuth } from "./helpers.js";
 import {
   IMAGE_ATTACHMENT_MAX_CONTENT_LENGTH_BYTES,
@@ -25,12 +25,11 @@ import {
 } from "./image-attachment.js";
 
 type Monitor = ReturnType<typeof createSessionMonitor>;
-type TmuxActions = ReturnType<typeof createTmuxActions>;
 
 type ApiContext = {
   config: AgentMonitorConfig;
   monitor: Monitor;
-  tmuxActions: TmuxActions;
+  actions: MultiplexerInputActions;
 };
 
 type RouteContext = {
@@ -102,7 +101,7 @@ const resolveTimelineRange = (range: string | undefined): SessionStateTimelineRa
   return "1h";
 };
 
-export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) => {
+export const createApiRouter = ({ config, monitor, actions }: ApiContext) => {
   const api = new Hono();
   const sendLimiter = createRateLimiter(config.rateLimit.send.windowMs, config.rateLimit.send.max);
   const screenLimiter = createRateLimiter(
@@ -211,7 +210,7 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
   ) =>
     createCommandResponse({
       monitor,
-      tmuxActions,
+      actions,
       payload,
       limiterKey: getLimiterKey(c),
       sendLimiter,
@@ -405,7 +404,7 @@ export const createApiRouter = ({ config, monitor, tmuxActions }: ApiContext) =>
           },
         });
       }
-      const command = await tmuxActions.focusPane(pane.paneId);
+      const command = await actions.focusPane(pane.paneId);
       return c.json({ command });
     });
   };

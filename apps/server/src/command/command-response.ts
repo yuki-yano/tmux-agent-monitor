@@ -2,10 +2,9 @@ import type { AllowedKey, CommandResponse, RawItem } from "@vde-monitor/shared";
 
 import { buildError } from "../http/helpers.js";
 import type { createSessionMonitor } from "../monitor.js";
-import type { createTmuxActions } from "../tmux-actions.js";
+import type { MultiplexerInputActions } from "../multiplexer/types.js";
 
 type Monitor = ReturnType<typeof createSessionMonitor>;
-type TmuxActions = ReturnType<typeof createTmuxActions>;
 type CommandLimiter = (key: string) => boolean;
 
 type CommandPayload =
@@ -15,7 +14,7 @@ type CommandPayload =
 
 type CommandResponseParams = {
   monitor: Monitor;
-  tmuxActions: TmuxActions;
+  actions: MultiplexerInputActions;
   payload: CommandPayload;
   limiterKey: string;
   sendLimiter: CommandLimiter;
@@ -28,22 +27,22 @@ const resolveLimiter = (
   rawLimiter: CommandLimiter,
 ) => (payloadType === "send.raw" ? rawLimiter : sendLimiter);
 
-const executePayload = async (tmuxActions: TmuxActions, payload: CommandPayload) => {
+const executePayload = async (actions: MultiplexerInputActions, payload: CommandPayload) => {
   switch (payload.type) {
     case "send.text":
       return {
         paneId: payload.paneId,
-        result: await tmuxActions.sendText(payload.paneId, payload.text, payload.enter ?? true),
+        result: await actions.sendText(payload.paneId, payload.text, payload.enter ?? true),
       };
     case "send.keys":
       return {
         paneId: payload.paneId,
-        result: await tmuxActions.sendKeys(payload.paneId, payload.keys),
+        result: await actions.sendKeys(payload.paneId, payload.keys),
       };
     case "send.raw":
       return {
         paneId: payload.paneId,
-        result: await tmuxActions.sendRaw(payload.paneId, payload.items, payload.unsafe ?? false),
+        result: await actions.sendRaw(payload.paneId, payload.items, payload.unsafe ?? false),
       };
     default:
       return null;
@@ -52,7 +51,7 @@ const executePayload = async (tmuxActions: TmuxActions, payload: CommandPayload)
 
 export const createCommandResponse = async ({
   monitor,
-  tmuxActions,
+  actions,
   payload,
   limiterKey,
   sendLimiter,
@@ -63,7 +62,7 @@ export const createCommandResponse = async ({
     return { ok: false, error: buildError("RATE_LIMIT", "rate limited") };
   }
 
-  const executed = await executePayload(tmuxActions, payload);
+  const executed = await executePayload(actions, payload);
   if (!executed) {
     return { ok: false, error: buildError("INVALID_PAYLOAD", "unsupported command payload") };
   }
