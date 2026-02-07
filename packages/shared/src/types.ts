@@ -220,7 +220,7 @@ export type ScreenDelta = {
   insertLines: string[];
 };
 
-export type SessionStateTimelineRange = "15m" | "1h" | "24h";
+export type SessionStateTimelineRange = "15m" | "1h" | "6h";
 
 export type SessionStateTimelineSource = "poll" | "hook" | "restore";
 

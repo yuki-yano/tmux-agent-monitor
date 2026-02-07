@@ -126,7 +126,7 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
           <IconButton
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-3"
+            className="absolute right-3 top-3 z-30"
             variant="lavender"
             size="sm"
             aria-label="Close quick panel"
@@ -247,7 +247,7 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
                                     variant={isCurrent ? "lavenderStrong" : "lavender"}
                                     size="sm"
                                     aria-label="Open session link"
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 shadow-md"
+                                    className="absolute right-0 top-1/2 z-10 -translate-y-1/2 shadow-md"
                                   >
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </IconButton>

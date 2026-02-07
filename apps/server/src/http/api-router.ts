@@ -69,7 +69,7 @@ const screenRequestSchema = z.object({
   cursor: z.string().optional(),
 });
 const timelineQuerySchema = z.object({
-  range: z.enum(["15m", "1h", "24h"]).optional(),
+  range: z.enum(["15m", "1h", "6h"]).optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
 });
 const sendTextSchema = z.object({
@@ -96,7 +96,7 @@ const parseQueryInteger = (value: string | undefined, fallback: number) => {
 };
 
 const resolveTimelineRange = (range: string | undefined): SessionStateTimelineRange => {
-  if (range === "15m" || range === "1h" || range === "24h") {
+  if (range === "15m" || range === "1h" || range === "6h") {
     return range;
   }
   return "1h";

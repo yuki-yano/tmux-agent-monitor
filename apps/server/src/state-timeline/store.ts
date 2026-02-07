@@ -9,7 +9,7 @@ import type {
 const RANGE_MS: Record<SessionStateTimelineRange, number> = {
   "15m": 15 * 60 * 1000,
   "1h": 60 * 60 * 1000,
-  "24h": 24 * 60 * 60 * 1000,
+  "6h": 6 * 60 * 60 * 1000,
 };
 
 const ALL_STATES: SessionStateValue[] = [
@@ -20,7 +20,7 @@ const ALL_STATES: SessionStateValue[] = [
   "UNKNOWN",
 ];
 
-const DEFAULT_RETENTION_MS = RANGE_MS["24h"];
+const DEFAULT_RETENTION_MS = RANGE_MS["6h"];
 const DEFAULT_LIMIT = 200;
 const DEFAULT_MAX_ITEMS_PER_PANE = 1000;
 

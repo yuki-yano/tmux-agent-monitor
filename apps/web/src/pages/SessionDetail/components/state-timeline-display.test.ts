@@ -206,4 +206,33 @@ describe("buildTimelineDisplay", () => {
     expect(display.items[1]?.durationMs).toBe(10 * 60 * 1000);
     expect(display.items[1]?.reason).toBe("recent_output");
   });
+
+  it("keeps long segments in 6h range", () => {
+    const timeline = createTimeline([
+      createTimelineItem({
+        id: "2",
+        state: "RUNNING",
+        startedAt: "2026-02-06T18:00:00.000Z",
+        endedAt: null,
+        reason: "recent_output",
+      }),
+      createTimelineItem({
+        id: "1",
+        state: "WAITING_INPUT",
+        startedAt: "2026-02-06T15:00:00.000Z",
+        endedAt: "2026-02-06T18:00:00.000Z",
+        reason: "inactive_timeout",
+      }),
+    ]);
+
+    const display = buildTimelineDisplay(timeline, "6h", { compact: false });
+
+    expect(display.items).toHaveLength(2);
+    expect(display.items[0]?.state).toBe("RUNNING");
+    expect(display.items[0]?.durationMs).toBe(3 * 60 * 60 * 1000);
+    expect(display.items[1]?.state).toBe("WAITING_INPUT");
+    expect(display.items[1]?.durationMs).toBe(3 * 60 * 60 * 1000);
+    expect(display.totalsMs.RUNNING).toBe(3 * 60 * 60 * 1000);
+    expect(display.totalsMs.WAITING_INPUT).toBe(3 * 60 * 60 * 1000);
+  });
 });

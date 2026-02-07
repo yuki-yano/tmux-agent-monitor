@@ -87,6 +87,26 @@ describe("QuickPanel", () => {
     expect(onOpenSessionLink).toHaveBeenCalledWith("pane-1");
   });
 
+  it("keeps close button above row action buttons", () => {
+    const session = createSessionDetail();
+    const state = buildState({
+      open: true,
+      sessionGroups: [
+        {
+          repoRoot: session.repoRoot,
+          sessions: [session],
+          lastInputAt: session.lastInputAt,
+        },
+      ],
+      allSessions: [session],
+    });
+    const actions = buildActions();
+    render(<QuickPanel state={state} actions={actions} />);
+
+    expect(screen.getByLabelText("Close quick panel").className).toContain("z-30");
+    expect(screen.getByLabelText("Open session link").className).toContain("z-10");
+  });
+
   it("uses window-level pane totals from all sessions", () => {
     const agentOne = createSessionDetail({
       paneId: "pane-1",

@@ -47,7 +47,7 @@ type StateTimelineSectionProps = {
 const RANGE_MS: Record<SessionStateTimelineRange, number> = {
   "15m": 15 * 60 * 1000,
   "1h": 60 * 60 * 1000,
-  "24h": 24 * 60 * 60 * 1000,
+  "6h": 6 * 60 * 60 * 1000,
 };
 
 const SEGMENT_COLOR_CLASS: Record<SessionStateValue, string> = {
@@ -130,7 +130,7 @@ const timelineRangeTabs = (
   <Tabs
     value={timelineRange}
     onValueChange={(value) => {
-      if (value === "15m" || value === "1h" || value === "24h") {
+      if (value === "15m" || value === "1h" || value === "6h") {
         onTimelineRangeChange(value);
       }
     }}
@@ -138,7 +138,7 @@ const timelineRangeTabs = (
     <TabsList aria-label="Timeline range">
       <TabsTrigger value="15m">15m</TabsTrigger>
       <TabsTrigger value="1h">1h</TabsTrigger>
-      <TabsTrigger value="24h">24h</TabsTrigger>
+      <TabsTrigger value="6h">6h</TabsTrigger>
     </TabsList>
   </Tabs>
 );
