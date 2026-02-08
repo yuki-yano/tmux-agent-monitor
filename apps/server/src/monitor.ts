@@ -176,6 +176,9 @@ export const createSessionMonitor = (runtime: MultiplexerRuntime, config: AgentM
       customTitles,
       activePaneIds,
       saveState: () => undefined,
+      onRemovedPaneId: (paneId) => {
+        logActivity.unregister(paneId);
+      },
     });
     removedPaneIds.forEach((paneId) => {
       stateTimeline.closePane({ paneId });

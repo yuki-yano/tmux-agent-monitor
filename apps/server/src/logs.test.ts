@@ -72,6 +72,23 @@ describe("createLogActivityPoller", () => {
 
     poller.stop();
   });
+
+  it("stops polling entries after unregister", async () => {
+    mocks.stat.mockResolvedValue({ size: 0 });
+
+    const poller = createLogActivityPoller(1000);
+    poller.register("%1", "/tmp/pane-1.log");
+    poller.register("%2", "/tmp/pane-2.log");
+    poller.unregister("%1");
+    poller.start();
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(mocks.stat).toHaveBeenCalledTimes(1);
+    expect(mocks.stat).toHaveBeenCalledWith("/tmp/pane-2.log");
+
+    poller.stop();
+  });
 });
 
 describe("createJsonlTailer", () => {

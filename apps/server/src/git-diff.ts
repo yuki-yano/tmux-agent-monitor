@@ -159,16 +159,23 @@ const fetchUntrackedNumstat = async (
 };
 
 const collectUntrackedStats = async (repoRoot: string, files: DiffSummaryFile[]) => {
-  const untrackedStats = new Map<string, NumstatResult>();
-  for (const file of files) {
-    if (file.status !== "?") {
-      continue;
-    }
-    const parsed = await fetchUntrackedNumstat(repoRoot, file.path);
-    if (parsed) {
-      untrackedStats.set(file.path, parsed);
-    }
+  const untrackedFiles = files.filter((file) => file.status === "?");
+  if (untrackedFiles.length === 0) {
+    return new Map<string, NumstatResult>();
   }
+  const resolved = await Promise.all(
+    untrackedFiles.map(async (file) => {
+      const parsed = await fetchUntrackedNumstat(repoRoot, file.path);
+      return parsed ? ({ path: file.path, parsed } as const) : null;
+    }),
+  );
+  const untrackedStats = new Map<string, NumstatResult>();
+  resolved.forEach((item) => {
+    if (!item) {
+      return;
+    }
+    untrackedStats.set(item.path, item.parsed);
+  });
   return untrackedStats;
 };
 
@@ -208,21 +215,18 @@ const getCachedDiffFile = (
 };
 
 const fetchPatchForUntrackedFile = async (repoRoot: string, safePath: string) => {
-  const patch = await runGit(repoRoot, ["diff", "--no-index", "--", "/dev/null", safePath]);
-  const numstatOutput = await runGit(repoRoot, [
-    "diff",
-    "--no-index",
-    "--numstat",
-    "--",
-    "/dev/null",
-    safePath,
+  const [patch, numstatOutput] = await Promise.all([
+    runGit(repoRoot, ["diff", "--no-index", "--", "/dev/null", safePath]),
+    runGit(repoRoot, ["diff", "--no-index", "--numstat", "--", "/dev/null", safePath]),
   ]);
   return { patch, numstat: parseNumstatLine(numstatOutput) };
 };
 
 const fetchPatchForTrackedFile = async (repoRoot: string, filePath: string) => {
-  const patch = await runGit(repoRoot, ["diff", "HEAD", "--", filePath]);
-  const numstatOutput = await runGit(repoRoot, ["diff", "HEAD", "--numstat", "--", filePath]);
+  const [patch, numstatOutput] = await Promise.all([
+    runGit(repoRoot, ["diff", "HEAD", "--", filePath]),
+    runGit(repoRoot, ["diff", "HEAD", "--numstat", "--", filePath]),
+  ]);
   return { patch, numstat: parseNumstatLine(numstatOutput) };
 };
 
@@ -275,9 +279,11 @@ export const fetchDiffSummary = async (
     return cached;
   }
   try {
-    const statusOutput = await runGit(repoRoot, ["status", "--porcelain", "-z"]);
+    const [statusOutput, numstatOutput] = await Promise.all([
+      runGit(repoRoot, ["status", "--porcelain", "-z"]),
+      runGit(repoRoot, ["diff", "HEAD", "--numstat", "--"]),
+    ]);
     const files = parseGitStatus(statusOutput);
-    const numstatOutput = await runGit(repoRoot, ["diff", "HEAD", "--numstat", "--"]);
     const trackedStats = parseNumstat(numstatOutput);
     const untrackedStats = await collectUntrackedStats(repoRoot, files);
     const withStats = attachFileStats(files, trackedStats, untrackedStats);

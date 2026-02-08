@@ -19,6 +19,7 @@ describe("cleanupRegistry", () => {
       ["3", "C"],
     ]);
     const saveState = vi.fn();
+    const onRemovedPaneId = vi.fn();
     const activePaneIds = new Set<string>(["3"]);
 
     const removed = cleanupRegistry({
@@ -27,6 +28,7 @@ describe("cleanupRegistry", () => {
       customTitles,
       activePaneIds,
       saveState,
+      onRemovedPaneId,
     });
 
     expect(paneStates.remove).toHaveBeenCalledWith("1");
@@ -36,6 +38,8 @@ describe("cleanupRegistry", () => {
     expect(customTitles.has("3")).toBe(true);
     expect(paneStates.pruneMissing).toHaveBeenCalledWith(activePaneIds);
     expect(saveState).toHaveBeenCalledWith([{ paneId: "3" }]);
+    expect(onRemovedPaneId).toHaveBeenCalledWith("1");
+    expect(onRemovedPaneId).toHaveBeenCalledWith("2");
     expect(removed).toEqual(["1", "2"]);
   });
 });

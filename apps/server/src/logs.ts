@@ -40,9 +40,25 @@ export const createLogActivityPoller = (pollIntervalMs: number) => {
   let pollRunning = false;
 
   const register = (paneId: string, filePath: string) => {
-    if (!entries.has(filePath)) {
-      entries.set(filePath, { paneId, size: 0 });
+    Array.from(entries.entries()).forEach(([entryPath, entry]) => {
+      if (entryPath !== filePath && entry.paneId === paneId) {
+        entries.delete(entryPath);
+      }
+    });
+    const existing = entries.get(filePath);
+    if (existing) {
+      existing.paneId = paneId;
+      return;
     }
+    entries.set(filePath, { paneId, size: 0 });
+  };
+
+  const unregister = (paneId: string) => {
+    Array.from(entries.entries()).forEach(([filePath, entry]) => {
+      if (entry.paneId === paneId) {
+        entries.delete(filePath);
+      }
+    });
   };
 
   const onActivity = (listener: (paneId: string, at: string) => void) => {
@@ -93,7 +109,7 @@ export const createLogActivityPoller = (pollIntervalMs: number) => {
     }
   };
 
-  return { register, onActivity, start, stop };
+  return { register, unregister, onActivity, start, stop };
 };
 
 export const createJsonlTailer = (pollIntervalMs: number) => {

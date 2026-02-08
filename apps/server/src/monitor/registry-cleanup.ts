@@ -16,6 +16,7 @@ type CleanupArgs = {
   customTitles: Map<string, string>;
   activePaneIds: Set<string>;
   saveState: (sessions: SessionDetail[]) => void;
+  onRemovedPaneId?: (paneId: string) => void;
 };
 
 export const cleanupRegistry = ({
@@ -24,11 +25,13 @@ export const cleanupRegistry = ({
   customTitles,
   activePaneIds,
   saveState,
+  onRemovedPaneId,
 }: CleanupArgs) => {
   const removed = registry.removeMissing(activePaneIds);
   removed.forEach((paneId) => {
     customTitles.delete(paneId);
     paneStates.remove(paneId);
+    onRemovedPaneId?.(paneId);
   });
   paneStates.pruneMissing(activePaneIds);
   saveState(registry.values());
