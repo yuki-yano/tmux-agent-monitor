@@ -34,6 +34,39 @@ export const resolveServerKey = (socketName: string | null, socketPath: string |
   return "default";
 };
 
+export const normalizeWeztermTarget = (value: string | null | undefined): string => {
+  if (value == null) {
+    return "auto";
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed === "auto") {
+    return "auto";
+  }
+  return trimmed;
+};
+
+export const resolveWeztermServerKey = (target: string | null | undefined): string =>
+  sanitizeServerKey(`wezterm:${normalizeWeztermTarget(target)}`);
+
+type MonitorServerKeyParams = {
+  multiplexerBackend: "tmux" | "wezterm";
+  tmuxSocketName: string | null;
+  tmuxSocketPath: string | null;
+  weztermTarget: string | null | undefined;
+};
+
+export const resolveMonitorServerKey = ({
+  multiplexerBackend,
+  tmuxSocketName,
+  tmuxSocketPath,
+  weztermTarget,
+}: MonitorServerKeyParams): string => {
+  if (multiplexerBackend === "wezterm") {
+    return resolveWeztermServerKey(weztermTarget);
+  }
+  return resolveServerKey(tmuxSocketName, tmuxSocketPath);
+};
+
 export const resolveLogPaths = (baseDir: string, serverKey: string, paneId: string) => {
   const paneIdEncoded = encodePaneId(paneId);
   const panesDir = path.join(baseDir, "panes", serverKey);

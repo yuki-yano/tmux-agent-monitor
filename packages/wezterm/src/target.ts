@@ -1,13 +1,7 @@
-export const normalizeWeztermTarget = (value: string | null | undefined): string => {
-  if (value == null) {
-    return "auto";
-  }
-  const trimmed = value.trim();
-  if (trimmed.length === 0 || trimmed === "auto") {
-    return "auto";
-  }
-  return trimmed;
-};
+import { normalizeWeztermTarget as normalizeWeztermTargetShared } from "@vde-monitor/shared";
+
+export const normalizeWeztermTarget = (value: string | null | undefined): string =>
+  normalizeWeztermTargetShared(value);
 
 export const buildWeztermTargetArgs = (target: string | null | undefined): string[] => {
   const normalized = normalizeWeztermTarget(target);

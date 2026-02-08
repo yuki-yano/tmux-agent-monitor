@@ -3,7 +3,12 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { buildHookEvent, extractPayloadFields, resolveTranscriptPath } from "./cli";
+import {
+  buildHookEvent,
+  extractPayloadFields,
+  resolveHookServerKey,
+  resolveTranscriptPath,
+} from "./cli";
 
 describe("hooks cli helpers", () => {
   it("resolves transcript path from cwd and session id", () => {
@@ -41,5 +46,27 @@ describe("hooks cli helpers", () => {
       cwd: "apps/web",
       transcript_path: "/tmp/session-1.jsonl",
     });
+  });
+
+  it("resolves tmux server key from config", () => {
+    expect(
+      resolveHookServerKey({
+        multiplexerBackend: "tmux",
+        tmuxSocketName: "my/socket",
+        tmuxSocketPath: "/tmp/tmux.sock",
+        weztermTarget: "dev",
+      }),
+    ).toBe("my_socket");
+  });
+
+  it("resolves wezterm server key from config", () => {
+    expect(
+      resolveHookServerKey({
+        multiplexerBackend: "wezterm",
+        tmuxSocketName: "my/socket",
+        tmuxSocketPath: "/tmp/tmux.sock",
+        weztermTarget: " dev ",
+      }),
+    ).toBe("wezterm-dev");
   });
 });

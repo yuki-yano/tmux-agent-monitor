@@ -4,7 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { resolveConfigDir, resolveServerKey } from "@vde-monitor/shared";
+import {
+  type AgentMonitorConfigFile,
+  configSchema,
+  resolveConfigDir,
+  resolveMonitorServerKey,
+} from "@vde-monitor/shared";
 
 type HookPayload = Record<string, unknown>;
 
@@ -30,6 +35,13 @@ export type HookEvent = {
   payload: { raw: string };
 };
 
+type HookServerConfig = {
+  multiplexerBackend: "tmux" | "wezterm";
+  tmuxSocketName: string | null;
+  tmuxSocketPath: string | null;
+  weztermTarget: string | null;
+};
+
 const readStdin = (): string => {
   try {
     return fs.readFileSync(0, "utf8");
@@ -53,21 +65,76 @@ export const resolveTranscriptPath = (
   return path.join(os.homedir(), ".claude", "projects", encoded, `${sessionId}.jsonl`);
 };
 
-const loadConfig = () => {
-  const configPath = path.join(resolveConfigDir(), "config.json");
-  try {
-    const raw = fs.readFileSync(configPath, "utf8");
-    return JSON.parse(raw) as { tmux?: { socketName?: string | null; socketPath?: string | null } };
-  } catch {
-    return null;
-  }
-};
-
 const ensureDir = (dir: string) => {
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
 };
 
 const toOptionalString = (value: unknown) => (typeof value === "string" ? value : undefined);
+const toNullableString = (value: unknown) => (typeof value === "string" ? value : null);
+
+const toRecord = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  return value as Record<string, unknown>;
+};
+
+const parseLegacyHookServerConfig = (value: unknown): HookServerConfig | null => {
+  const root = toRecord(value);
+  if (!root) {
+    return null;
+  }
+  const tmux = toRecord(root.tmux);
+  const multiplexer = toRecord(root.multiplexer);
+  const wezterm = toRecord(multiplexer?.wezterm);
+  return {
+    multiplexerBackend: multiplexer?.backend === "wezterm" ? "wezterm" : "tmux",
+    tmuxSocketName: toNullableString(tmux?.socketName),
+    tmuxSocketPath: toNullableString(tmux?.socketPath),
+    weztermTarget: toNullableString(wezterm?.target),
+  };
+};
+
+const parseHookServerConfig = (value: unknown): HookServerConfig | null => {
+  const parsed = configSchema.safeParse(value);
+  if (parsed.success) {
+    const config: AgentMonitorConfigFile = parsed.data;
+    return {
+      multiplexerBackend: config.multiplexer.backend,
+      tmuxSocketName: config.tmux.socketName,
+      tmuxSocketPath: config.tmux.socketPath,
+      weztermTarget: config.multiplexer.wezterm.target,
+    };
+  }
+  return parseLegacyHookServerConfig(value);
+};
+
+const loadConfig = (): HookServerConfig | null => {
+  const configPath = path.join(resolveConfigDir(), "config.json");
+  try {
+    const raw = fs.readFileSync(configPath, "utf8");
+    return parseHookServerConfig(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+};
+
+export const resolveHookServerKey = (config: HookServerConfig | null): string => {
+  if (!config) {
+    return resolveMonitorServerKey({
+      multiplexerBackend: "tmux",
+      tmuxSocketName: null,
+      tmuxSocketPath: null,
+      weztermTarget: null,
+    });
+  }
+  return resolveMonitorServerKey({
+    multiplexerBackend: config.multiplexerBackend,
+    tmuxSocketName: config.tmuxSocketName,
+    tmuxSocketPath: config.tmuxSocketPath,
+    weztermTarget: config.weztermTarget,
+  });
+};
 
 const parsePayload = (rawInput: string): HookPayload | null => {
   try {
@@ -126,10 +193,7 @@ export const buildHookEvent = (
 
 const appendEvent = (event: HookEvent) => {
   const config = loadConfig();
-  const serverKey = resolveServerKey(
-    config?.tmux?.socketName ?? null,
-    config?.tmux?.socketPath ?? null,
-  );
+  const serverKey = resolveHookServerKey(config);
   const baseDir = path.join(os.homedir(), ".vde-monitor");
   const eventsDir = path.join(baseDir, "events", serverKey);
   const eventsPath = path.join(eventsDir, "claude.jsonl");

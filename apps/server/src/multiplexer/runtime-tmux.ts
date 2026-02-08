@@ -1,5 +1,4 @@
-import type { AgentMonitorConfig } from "@vde-monitor/shared";
-import { resolveServerKey } from "@vde-monitor/shared";
+import { type AgentMonitorConfig, resolveMonitorServerKey } from "@vde-monitor/shared";
 import {
   createInspector,
   createPipeManager,
@@ -18,7 +17,12 @@ export const createTmuxRuntime = (config: AgentMonitorConfig): MultiplexerRuntim
   });
   return {
     backend: "tmux",
-    serverKey: resolveServerKey(config.tmux.socketName, config.tmux.socketPath),
+    serverKey: resolveMonitorServerKey({
+      multiplexerBackend: "tmux",
+      tmuxSocketName: config.tmux.socketName,
+      tmuxSocketPath: config.tmux.socketPath,
+      weztermTarget: config.multiplexer.wezterm.target,
+    }),
     inspector: createInspector(adapter),
     screenCapture: createScreenCapture(adapter),
     actions: createTmuxActions(adapter, config),

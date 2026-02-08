@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   decodePaneId,
   encodePaneId,
+  normalizeWeztermTarget,
   resolveLogPaths,
+  resolveMonitorServerKey,
   resolveServerKey,
+  resolveWeztermServerKey,
   sanitizeServerKey,
 } from "./paths";
 
@@ -53,6 +56,56 @@ describe("resolveServerKey", () => {
 
   it("handles null values", () => {
     expect(resolveServerKey(null, null)).toBe("default");
+  });
+});
+
+describe("normalizeWeztermTarget", () => {
+  it("normalizes null, blank and auto to auto", () => {
+    expect(normalizeWeztermTarget(null)).toBe("auto");
+    expect(normalizeWeztermTarget("")).toBe("auto");
+    expect(normalizeWeztermTarget("   ")).toBe("auto");
+    expect(normalizeWeztermTarget("auto")).toBe("auto");
+  });
+
+  it("trims and keeps explicit target names", () => {
+    expect(normalizeWeztermTarget(" dev ")).toBe("dev");
+  });
+});
+
+describe("resolveWeztermServerKey", () => {
+  it("uses same key for null/blank/auto", () => {
+    const base = resolveWeztermServerKey(null);
+    expect(resolveWeztermServerKey("")).toBe(base);
+    expect(resolveWeztermServerKey("   ")).toBe(base);
+    expect(resolveWeztermServerKey("auto")).toBe(base);
+  });
+
+  it("normalizes trimmed targets to same key", () => {
+    expect(resolveWeztermServerKey(" dev ")).toBe(resolveWeztermServerKey("dev"));
+  });
+});
+
+describe("resolveMonitorServerKey", () => {
+  it("uses tmux socket key when backend is tmux", () => {
+    expect(
+      resolveMonitorServerKey({
+        multiplexerBackend: "tmux",
+        tmuxSocketName: "my/socket",
+        tmuxSocketPath: "/tmp/tmux.sock",
+        weztermTarget: "dev",
+      }),
+    ).toBe("my_socket");
+  });
+
+  it("uses wezterm key when backend is wezterm", () => {
+    expect(
+      resolveMonitorServerKey({
+        multiplexerBackend: "wezterm",
+        tmuxSocketName: "my/socket",
+        tmuxSocketPath: "/tmp/tmux.sock",
+        weztermTarget: "dev",
+      }),
+    ).toBe(resolveWeztermServerKey("dev"));
   });
 });
 

@@ -1,11 +1,13 @@
-import type { AgentMonitorConfig } from "@vde-monitor/shared";
-import { sanitizeServerKey } from "@vde-monitor/shared";
+import {
+  type AgentMonitorConfig,
+  resolveMonitorServerKey,
+  resolveWeztermServerKey,
+} from "@vde-monitor/shared";
 import {
   createInspector,
   createScreenCapture,
   createWeztermActions,
   createWeztermAdapter,
-  normalizeWeztermTarget,
 } from "@vde-monitor/wezterm";
 
 import { markPaneFocus } from "../activity-suppressor";
@@ -15,7 +17,7 @@ import { focusTerminalApp, isAppRunning } from "../screen/macos-applescript";
 import type { MultiplexerRuntime } from "./types";
 
 export const createWeztermServerKey = (target: string | null | undefined) => {
-  return sanitizeServerKey(`wezterm:${normalizeWeztermTarget(target)}`);
+  return resolveWeztermServerKey(target);
 };
 
 export const createWeztermRuntime = (config: AgentMonitorConfig): MultiplexerRuntime => {
@@ -70,7 +72,12 @@ export const createWeztermRuntime = (config: AgentMonitorConfig): MultiplexerRun
 
   return {
     backend: "wezterm",
-    serverKey: createWeztermServerKey(config.multiplexer.wezterm.target),
+    serverKey: resolveMonitorServerKey({
+      multiplexerBackend: "wezterm",
+      tmuxSocketName: config.tmux.socketName,
+      tmuxSocketPath: config.tmux.socketPath,
+      weztermTarget: config.multiplexer.wezterm.target,
+    }),
     inspector,
     screenCapture,
     actions,
