@@ -21,12 +21,13 @@ import {
 import { useCallback, useMemo, useRef } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
-import { extractErrorMessage, requestJson } from "@/lib/api-utils";
+import { requestJson } from "@/lib/api-utils";
 
 import { createApiClient } from "./session-api-contract";
 import {
   mutateSession as executeMutateSession,
   requestCommand as executeRequestCommand,
+  requestScreenResponse as executeRequestScreenResponse,
   requestSessionField as executeRequestSessionField,
 } from "./session-api-request-executors";
 import {
@@ -36,7 +37,6 @@ import {
   buildCommitLogQuery,
   buildDiffFileQuery,
   buildForceQuery,
-  buildScreenErrorResponse,
   buildScreenRequestJson,
   buildScreenRequestKeys,
   type RefreshSessionsResult,
@@ -309,49 +309,17 @@ export const useSessionApi = ({
       const executeRequest = async (): Promise<ScreenResponse> => {
         const param = buildPaneParam(paneId);
         const json = buildScreenRequestJson(options, normalizedMode);
-        try {
-          const { res, data } = await requestJson<ApiEnvelope<{ screen?: ScreenResponse }>>(
-            apiClient.sessions[":paneId"].screen.$post({ param, json }),
-          );
-          if (!res.ok) {
-            const message = extractErrorMessage(res, data, API_ERROR_MESSAGES.screenRequestFailed, {
-              includeStatus: true,
-            });
-            onConnectionIssue(message);
-            handleSessionMissing(paneId, res, data);
-            return buildScreenErrorResponse({
-              paneId,
-              mode: normalizedMode,
-              message,
-              apiError: data?.error,
-              buildApiError,
-            });
-          }
-          if (!data?.screen) {
-            const message = API_ERROR_MESSAGES.invalidResponse;
-            onConnectionIssue(message);
-            return buildScreenErrorResponse({
-              paneId,
-              mode: normalizedMode,
-              message,
-              buildApiError,
-            });
-          }
-          if (isPaneMissingError(data.screen.error)) {
-            onSessionRemoved(paneId);
-          }
-          onConnectionIssue(null);
-          return data.screen;
-        } catch (err) {
-          const message = resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.screenRequestFailed);
-          onConnectionIssue(message);
-          return buildScreenErrorResponse({
-            paneId,
-            mode: normalizedMode,
-            message,
-            buildApiError,
-          });
-        }
+        return executeRequestScreenResponse({
+          paneId,
+          mode: normalizedMode,
+          request: apiClient.sessions[":paneId"].screen.$post({ param, json }),
+          fallbackMessage: API_ERROR_MESSAGES.screenRequestFailed,
+          onConnectionIssue,
+          handleSessionMissing,
+          isPaneMissingError,
+          onSessionRemoved,
+          buildApiError,
+        });
       };
 
       const promise = executeRequest();

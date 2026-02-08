@@ -6,6 +6,7 @@ import { requestJson } from "@/lib/api-utils";
 import {
   mutateSession,
   requestCommand,
+  requestScreenResponse,
   requestSessionField,
 } from "./session-api-request-executors";
 
@@ -248,6 +249,99 @@ describe("session-api-request-executors", () => {
       ok: false,
       error: { code: "INTERNAL", message: "network down" },
     });
+    expect(onConnectionIssue).toHaveBeenCalledWith("network down");
+    expect(handleSessionMissing).not.toHaveBeenCalled();
+    expect(onSessionRemoved).not.toHaveBeenCalled();
+  });
+
+  it("requestScreenResponse returns screen payload on success", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const onConnectionIssue = vi.fn();
+    const handleSessionMissing = vi.fn();
+    const onSessionRemoved = vi.fn();
+    requestJsonMock.mockResolvedValueOnce({
+      res: new Response(null, { status: 200 }),
+      data: {
+        screen: {
+          ok: true,
+          paneId: "pane-1",
+          mode: "text",
+          capturedAt: new Date(0).toISOString(),
+          screen: "ok",
+        },
+      },
+    });
+
+    const response = await requestScreenResponse({
+      paneId: "pane-1",
+      mode: "text",
+      request: Promise.resolve(new Response()),
+      fallbackMessage: "screen failed",
+      onConnectionIssue,
+      handleSessionMissing,
+      isPaneMissingError: vi.fn(() => false),
+      onSessionRemoved,
+      buildApiError: (code, message) => ({ code, message }),
+    });
+
+    expect(response).toMatchObject({ ok: true, paneId: "pane-1" });
+    expect(onConnectionIssue).toHaveBeenCalledWith(null);
+    expect(handleSessionMissing).not.toHaveBeenCalled();
+    expect(onSessionRemoved).not.toHaveBeenCalled();
+  });
+
+  it("requestScreenResponse returns error screen on http errors", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const onConnectionIssue = vi.fn();
+    const handleSessionMissing = vi.fn();
+    const onSessionRemoved = vi.fn();
+    requestJsonMock.mockResolvedValueOnce({
+      res: new Response(null, { status: 429 }),
+      data: {
+        error: { code: "RATE_LIMIT", message: "too many requests" },
+      },
+    });
+
+    const response = await requestScreenResponse({
+      paneId: "pane-1",
+      mode: "image",
+      request: Promise.resolve(new Response()),
+      fallbackMessage: "screen failed",
+      onConnectionIssue,
+      handleSessionMissing,
+      isPaneMissingError: vi.fn(() => false),
+      onSessionRemoved,
+      buildApiError: (code, message) => ({ code, message }),
+    });
+
+    expect(response.ok).toBe(false);
+    expect(response.error).toEqual({ code: "RATE_LIMIT", message: "too many requests" });
+    expect(onConnectionIssue).toHaveBeenCalledWith("too many requests");
+    expect(handleSessionMissing).toHaveBeenCalledTimes(1);
+    expect(onSessionRemoved).not.toHaveBeenCalled();
+  });
+
+  it("requestScreenResponse returns INTERNAL screen on thrown errors", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const onConnectionIssue = vi.fn();
+    const handleSessionMissing = vi.fn();
+    const onSessionRemoved = vi.fn();
+    requestJsonMock.mockRejectedValueOnce(new Error("network down"));
+
+    const response = await requestScreenResponse({
+      paneId: "pane-1",
+      mode: "text",
+      request: Promise.resolve(new Response()),
+      fallbackMessage: "screen failed",
+      onConnectionIssue,
+      handleSessionMissing,
+      isPaneMissingError: vi.fn(() => false),
+      onSessionRemoved,
+      buildApiError: (code, message) => ({ code, message }),
+    });
+
+    expect(response.ok).toBe(false);
+    expect(response.error).toEqual({ code: "INTERNAL", message: "network down" });
     expect(onConnectionIssue).toHaveBeenCalledWith("network down");
     expect(handleSessionMissing).not.toHaveBeenCalled();
     expect(onSessionRemoved).not.toHaveBeenCalled();

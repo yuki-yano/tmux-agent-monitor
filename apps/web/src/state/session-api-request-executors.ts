@@ -1,7 +1,15 @@
-import type { ApiEnvelope, ApiError, CommandResponse, SessionSummary } from "@vde-monitor/shared";
+import type {
+  ApiEnvelope,
+  ApiError,
+  CommandResponse,
+  ScreenResponse,
+  SessionSummary,
+} from "@vde-monitor/shared";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { expectField, extractErrorMessage, requestJson } from "@/lib/api-utils";
+
+import { buildScreenErrorResponse, resolveUnknownErrorMessage } from "./session-api-utils";
 
 type EnsureToken = () => void;
 type OnConnectionIssue = (message: string | null) => void;
@@ -142,5 +150,69 @@ export const requestCommand = async ({
     const message = error instanceof Error ? error.message : fallbackMessage;
     onConnectionIssue(message);
     return { ok: false, error: buildApiError("INTERNAL", message) };
+  }
+};
+
+type RequestScreenResponseParams = {
+  paneId: string;
+  mode: "text" | "image";
+  request: Promise<Response>;
+  fallbackMessage: string;
+  onConnectionIssue: OnConnectionIssue;
+  handleSessionMissing: HandleSessionMissing;
+  isPaneMissingError: (error?: ApiError | null) => boolean;
+  onSessionRemoved: (paneId: string) => void;
+  buildApiError: (code: ApiError["code"], message: string) => ApiError;
+};
+
+export const requestScreenResponse = async ({
+  paneId,
+  mode,
+  request,
+  fallbackMessage,
+  onConnectionIssue,
+  handleSessionMissing,
+  isPaneMissingError,
+  onSessionRemoved,
+  buildApiError,
+}: RequestScreenResponseParams): Promise<ScreenResponse> => {
+  try {
+    const { res, data } = await requestJson<ApiEnvelope<{ screen?: ScreenResponse }>>(request);
+    if (!res.ok) {
+      const message = extractErrorMessage(res, data, fallbackMessage, { includeStatus: true });
+      onConnectionIssue(message);
+      handleSessionMissing(paneId, res, data);
+      return buildScreenErrorResponse({
+        paneId,
+        mode,
+        message,
+        apiError: data?.error,
+        buildApiError,
+      });
+    }
+    if (!data?.screen) {
+      const message = API_ERROR_MESSAGES.invalidResponse;
+      onConnectionIssue(message);
+      return buildScreenErrorResponse({
+        paneId,
+        mode,
+        message,
+        buildApiError,
+      });
+    }
+    if (isPaneMissingError(data.screen.error)) {
+      onSessionRemoved(paneId);
+    }
+    onConnectionIssue(null);
+    return data.screen;
+  } catch (error) {
+    const message = resolveUnknownErrorMessage(error, fallbackMessage);
+    onConnectionIssue(message);
+    return buildScreenErrorResponse({
+      paneId,
+      mode,
+      message,
+      buildApiError,
+    });
   }
 };
