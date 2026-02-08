@@ -5,6 +5,7 @@ import {
   isUnicodeTableHtmlLine,
   normalizeUnicodeTableLines,
   replaceBackgroundColors,
+  sanitizeAnsiForHtml,
   stripAnsi,
   unwrapUnicodeTableHtmlLine,
 } from "./ansi-text-utils";
@@ -12,6 +13,17 @@ import {
 describe("ansi-text-utils", () => {
   it("strips ANSI escape codes", () => {
     expect(stripAnsi("\u001b[31mred\u001b[0m")).toBe("red");
+  });
+
+  it("sanitizes unsupported ANSI control sequences but keeps CSI", () => {
+    const value =
+      "\u001b(B\u001b[31mred\u001b[0m \u001b]8;;https://example.com/\u001b\\link\u001b]8;;\u001b\\";
+    expect(sanitizeAnsiForHtml(value)).toBe("\u001b[31mred\u001b[0m link");
+  });
+
+  it("normalizes colon-based SGR truecolor parameters", () => {
+    const value = "\u001b[38:2::215:119:87mcolor\u001b[0m";
+    expect(sanitizeAnsiForHtml(value)).toBe("\u001b[38;2;215;119;87mcolor\u001b[0m");
   });
 
   it("ensures line content when html is empty", () => {

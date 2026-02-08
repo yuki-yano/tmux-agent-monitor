@@ -13,6 +13,8 @@ export type PaneGeometry = {
   height: number;
   windowWidth: number;
   windowHeight: number;
+  panePixelWidth?: number;
+  panePixelHeight?: number;
 };
 
 const runCommand = (command: string, args: string[], timeout?: number) =>

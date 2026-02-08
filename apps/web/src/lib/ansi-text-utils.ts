@@ -1,4 +1,12 @@
 const ansiEscapePattern = new RegExp(String.raw`\u001b\[[0-?]*[ -/]*[@-~]`, "g");
+const ansiSgrPattern = new RegExp(String.raw`(\u001b\[)([0-9:;]*)(m)`, "g");
+const ansiOscPattern = new RegExp(String.raw`\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)`, "g");
+const ansiCharsetDesignatePattern = new RegExp(String.raw`\u001b[\(\)\*\+\-\.\/][0-~]`, "g");
+const ansiSingleCharacterPattern = new RegExp(String.raw`\u001b(?:[@-Z\\^_]|[=>])`, "g");
+const ansiControlPattern = new RegExp(
+  String.raw`[\u0000-\u0008\u000B-\u001A\u001C-\u001F\u007F]`,
+  "g",
+);
 const backgroundColorPattern = /background-color:\s*([^;"']+)/i;
 const backgroundColorPatternGlobal = /background-color:\s*([^;"']+)/gi;
 const unicodeTableBorderPattern = /^(\s*)([┌├└]).*([┐┤┘])\s*$/;
@@ -10,6 +18,23 @@ type UnicodeTableCell = {
 };
 
 export const stripAnsi = (value: string) => value.replace(ansiEscapePattern, "");
+
+const normalizeSgrParams = (params: string) => {
+  if (!params.includes(":")) {
+    return params;
+  }
+  return params.replace(/:/g, ";").replace(/;{2,}/g, ";").replace(/^;|;$/g, "");
+};
+
+export const sanitizeAnsiForHtml = (value: string) =>
+  value
+    .replace(ansiSgrPattern, (_match, prefix: string, params: string, suffix: string) => {
+      return `${prefix}${normalizeSgrParams(params)}${suffix}`;
+    })
+    .replace(ansiOscPattern, "")
+    .replace(ansiCharsetDesignatePattern, "")
+    .replace(ansiSingleCharacterPattern, "")
+    .replace(ansiControlPattern, "");
 
 export const extractBackgroundColor = (html: string): string | null => {
   const match = html.match(backgroundColorPattern);

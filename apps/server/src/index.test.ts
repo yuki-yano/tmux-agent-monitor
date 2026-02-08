@@ -23,7 +23,7 @@ vi.mock("@vde-monitor/wezterm", () => ({
   }),
 }));
 
-import { ensureBackendAvailable } from "./index";
+import { buildAccessUrl, ensureBackendAvailable } from "./index";
 
 describe("ensureBackendAvailable", () => {
   beforeEach(() => {
@@ -83,5 +83,38 @@ describe("ensureBackendAvailable", () => {
         },
       }),
     ).rejects.toThrow("no running wezterm instance");
+  });
+});
+
+describe("buildAccessUrl", () => {
+  it("omits api hash param when ui/api host:port are the same", () => {
+    const url = buildAccessUrl({
+      displayHost: "localhost",
+      displayPort: 11080,
+      token: "abc123",
+    });
+    const parsed = new URL(url);
+    const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+    const hashParams = new URLSearchParams(hash);
+
+    expect(parsed.origin).toBe("http://localhost:11080");
+    expect(hashParams.get("token")).toBe("abc123");
+    expect(hashParams.has("api")).toBe(false);
+  });
+
+  it("embeds token and api endpoint in hash params when api is different origin", () => {
+    const url = buildAccessUrl({
+      displayHost: "100.102.60.85",
+      displayPort: 24181,
+      token: "abc123",
+      apiBaseUrl: "http://100.102.60.85:11081/api",
+    });
+    const parsed = new URL(url);
+    const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+    const hashParams = new URLSearchParams(hash);
+
+    expect(parsed.origin).toBe("http://100.102.60.85:24181");
+    expect(hashParams.get("token")).toBe("abc123");
+    expect(hashParams.get("api")).toBe("http://100.102.60.85:11081/api");
   });
 });

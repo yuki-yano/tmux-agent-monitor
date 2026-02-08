@@ -28,8 +28,6 @@ describe("createScreenCapture", () => {
       "1",
       "--start-line",
       "-10",
-      "--end-line",
-      "-1",
       "--escapes",
     ]);
     expect(result).toEqual({

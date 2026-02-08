@@ -101,6 +101,36 @@ const resolveTimelineRange = (range: string | undefined): SessionStateTimelineRa
   return "1h";
 };
 
+const CORS_ALLOW_METHODS = "GET,POST,PUT,OPTIONS";
+const CORS_ALLOW_HEADERS = "Authorization,Content-Type,Request-Id,X-Request-Id,Content-Length";
+
+const mergeVary = (existing: string | null, value: string) => {
+  if (!existing) {
+    return value;
+  }
+  const values = existing
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (values.includes(value)) {
+    return existing;
+  }
+  return `${existing}, ${value}`;
+};
+
+const applyCorsHeaders = (
+  c: {
+    header: (name: string, value: string) => void;
+    res: { headers: { get: (name: string) => string | null } };
+  },
+  origin: string,
+) => {
+  c.header("Access-Control-Allow-Origin", origin);
+  c.header("Access-Control-Allow-Methods", CORS_ALLOW_METHODS);
+  c.header("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS);
+  c.header("Vary", mergeVary(c.res.headers.get("Vary"), "Origin"));
+};
+
 export const createApiRouter = ({ config, monitor, actions }: ApiContext) => {
   const api = new Hono();
   const sendLimiter = createRateLimiter(config.rateLimit.send.windowMs, config.rateLimit.send.max);
@@ -223,13 +253,20 @@ export const createApiRouter = ({ config, monitor, actions }: ApiContext) => {
     if (requestId) {
       c.header("Request-Id", requestId);
     }
-    if (!requireAuth(config, c)) {
-      return c.json({ error: buildError("INVALID_PAYLOAD", "unauthorized") }, 401);
-    }
     const origin = c.req.header("origin");
     const host = c.req.header("host");
-    if (!isOriginAllowed(config, origin, host)) {
+    const originAllowed = isOriginAllowed(config, origin, host);
+    if (!originAllowed) {
       return c.json({ error: buildError("INVALID_PAYLOAD", "origin not allowed") }, 403);
+    }
+    if (origin) {
+      applyCorsHeaders(c, origin);
+    }
+    if (c.req.method === "OPTIONS") {
+      return c.body(null, 204);
+    }
+    if (!requireAuth(config, c)) {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "unauthorized") }, 401);
     }
     await next();
   });

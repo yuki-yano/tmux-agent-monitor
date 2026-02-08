@@ -141,6 +141,25 @@ describe("renderAnsiLines", () => {
     expect(lines[0]).not.toContain("\u001b");
   });
 
+  it("removes OSC/charset escape artifacts from rendered lines", () => {
+    const text = [
+      "\u001b(B\u001b[0;1mTip:\u001b(B\u001b[0m visit",
+      "\u001b]8;;https://chatgpt.com/\u001b\\https://chatgpt.com/\u001b]8;;\u001b\\",
+    ].join("\n");
+    const lines = renderAnsiLines(text, "latte", { agent: "codex" });
+    expect(lines[0]).toContain("Tip:");
+    expect(lines[0]).not.toContain("(B");
+    expect(lines[1]).toContain("https://chatgpt.com/");
+    expect(lines[1]).not.toContain("]8;;");
+  });
+
+  it("renders colon-based SGR truecolor escapes without raw fragments", () => {
+    const text = "\u001b[38:2::215:119:87mClaude\u001b[0m";
+    const lines = renderAnsiLines(text, "latte", { agent: "codex" });
+    expect(lines[0]).toContain("Claude");
+    expect(lines[0]).not.toContain(":2::215:119:87");
+  });
+
   it("keeps ellipsis lines within a diff segment as plain text", () => {
     const text = ["  1 foo", "  2 -bar", "...", "  3 baz"].join("\n");
     const lines = renderAnsiLines(text, "latte", { agent: "claude" });

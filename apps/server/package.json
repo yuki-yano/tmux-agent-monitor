@@ -4,19 +4,20 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts --",
     "start": "tsx src/index.ts"
   },
   "bin": {
     "vde-monitor": "./src/index.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.4",
+    "@hono/zod-validator": "^0.7.6",
     "@vde-monitor/agents": "workspace:*",
     "@vde-monitor/shared": "workspace:*",
     "@vde-monitor/tmux": "workspace:*",
     "@vde-monitor/wezterm": "workspace:*",
-    "@hono/node-server": "^1.19.4",
-    "@hono/zod-validator": "^0.7.6",
+    "cac": "^6.7.14",
     "execa": "^9.6.0",
     "hono": "^4.11.4",
     "qrcode-terminal": "^0.12.0",

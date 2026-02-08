@@ -12,6 +12,7 @@ import {
   isUnicodeTableHtmlLine,
   normalizeUnicodeTableLines,
   replaceBackgroundColors,
+  sanitizeAnsiForHtml,
   splitLines,
   stripAnsi,
   unwrapUnicodeTableHtmlLine,
@@ -356,7 +357,7 @@ const normalizeClaudePromptBackgrounds = (renderedLines: string[], plainLines: s
 };
 
 export const renderAnsi = (text: string, theme: Theme = "latte"): string => {
-  const html = ansiToHtmlByTheme[theme].toHtml(text);
+  const html = ansiToHtmlByTheme[theme].toHtml(sanitizeAnsiForHtml(text));
   return adjustLowContrast(html, theme);
 };
 
@@ -366,7 +367,7 @@ export const renderAnsiLines = (
   options?: RenderAnsiOptions,
 ): string[] => {
   const converter = buildAnsiToHtml(theme, { stream: false });
-  const lines = splitLines(text);
+  const lines = splitLines(sanitizeAnsiForHtml(text));
   const shouldNormalizeUnicodeTable = options?.agent === "claude" || options?.agent === "unknown";
   const normalizedLines = shouldNormalizeUnicodeTable ? normalizeUnicodeTableLines(lines) : lines;
   const shouldApplyCodexHighlight = shouldApplyHighlight(options, "codex");

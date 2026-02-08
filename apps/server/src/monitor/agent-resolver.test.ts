@@ -18,7 +18,12 @@ const getExeca = async () => {
 const loadModule = async () => {
   await vi.resetModules();
   const execa = await getExeca();
-  execa.mockClear();
+  execa.mockReset();
+  execa.mockResolvedValue({
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
+  });
   return import("./agent-resolver");
 };
 
@@ -107,5 +112,29 @@ describe("resolvePaneAgent", () => {
       buildPane({ currentCommand: "bash", paneTty: "/dev/tty1" }),
     );
     expect(result).toEqual({ agent: "claude", ignore: false });
+  });
+
+  it("does not infer agent from pane title only", async () => {
+    const { resolvePaneAgent } = await loadModule();
+    const result = await resolvePaneAgent(
+      buildPane({
+        currentCommand: null,
+        paneStartCommand: null,
+        paneTitle: "✳ Claude Code",
+      }),
+    );
+    expect(result).toEqual({ agent: "unknown", ignore: false });
+  });
+
+  it("does not ignore editor pane from title hint only", async () => {
+    const { resolvePaneAgent } = await loadModule();
+    const result = await resolvePaneAgent(
+      buildPane({
+        currentCommand: "vim",
+        paneStartCommand: "vim",
+        paneTitle: "✳ Claude Code",
+      }),
+    );
+    expect(result).toEqual({ agent: "unknown", ignore: false });
   });
 });

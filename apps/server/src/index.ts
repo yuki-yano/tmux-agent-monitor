@@ -73,6 +73,26 @@ export const ensureBackendAvailable = async (
   await ensureWeztermAvailable(weztermAdapter);
 };
 
+type BuildAccessUrlInput = {
+  displayHost: string;
+  displayPort: number;
+  token: string;
+  apiBaseUrl?: string | null;
+};
+
+export const buildAccessUrl = ({
+  displayHost,
+  displayPort,
+  token,
+  apiBaseUrl,
+}: BuildAccessUrlInput) => {
+  const hashParams = new URLSearchParams({ token });
+  if (apiBaseUrl) {
+    hashParams.set("api", apiBaseUrl);
+  }
+  return `http://${displayHost}:${displayPort}/#${hashParams.toString()}`;
+};
+
 export const runServe = async (flags: Map<string, string | boolean>) => {
   const config = ensureConfig();
   const noAttach = flags.has("--no-attach");
@@ -100,8 +120,11 @@ export const runServe = async (flags: Map<string, string | boolean>) => {
   if (typeof socketPath === "string") {
     config.tmux.socketPath = socketPath;
   }
-  if (multiplexerOverrides.backend) {
-    config.multiplexer.backend = multiplexerOverrides.backend;
+  if (multiplexerOverrides.multiplexerBackend) {
+    config.multiplexer.backend = multiplexerOverrides.multiplexerBackend;
+  }
+  if (multiplexerOverrides.screenImageBackend) {
+    config.screen.image.backend = multiplexerOverrides.screenImageBackend;
   }
   if (multiplexerOverrides.weztermCliPath) {
     config.multiplexer.wezterm.cliPath = multiplexerOverrides.weztermCliPath;
@@ -128,8 +151,16 @@ export const runServe = async (flags: Map<string, string | boolean>) => {
     hostname: host,
   });
 
-  const displayPort = parsePort(webPortFlag) ?? port;
-  const url = `http://${displayHost}:${displayPort}/#token=${config.token}`;
+  const parsedWebPort = parsePort(webPortFlag);
+  const displayPort = parsedWebPort ?? port;
+  const apiBaseUrl =
+    parsedWebPort !== null && parsedWebPort !== port ? `http://${displayHost}:${port}/api` : null;
+  const url = buildAccessUrl({
+    displayHost,
+    displayPort,
+    token: config.token,
+    apiBaseUrl,
+  });
   console.log(`vde-monitor: ${url}`);
 
   qrcode.generate(url, { small: true });

@@ -8,7 +8,10 @@ import {
   normalizeWeztermTarget,
 } from "@vde-monitor/wezterm";
 
+import { markPaneFocus } from "../activity-suppressor";
 import { normalizeFingerprint } from "../monitor/monitor-utils";
+import { resolveBackendApp } from "../screen/macos-app";
+import { focusTerminalApp, isAppRunning } from "../screen/macos-applescript";
 import type { MultiplexerRuntime } from "./types";
 
 export const createWeztermServerKey = (target: string | null | undefined) => {
@@ -22,7 +25,33 @@ export const createWeztermRuntime = (config: AgentMonitorConfig): MultiplexerRun
   });
   const inspector = createInspector(adapter);
   const screenCapture = createScreenCapture(adapter);
-  const actions = createWeztermActions(adapter, config);
+  const baseActions = createWeztermActions(adapter, config);
+  const actions: MultiplexerRuntime["actions"] = {
+    ...baseActions,
+    focusPane: async (paneId: string) => {
+      const result = await baseActions.focusPane(paneId);
+      if (!result.ok) {
+        return result;
+      }
+      markPaneFocus(paneId);
+      if (process.platform !== "darwin") {
+        return result;
+      }
+      const app = resolveBackendApp("wezterm");
+      if (!app) {
+        return result;
+      }
+      try {
+        const running = await isAppRunning(app.appName);
+        if (running) {
+          await focusTerminalApp(app.appName);
+        }
+      } catch {
+        // ignore focus errors after pane activation succeeds
+      }
+      return result;
+    },
+  };
   const captureFingerprint = async (paneId: string, useAlt: boolean) => {
     try {
       const captured = await screenCapture.captureText({

@@ -146,10 +146,17 @@ describe("createApiRouter", () => {
 
   it("rejects requests with disallowed origin", async () => {
     const { api } = createTestContext({ allowedOrigins: ["https://allowed.example"] });
-    const res = await api.request("/sessions", {
-      headers: { ...authHeaders, origin: "https://bad.example" },
+    const req = new Request("http://localhost/sessions", {
+      headers: { ...authHeaders, Origin: "https://bad.example" },
     });
+    const res = await api.fetch(req);
     expect(res.status).toBe(403);
+  });
+
+  it("allows unauthenticated preflight requests", async () => {
+    const { api } = createTestContext();
+    const res = await api.request("/sessions", { method: "OPTIONS" });
+    expect(res.status).toBe(204);
   });
 
   it("returns sessions snapshot and mirrors request id", async () => {

@@ -24,18 +24,16 @@ tell application "System Events"
   if not (exists process "${appName}") then return ""
   tell process "${appName}"
     try
-      set windowFrame to value of attribute "AXFrame" of front window
-      set pos to {item 1 of windowFrame, item 2 of windowFrame}
-      set sz to {item 3 of windowFrame, item 4 of windowFrame}
-      set contentPos to pos
-      set contentSize to sz
+      set windowPos to value of attribute "AXPosition" of front window
+      set windowSize to value of attribute "AXSize" of front window
+      set contentPos to windowPos
+      set contentSize to windowSize
       try
         set scrollArea to first UI element of front window whose role is "AXScrollArea"
-        set contentFrame to value of attribute "AXFrame" of scrollArea
-        set contentPos to {item 1 of contentFrame, item 2 of contentFrame}
-        set contentSize to {item 3 of contentFrame, item 4 of contentFrame}
+        set contentPos to value of attribute "AXPosition" of scrollArea
+        set contentSize to value of attribute "AXSize" of scrollArea
       end try
-      return (item 1 of contentPos as text) & ", " & (item 2 of contentPos as text) & ", " & (item 1 of contentSize as text) & ", " & (item 2 of contentSize as text) & "|" & (item 1 of pos as text) & ", " & (item 2 of pos as text) & ", " & (item 1 of sz as text) & ", " & (item 2 of sz as text)
+      return (item 1 of contentPos as text) & ", " & (item 2 of contentPos as text) & ", " & (item 1 of contentSize as text) & ", " & (item 2 of contentSize as text) & "|" & (item 1 of windowPos as text) & ", " & (item 2 of windowPos as text) & ", " & (item 1 of windowSize as text) & ", " & (item 2 of windowSize as text)
     end try
   end tell
 end tell

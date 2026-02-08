@@ -201,8 +201,12 @@ describe("createScreenResponse", () => {
     expect(response.fallbackReason).toBe("image_disabled");
   });
 
-  it("falls back to text when multiplexer backend is wezterm", async () => {
+  it("captures image when multiplexer backend is wezterm", async () => {
     vi.mocked(captureTerminalScreen).mockClear();
+    vi.mocked(captureTerminalScreen).mockResolvedValueOnce({
+      imageBase64: "wezterm-image",
+      cropped: true,
+    });
     const captureText = vi.fn(async () => ({
       screen: "hello",
       alternateOn: false,
@@ -231,10 +235,17 @@ describe("createScreenResponse", () => {
       buildTextResponse: screenCache.buildTextResponse,
     });
 
-    expect(captureTerminalScreen).not.toHaveBeenCalled();
-    expect(captureText).toHaveBeenCalled();
+    expect(captureTerminalScreen).toHaveBeenCalledWith("tty1", {
+      paneId: "%1",
+      multiplexerBackend: "wezterm",
+      tmux: baseConfig.tmux,
+      wezterm: baseConfig.multiplexer.wezterm,
+      cropPane: baseConfig.screen.image.cropPane,
+      backend: baseConfig.screen.image.backend,
+    });
+    expect(captureText).not.toHaveBeenCalled();
     expect(response.ok).toBe(true);
-    expect(response.mode).toBe("text");
+    expect(response.mode).toBe("image");
   });
 
   it("falls back to text when image capture fails", async () => {

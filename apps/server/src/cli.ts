@@ -14,7 +14,8 @@ export type ResolvedHosts = {
 };
 
 export type MultiplexerOverrides = {
-  backend?: AgentMonitorConfig["multiplexer"]["backend"];
+  multiplexerBackend?: AgentMonitorConfig["multiplexer"]["backend"];
+  screenImageBackend?: AgentMonitorConfig["screen"]["image"]["backend"];
   weztermCliPath?: string;
   weztermTarget?: string;
 };
@@ -26,32 +27,64 @@ type ResolveHostsOptions = {
   getTailscaleIP: () => string | null;
 };
 
+const multiplexerBackends = ["tmux", "wezterm"] as const;
+const imageBackends = ["alacritty", "terminal", "iterm", "wezterm", "ghostty"] as const;
+
+const isMultiplexerBackend = (
+  value: string,
+): value is AgentMonitorConfig["multiplexer"]["backend"] =>
+  (multiplexerBackends as readonly string[]).includes(value);
+
+const isImageBackend = (value: string): value is AgentMonitorConfig["screen"]["image"]["backend"] =>
+  (imageBackends as readonly string[]).includes(value);
+
 export const parseArgs = (argv = process.argv.slice(2)): ParsedArgs => {
+  const normalizedArgv = [...argv];
+  while (normalizedArgv[0] === "--") {
+    normalizedArgv.shift();
+  }
+
   const flags = new Map<string, string | boolean>();
   let command: string | null = null;
   const positional: string[] = [];
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (!arg) {
+  for (let i = 0; i < normalizedArgv.length; i += 1) {
+    const token = normalizedArgv[i];
+    if (!token || token === "--") {
       continue;
     }
-    if (arg.startsWith("--")) {
-      const next = argv[i + 1];
-      if (next && !next.startsWith("--")) {
-        flags.set(arg, next);
+
+    if (token.startsWith("--")) {
+      const equalIndex = token.indexOf("=");
+      if (equalIndex > 2) {
+        const key = token.slice(0, equalIndex);
+        const value = token.slice(equalIndex + 1);
+        flags.set(key, value);
+        continue;
+      }
+
+      const next = normalizedArgv[i + 1];
+      if (next && next !== "--" && !next.startsWith("--")) {
+        flags.set(token, next);
         i += 1;
       } else {
-        flags.set(arg, true);
+        flags.set(token, true);
       }
-    } else if (!command) {
-      command = arg;
-    } else {
-      positional.push(arg);
+      continue;
     }
+
+    if (!command) {
+      command = token;
+      continue;
+    }
+    positional.push(token);
   }
 
-  return { command, flags, positional };
+  return {
+    command,
+    flags,
+    positional,
+  };
 };
 
 export const parsePort = (value: FlagValue) => {
@@ -205,12 +238,24 @@ export const resolveMultiplexerOverrides = (
 ): MultiplexerOverrides => {
   const overrides: MultiplexerOverrides = {};
 
-  const backend = resolveRequiredStringFlag(flags, "--multiplexer");
-  if (backend) {
-    if (backend !== "tmux" && backend !== "wezterm") {
-      throw new Error(`--multiplexer must be one of: tmux, wezterm. (received: ${backend})`);
-    }
-    overrides.backend = backend;
+  const multiplexerBackend = resolveRequiredStringFlag(flags, "--multiplexer");
+  if (multiplexerBackend && !isMultiplexerBackend(multiplexerBackend)) {
+    throw new Error(
+      `--multiplexer must be one of: tmux, wezterm. (received: ${multiplexerBackend})`,
+    );
+  }
+  if (multiplexerBackend && isMultiplexerBackend(multiplexerBackend)) {
+    overrides.multiplexerBackend = multiplexerBackend;
+  }
+
+  const screenImageBackend = resolveRequiredStringFlag(flags, "--backend");
+  if (screenImageBackend && !isImageBackend(screenImageBackend)) {
+    throw new Error(
+      `--backend must be one of: alacritty, terminal, iterm, wezterm, ghostty. (received: ${screenImageBackend})`,
+    );
+  }
+  if (screenImageBackend && isImageBackend(screenImageBackend)) {
+    overrides.screenImageBackend = screenImageBackend;
   }
 
   const weztermCliPath = resolveRequiredStringFlag(flags, "--wezterm-cli");

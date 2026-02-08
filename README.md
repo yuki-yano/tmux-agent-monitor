@@ -96,6 +96,7 @@ Recommended remote access:
 --socket-name   tmux socket name
 --socket-path   tmux socket path
 --multiplexer  multiplexer backend (`tmux` or `wezterm`)
+--backend      image/focus terminal backend (`alacritty`, `terminal`, `iterm`, `wezterm`, `ghostty`)
 --wezterm-cli  wezterm binary path (default: `wezterm`)
 --wezterm-target wezterm CLI target (`auto` or explicit target name)
 ```

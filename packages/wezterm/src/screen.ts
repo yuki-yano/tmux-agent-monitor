@@ -26,15 +26,7 @@ const normalizeLines = (text: string) => {
 
 export const createScreenCapture = (adapter: WeztermAdapter) => {
   const captureText = async (options: TextCaptureOptions): Promise<TextCaptureResult> => {
-    const args = [
-      "get-text",
-      "--pane-id",
-      options.paneId,
-      "--start-line",
-      `-${options.lines}`,
-      "--end-line",
-      "-1",
-    ];
+    const args = ["get-text", "--pane-id", options.paneId, "--start-line", `-${options.lines}`];
     if (options.includeAnsi) {
       args.push("--escapes");
     }

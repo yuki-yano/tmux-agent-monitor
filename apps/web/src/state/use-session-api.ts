@@ -45,6 +45,7 @@ import {
 
 type UseSessionApiParams = {
   token: string | null;
+  apiBaseUrl?: string | null;
   onSessions: (sessions: SessionSummary[]) => void;
   onConnectionIssue: (message: string | null) => void;
   onSessionUpdated: (session: SessionSummary) => void;
@@ -56,6 +57,7 @@ export type { RefreshSessionsResult } from "./session-api-utils";
 
 export const useSessionApi = ({
   token,
+  apiBaseUrl,
   onSessions,
   onConnectionIssue,
   onSessionUpdated,
@@ -92,12 +94,16 @@ export const useSessionApi = ({
     (): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {}),
     [token],
   );
+  const apiBasePath = useMemo(() => {
+    const normalized = apiBaseUrl?.trim();
+    return normalized && normalized.length > 0 ? normalized : "/api";
+  }, [apiBaseUrl]);
   const apiClient = useMemo(
     () =>
-      hc("/api", {
+      hc(apiBasePath, {
         headers: authHeaders,
       }) as unknown as ApiClientContract,
-    [authHeaders],
+    [apiBasePath, authHeaders],
   );
   const screenInFlightRef = useRef(new Map<string, Promise<ScreenResponse>>());
 

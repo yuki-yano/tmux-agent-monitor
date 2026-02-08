@@ -27,7 +27,7 @@ vi.mock("./use-session-api", () => ({
 }));
 
 vi.mock("./use-session-token", () => ({
-  useSessionToken: () => ({ token: "token", setToken: vi.fn() }),
+  useSessionToken: () => ({ token: "token", setToken: vi.fn(), apiBaseUrl: null }),
 }));
 
 describe("SessionProvider", () => {

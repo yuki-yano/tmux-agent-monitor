@@ -3,7 +3,6 @@ import type { AgentType } from "./agent-resolver-utils";
 import {
   buildAgent,
   editorCommandHasAgentArg,
-  hasAgentHint,
   isEditorCommand,
   mergeHints,
 } from "./agent-resolver-utils";
@@ -27,7 +26,7 @@ const resolveEditorPaneContext = async (pane: PaneAgentHints, isEditorPane: bool
   if (!isEditorPane) {
     return { ignore: false, processCommand: null as string | null };
   }
-  if (editorCommandHasAgentArg(pane.paneStartCommand) || hasAgentHint(pane.paneTitle)) {
+  if (editorCommandHasAgentArg(pane.paneStartCommand)) {
     return { ignore: true, processCommand: null as string | null };
   }
   const processCommand = await getProcessCommand(pane.panePid);
@@ -66,7 +65,7 @@ const resolveFallbackAgent = async ({
 };
 
 export const resolvePaneAgent = async (pane: PaneAgentHints): Promise<AgentResolution> => {
-  const baseHint = mergeHints(pane.currentCommand, pane.paneStartCommand, pane.paneTitle);
+  const baseHint = mergeHints(pane.currentCommand, pane.paneStartCommand);
   const isEditorPane =
     isEditorCommand(pane.currentCommand) || isEditorCommand(pane.paneStartCommand);
   const editorContext = await resolveEditorPaneContext(pane, isEditorPane);

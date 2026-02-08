@@ -58,6 +58,7 @@ export const createWeztermActions = (adapter: WeztermAdapter, config: AgentMonit
   const dangerPatterns = compileDangerPatterns(config.dangerCommandPatterns);
   const dangerKeys = new Set(config.dangerKeys);
   const allowedKeySet = new Set(allowedKeys);
+  const enterDelayMs = config.input.enterDelayMs ?? 0;
 
   const okResult = (): ActionResult => ({ ok: true });
   const invalidPayload = (message: string): ActionResult => ({
@@ -110,6 +111,13 @@ export const createWeztermActions = (adapter: WeztermAdapter, config: AgentMonit
     return null;
   };
 
+  const waitForEnterDelay = async () => {
+    if (enterDelayMs <= 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, enterDelayMs));
+  };
+
   const sendText = async (paneId: string, text: string, enter = true): Promise<ActionResult> => {
     if (!text || text.trim().length === 0) {
       return invalidPayload("text is required");
@@ -138,9 +146,10 @@ export const createWeztermActions = (adapter: WeztermAdapter, config: AgentMonit
     }
 
     if (enter) {
-      const enterResult = await sendKey(paneId, config.input.enterKey as AllowedKey);
-      if (!enterResult.ok) {
-        return enterResult;
+      await waitForEnterDelay();
+      const sendEnterResult = await sendTextToPane(adapter, paneId, "\r", true);
+      if (!sendEnterResult.ok) {
+        return sendEnterResult;
       }
     }
 

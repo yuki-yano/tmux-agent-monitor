@@ -94,12 +94,15 @@ export const createScreenResponse = async ({
     if (!config.screen.image.enabled) {
       return captureTextResponse("image_disabled", false);
     }
-    if (config.multiplexer.backend !== "tmux") {
+    const multiplexerBackend = config.multiplexer.backend;
+    if (multiplexerBackend !== "tmux" && multiplexerBackend !== "wezterm") {
       return captureTextResponse("image_disabled", false);
     }
     const imageResult = await captureTerminalScreen(target.paneTty, {
       paneId: target.paneId,
+      multiplexerBackend,
       tmux: config.tmux,
+      wezterm: config.multiplexer.wezterm,
       cropPane: config.screen.image.cropPane,
       backend: config.screen.image.backend,
     });

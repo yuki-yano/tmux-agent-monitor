@@ -32,6 +32,11 @@ vi.mock("./tmux-geometry", () => ({
   getPaneGeometry: vi.fn(),
 }));
 
+vi.mock("./wezterm-geometry", () => ({
+  focusWeztermPane: vi.fn(),
+  getWeztermPaneGeometry: vi.fn(),
+}));
+
 vi.mock("./tty", () => ({
   isValidTty: vi.fn(),
 }));
@@ -45,6 +50,7 @@ import { buildTerminalBoundsScript, parseBoundsSet } from "./macos-bounds";
 import { captureRegion } from "./macos-screencapture";
 import { focusTmuxPane, getPaneGeometry } from "./tmux-geometry";
 import { isValidTty } from "./tty";
+import { focusWeztermPane, getWeztermPaneGeometry } from "./wezterm-geometry";
 
 const baseBounds = { x: 0, y: 0, width: 200, height: 100 };
 const croppedBounds = { x: 12, y: 8, width: 100, height: 50 };
@@ -55,6 +61,8 @@ const paneGeometry = {
   height: 40,
   windowWidth: 160,
   windowHeight: 80,
+  panePixelWidth: 120,
+  panePixelHeight: 50,
 };
 
 const settleCapture = async <T>(promise: Promise<T>) => {
@@ -81,6 +89,7 @@ describe("captureTerminalScreenMacos", () => {
       window: null,
     });
     vi.mocked(getPaneGeometry).mockResolvedValue(paneGeometry);
+    vi.mocked(getWeztermPaneGeometry).mockResolvedValue(paneGeometry);
     vi.mocked(cropPaneBounds).mockReturnValue(croppedBounds);
     vi.mocked(captureRegion).mockResolvedValue("image-data");
   });
@@ -112,6 +121,78 @@ describe("captureTerminalScreenMacos", () => {
     expect(runAppleScript).toHaveBeenCalledWith("SCRIPT");
     expect(getPaneGeometry).toHaveBeenCalledWith("%1", { socketName: "sock" });
     expect(captureRegion).toHaveBeenCalledWith(croppedBounds);
+  });
+
+  it("focuses and crops pane using wezterm geometry when backend is wezterm", async () => {
+    const capturePromise = captureTerminalScreenMacos("/dev/ttys001", {
+      paneId: "6",
+      multiplexerBackend: "wezterm",
+      wezterm: { cliPath: "/bin/wezterm", target: "dev" },
+    });
+
+    const result = await settleCapture(capturePromise);
+
+    expect(result).toEqual({ imageBase64: "image-data", cropped: true });
+    expect(markPaneFocus).toHaveBeenCalledWith("6");
+    expect(focusWeztermPane).toHaveBeenCalledWith("6", {
+      cliPath: "/bin/wezterm",
+      target: "dev",
+    });
+    expect(getWeztermPaneGeometry).toHaveBeenCalledWith("6", {
+      cliPath: "/bin/wezterm",
+      target: "dev",
+    });
+    expect(focusTmuxPane).not.toHaveBeenCalled();
+    expect(getPaneGeometry).not.toHaveBeenCalled();
+  });
+
+  it("uses content bounds directly when wezterm scroll area already matches active pane", async () => {
+    const activePaneBounds = { x: 40, y: 20, width: 120, height: 50 };
+    vi.mocked(parseBoundsSet).mockReturnValue({
+      content: activePaneBounds,
+      window: baseBounds,
+    });
+
+    const capturePromise = captureTerminalScreenMacos("/dev/ttys001", {
+      paneId: "6",
+      multiplexerBackend: "wezterm",
+      wezterm: { target: "dev" },
+    });
+    const result = await settleCapture(capturePromise);
+
+    expect(result).toEqual({ imageBase64: "image-data", cropped: true });
+    expect(captureRegion).toHaveBeenCalledWith(activePaneBounds);
+    expect(cropPaneBounds).not.toHaveBeenCalled();
+  });
+
+  it("adjusts wezterm content bounds before cropping when frame includes window padding", async () => {
+    const windowLikeBounds = { x: 496, y: 1353, width: 968, height: 484 };
+    vi.mocked(parseBoundsSet).mockReturnValue({
+      content: windowLikeBounds,
+      window: windowLikeBounds,
+    });
+    vi.mocked(getWeztermPaneGeometry).mockResolvedValue({
+      left: 0,
+      top: 0,
+      width: 59,
+      height: 14,
+      windowWidth: 120,
+      windowHeight: 30,
+      panePixelWidth: 472,
+      panePixelHeight: 224,
+    });
+
+    const capturePromise = captureTerminalScreenMacos("/dev/ttys001", {
+      paneId: "3",
+      multiplexerBackend: "wezterm",
+    });
+    const result = await settleCapture(capturePromise);
+
+    expect(result).toEqual({ imageBase64: "image-data", cropped: true });
+    expect(cropPaneBounds).toHaveBeenCalledWith(
+      { x: 500, y: 1355, width: 960, height: 480 },
+      expect.objectContaining({ width: 59, height: 14, windowWidth: 120, windowHeight: 30 }),
+    );
   });
 
   it("falls back to uncropped window capture when content bounds are unavailable", async () => {

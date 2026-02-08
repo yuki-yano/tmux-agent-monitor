@@ -34,27 +34,11 @@ describe("createWeztermActions", () => {
   });
 
   it("sends text and enter", async () => {
-    const child = createFakeChild();
     const run = vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 }));
-
-    child.stdin.on("data", (chunk: Buffer) => {
-      const frame = decodeNextPduFrame(Buffer.from(chunk));
-      if (!frame) {
-        return;
-      }
-      (child.stdout as unknown as PassThrough).write(
-        encodePduFrame({
-          ident: 10,
-          serial: frame.serial,
-          data: Buffer.alloc(0),
-        }),
-      );
-    });
 
     const actions = createWeztermActions(
       {
         run,
-        spawnProxy: () => child,
       },
       {
         ...defaultConfig,
@@ -65,8 +49,40 @@ describe("createWeztermActions", () => {
     const result = await actions.sendText("1", "echo hi", true);
 
     expect(result.ok).toBe(true);
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenNthCalledWith(1, ["send-text", "--pane-id", "1", "echo hi"]);
+    expect(run).toHaveBeenNthCalledWith(2, ["send-text", "--pane-id", "1", "--no-paste", "\r"]);
+  });
+
+  it("waits enterDelayMs before sending enter", async () => {
+    vi.useFakeTimers();
+    const run = vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 }));
+
+    const actions = createWeztermActions(
+      {
+        run,
+      },
+      {
+        ...defaultConfig,
+        token: "token",
+        input: {
+          ...defaultConfig.input,
+          enterDelayMs: 120,
+        },
+      },
+    );
+
+    const promise = actions.sendText("1", "echo hi", true);
+    await Promise.resolve();
     expect(run).toHaveBeenCalledTimes(1);
-    expect(run).toHaveBeenCalledWith(["send-text", "--pane-id", "1", "echo hi"]);
+
+    await vi.advanceTimersByTimeAsync(120);
+    const result = await promise;
+
+    expect(result.ok).toBe(true);
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenNthCalledWith(1, ["send-text", "--pane-id", "1", "echo hi"]);
+    expect(run).toHaveBeenNthCalledWith(2, ["send-text", "--pane-id", "1", "--no-paste", "\r"]);
   });
 
   it("blocks dangerous commands across split sendText", async () => {

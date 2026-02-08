@@ -88,7 +88,7 @@ const MAX_RATE_LIMIT_STEPS = 3;
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 export const SessionProvider = ({ children }: { children: ReactNode }) => {
-  const { token } = useSessionToken();
+  const { token, apiBaseUrl } = useSessionToken();
   const { sessions, setSessions, updateSession, removeSession, getSessionDetail } =
     useSessionStore();
   const [connectionIssue, setConnectionIssue] = useState<string | null>(null);
@@ -150,6 +150,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     touchSession,
   } = useSessionApi({
     token,
+    apiBaseUrl,
     onSessions: setSessions,
     onConnectionIssue: setConnectionIssue,
     onSessionUpdated: updateSession,

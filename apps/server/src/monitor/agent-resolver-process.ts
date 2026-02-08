@@ -6,7 +6,7 @@ import { type AgentType, buildAgent, normalizeTty } from "./agent-resolver-utils
 const runPs = async (args: string[], timeout: number) =>
   execa("ps", args, { reject: false, timeout });
 
-const processCacheTtlMs = 5000;
+const processCacheTtlMs = 1000;
 const PROCESS_COMMAND_CACHE_MAX_ENTRIES = 1000;
 const TTY_AGENT_CACHE_MAX_ENTRIES = 500;
 const processCommandCache = new Map<number, { command: string; at: number }>();

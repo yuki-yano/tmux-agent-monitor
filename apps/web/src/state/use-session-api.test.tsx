@@ -11,6 +11,7 @@ import { useSessionApi } from "./use-session-api";
 const mockPost = vi.fn(() => Promise.resolve(new Response()));
 const mockGet = vi.fn(() => Promise.resolve(new Response()));
 const mockPut = vi.fn(() => Promise.resolve(new Response()));
+const hcMock = vi.fn();
 const mockApiClient = {
   sessions: {
     $get: mockGet,
@@ -34,7 +35,10 @@ const mockApiClient = {
 };
 
 vi.mock("hono/client", () => ({
-  hc: () => mockApiClient,
+  hc: (...args: unknown[]) => {
+    hcMock(...args);
+    return mockApiClient;
+  },
 }));
 
 vi.mock("@/lib/api-utils", async () => {
@@ -49,6 +53,27 @@ describe("useSessionApi", () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("uses apiBaseUrl when provided", () => {
+    renderHook(() =>
+      useSessionApi({
+        token: "token",
+        apiBaseUrl: "http://localhost:11081/api",
+        onSessions: vi.fn(),
+        onConnectionIssue: vi.fn(),
+        onSessionUpdated: vi.fn(),
+        onSessionRemoved: vi.fn(),
+        onHighlightCorrections: vi.fn(),
+      }),
+    );
+
+    expect(hcMock).toHaveBeenCalledWith(
+      "http://localhost:11081/api",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer token" },
+      }),
+    );
   });
 
   it("dedupes in-flight screen requests", async () => {
