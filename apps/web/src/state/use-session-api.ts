@@ -457,12 +457,15 @@ export const useSessionApi = ({
   const uploadImageAttachment = useCallback(
     async (paneId: string, file: File): Promise<ImageAttachment> => {
       const param = { paneId: encodePaneId(paneId) };
+      const imageUploadEndpoint = apiClient.sessions[":paneId"].attachments.image as unknown as {
+        $post: (args: {
+          param: { paneId: string };
+          form: { image: File | Blob };
+        }) => Promise<Response>;
+      };
       const attachment = await requestSessionField<{ attachment?: unknown }, "attachment">({
         paneId,
-        request: apiClient.sessions[":paneId"].attachments.image.$post({
-          param,
-          form: { image: file },
-        }),
+        request: imageUploadEndpoint.$post({ param, form: { image: file } }),
         field: "attachment",
         fallbackMessage: API_ERROR_MESSAGES.uploadImage,
         includeStatus: true,
