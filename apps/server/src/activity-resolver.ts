@@ -3,7 +3,9 @@ import { shouldSuppressActivity } from "./activity-suppressor";
 type ActivityResolverInput = {
   paneId: string;
   paneActivity: number | null;
+  // Kept to avoid changing call sites; window activity is no longer used as output fallback.
   windowActivity: number | null;
+  // Kept to avoid changing call sites; pane active flag is no longer used as output fallback.
   paneActive: boolean;
   suppressor?: (paneId: string, activityIso: string | null) => boolean;
 };
@@ -22,17 +24,11 @@ const toIsoFromEpochSeconds = (value: number | null) => {
 export const resolveActivityTimestamp = ({
   paneId,
   paneActivity,
-  windowActivity,
-  paneActive,
   suppressor = shouldSuppressActivity,
 }: ActivityResolverInput): string | null => {
   const paneActivityAt = toIsoFromEpochSeconds(paneActivity);
   if (paneActivityAt && !suppressor(paneId, paneActivityAt)) {
     return paneActivityAt;
-  }
-  const windowActivityAt = toIsoFromEpochSeconds(windowActivity);
-  if (windowActivityAt && paneActive && !suppressor(paneId, windowActivityAt)) {
-    return windowActivityAt;
   }
   return null;
 };

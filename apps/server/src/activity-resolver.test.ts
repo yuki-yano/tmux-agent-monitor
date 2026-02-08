@@ -17,7 +17,7 @@ describe("resolveActivityTimestamp", () => {
     expect(result).toBe(toIso(1_700_000_000));
   });
 
-  it("falls back to window activity when pane is active", () => {
+  it("does not fall back to window activity when pane activity is missing", () => {
     const result = resolveActivityTimestamp({
       paneId: "%1",
       paneActivity: null,
@@ -26,24 +26,11 @@ describe("resolveActivityTimestamp", () => {
       suppressor: () => false,
     });
 
-    expect(result).toBe(toIso(1_700_000_100));
-  });
-
-  it("does not use window activity when pane is inactive", () => {
-    const result = resolveActivityTimestamp({
-      paneId: "%1",
-      paneActivity: null,
-      windowActivity: 1_700_000_100,
-      paneActive: false,
-      suppressor: () => false,
-    });
-
     expect(result).toBeNull();
   });
 
-  it("uses window activity when pane activity is suppressed", () => {
+  it("does not fall back to window activity when pane activity is suppressed", () => {
     const paneIso = toIso(1_700_000_000);
-    const windowIso = toIso(1_700_000_100);
     const suppressor = vi.fn((_: string, activityIso: string | null) => activityIso === paneIso);
 
     const result = resolveActivityTimestamp({
@@ -54,7 +41,7 @@ describe("resolveActivityTimestamp", () => {
       suppressor,
     });
 
-    expect(result).toBe(windowIso);
-    expect(suppressor).toHaveBeenCalledTimes(2);
+    expect(result).toBeNull();
+    expect(suppressor).toHaveBeenCalledTimes(1);
   });
 });
