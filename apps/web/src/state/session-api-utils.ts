@@ -19,6 +19,10 @@ import type {
   PaneHashParam,
   PaneParam,
   ScreenRequestJson,
+  SendKeysJson,
+  SendRawJson,
+  SendTextJson,
+  SessionTitleJson,
   TimelineQuery,
 } from "./session-api-contract";
 
@@ -77,6 +81,24 @@ export const buildScreenRequestJson = (
   }
   return json;
 };
+
+export const buildSendTextJson = (text: string, enter: boolean): SendTextJson => ({
+  text,
+  enter,
+});
+
+export const buildSendKeysJson = (keys: SendKeysJson["keys"]): SendKeysJson => ({
+  keys,
+});
+
+export const buildSendRawJson = (items: SendRawJson["items"], unsafe: boolean): SendRawJson => ({
+  items,
+  unsafe,
+});
+
+export const buildSessionTitleJson = (title: string | null): SessionTitleJson => ({
+  title,
+});
 
 export const applyRefreshSessionsSuccess = ({
   res,

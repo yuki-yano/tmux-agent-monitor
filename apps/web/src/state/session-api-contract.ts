@@ -28,6 +28,18 @@ export type CommitFileQuery = NonNullable<
 export type ScreenRequestJson = NonNullable<
   InferRequestType<SessionClient["screen"]["$post"]>["json"]
 >;
+export type SendTextJson = NonNullable<
+  InferRequestType<SessionClient["send"]["text"]["$post"]>["json"]
+>;
+export type SendKeysJson = NonNullable<
+  InferRequestType<SessionClient["send"]["keys"]["$post"]>["json"]
+>;
+export type SendRawJson = NonNullable<
+  InferRequestType<SessionClient["send"]["raw"]["$post"]>["json"]
+>;
+export type SessionTitleJson = NonNullable<
+  InferRequestType<SessionClient["title"]["$put"]>["json"]
+>;
 export type UploadImageForm = NonNullable<
   InferRequestType<SessionClient["attachments"]["image"]["$post"]>["form"]
 >;

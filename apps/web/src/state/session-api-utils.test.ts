@@ -10,6 +10,10 @@ import {
   buildRefreshFailureResult,
   buildScreenRequestJson,
   buildScreenRequestKeys,
+  buildSendKeysJson,
+  buildSendRawJson,
+  buildSendTextJson,
+  buildSessionTitleJson,
   buildTimelineQuery,
   executeInflightRequest,
   resolveInflightScreenRequest,
@@ -121,6 +125,13 @@ describe("session-api-utils", () => {
   it("builds query helpers", () => {
     expect(buildPaneParam("pane-1")).toEqual({ paneId: "pane-1" });
     expect(buildPaneHashParam("pane-1", "hash")).toEqual({ paneId: "pane-1", hash: "hash" });
+    expect(buildSendTextJson("echo test", true)).toEqual({ text: "echo test", enter: true });
+    expect(buildSendKeysJson(["Enter"])).toEqual({ keys: ["Enter"] });
+    expect(buildSendRawJson([{ kind: "text", value: "abc" }], false)).toEqual({
+      items: [{ kind: "text", value: "abc" }],
+      unsafe: false,
+    });
+    expect(buildSessionTitleJson("next title")).toEqual({ title: "next title" });
 
     expect(buildForceQuery()).toEqual({});
     expect(buildForceQuery({ force: true })).toEqual({ force: "1" });

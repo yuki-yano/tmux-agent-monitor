@@ -38,6 +38,10 @@ import {
   buildPaneParam,
   buildScreenRequestJson,
   buildScreenRequestKeys,
+  buildSendKeysJson,
+  buildSendRawJson,
+  buildSendTextJson,
+  buildSessionTitleJson,
   buildTimelineQuery,
   executeInflightRequest,
   type RefreshSessionsResult,
@@ -410,7 +414,10 @@ export const useSessionApi = ({
   const sendText = useCallback(
     async (paneId: string, text: string, enter = true): Promise<CommandResponse> => {
       return runPaneCommand(paneId, API_ERROR_MESSAGES.sendText, (param) =>
-        apiClient.sessions[":paneId"].send.text.$post({ param, json: { text, enter } }),
+        apiClient.sessions[":paneId"].send.text.$post({
+          param,
+          json: buildSendTextJson(text, enter),
+        }),
       );
     },
     [apiClient, runPaneCommand],
@@ -444,7 +451,10 @@ export const useSessionApi = ({
   const sendKeys = useCallback(
     async (paneId: string, keys: AllowedKey[]): Promise<CommandResponse> => {
       return runPaneCommand(paneId, API_ERROR_MESSAGES.sendKeys, (param) =>
-        apiClient.sessions[":paneId"].send.keys.$post({ param, json: { keys } }),
+        apiClient.sessions[":paneId"].send.keys.$post({
+          param,
+          json: buildSendKeysJson(keys),
+        }),
       );
     },
     [apiClient, runPaneCommand],
@@ -453,7 +463,10 @@ export const useSessionApi = ({
   const sendRaw = useCallback(
     async (paneId: string, items: RawItem[], unsafe = false): Promise<CommandResponse> => {
       return runPaneCommand(paneId, API_ERROR_MESSAGES.sendRaw, (param) =>
-        apiClient.sessions[":paneId"].send.raw.$post({ param, json: { items, unsafe } }),
+        apiClient.sessions[":paneId"].send.raw.$post({
+          param,
+          json: buildSendRawJson(items, unsafe),
+        }),
       );
     },
     [apiClient, runPaneCommand],
@@ -462,7 +475,10 @@ export const useSessionApi = ({
   const updateSessionTitle = useCallback(
     async (paneId: string, title: string | null) => {
       await runPaneMutation(paneId, API_ERROR_MESSAGES.updateTitle, (param) =>
-        apiClient.sessions[":paneId"].title.$put({ param, json: { title } }),
+        apiClient.sessions[":paneId"].title.$put({
+          param,
+          json: buildSessionTitleJson(title),
+        }),
       );
     },
     [apiClient, runPaneMutation],
