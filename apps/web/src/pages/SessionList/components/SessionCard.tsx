@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { SessionSummary } from "@vde-monitor/shared";
-import { Clock } from "lucide-react";
+import { Clock, Pin } from "lucide-react";
+import type { MouseEvent } from "react";
 
-import { Badge, Card, LastInputPill, TagPill } from "@/components/ui";
+import { Badge, Card, IconButton, LastInputPill, TagPill } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
   agentLabelFor,
@@ -19,6 +20,8 @@ import {
 type SessionCardProps = {
   session: SessionSummary;
   nowMs: number;
+  isPinned?: boolean;
+  onTogglePin?: (paneId: string) => void;
 };
 
 const sessionStateStyles: Record<
@@ -61,7 +64,12 @@ const resolveSessionTitle = (session: SessionSummary) => {
   return session.sessionName;
 };
 
-export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
+export const SessionCard = ({
+  session,
+  nowMs,
+  isPinned = false,
+  onTogglePin,
+}: SessionCardProps) => {
   const sessionTone = getLastInputTone(session.lastInputAt, nowMs);
   const sessionTitle = resolveSessionTitle(session);
   const showAgentBadge = isKnownAgent(session.agent);
@@ -69,6 +77,11 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
   const stateStyle = showEditorState ? editorSessionStyle : sessionStateStyles[session.state];
   const stateBadgeTone = showEditorState ? "editor" : stateTone(session.state);
   const stateBadgeLabel = showEditorState ? "EDITOR" : formatStateLabel(session.state);
+  const handlePinClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onTogglePin?.(session.paneId);
+  };
 
   return (
     <Link
@@ -135,10 +148,22 @@ export const SessionCard = ({ session, nowMs }: SessionCardProps) => {
           )}
         </div>
 
-        <div className="border-latte-surface1/30 relative mt-3 flex flex-wrap items-center gap-1.5 border-t pt-2.5">
-          <TagPill tone="meta">Session {session.sessionName}</TagPill>
-          <TagPill tone="meta">Window {session.windowIndex}</TagPill>
+        <div className="relative mt-3 flex flex-wrap items-center gap-1.5 pt-2.5">
           <TagPill tone="meta">Pane {session.paneId}</TagPill>
+          {onTogglePin ? (
+            <IconButton
+              type="button"
+              size="xs"
+              variant={isPinned ? "lavenderStrong" : "base"}
+              className="ml-auto"
+              aria-label="Pin pane to top"
+              aria-pressed={isPinned}
+              title="Pin pane to top"
+              onClick={handlePinClick}
+            >
+              <Pin className={cn("h-3.5 w-3.5", isPinned ? "fill-current" : null)} />
+            </IconButton>
+          ) : null}
         </div>
       </Card>
     </Link>

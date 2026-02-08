@@ -6,6 +6,10 @@ export type SessionGroup = {
   lastInputAt: string | null;
 };
 
+export type BuildSessionGroupOptions = {
+  isRepoPinned?: (repoRoot: string | null) => boolean;
+};
+
 const parseTime = (value: string | null) => {
   if (!value) return null;
   const ts = Date.parse(value);
@@ -20,6 +24,13 @@ const compareTimeDesc = (a: string | null, b: string | null) => {
   const bTs = resolveComparableTime(b);
   if (aTs === bTs) return 0;
   return bTs - aTs;
+};
+
+const comparePinnedDesc = (a: boolean, b: boolean) => {
+  if (a === b) {
+    return 0;
+  }
+  return a ? -1 : 1;
 };
 
 const compareSessions = (a: SessionSummary, b: SessionSummary) => {
@@ -46,7 +57,10 @@ const pickLatestInputAt = (sessions: SessionSummary[]) => {
   return latestValue;
 };
 
-export const buildSessionGroups = (sessions: SessionSummary[]): SessionGroup[] => {
+export const buildSessionGroups = (
+  sessions: SessionSummary[],
+  options?: BuildSessionGroupOptions,
+): SessionGroup[] => {
   const grouped = new Map<string | null, SessionSummary[]>();
   sessions.forEach((session) => {
     const key = session.repoRoot ?? null;
@@ -68,6 +82,14 @@ export const buildSessionGroups = (sessions: SessionSummary[]): SessionGroup[] =
   });
 
   groups.sort((a, b) => {
+    const repoPinnedCompare = comparePinnedDesc(
+      Boolean(options?.isRepoPinned?.(a.repoRoot)),
+      Boolean(options?.isRepoPinned?.(b.repoRoot)),
+    );
+    if (repoPinnedCompare !== 0) {
+      return repoPinnedCompare;
+    }
+
     const inputCompare = compareTimeDesc(a.lastInputAt, b.lastInputAt);
     if (inputCompare !== 0) return inputCompare;
     if (a.repoRoot == null && b.repoRoot == null) return 0;

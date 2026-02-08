@@ -6,10 +6,10 @@ import {
   createRouter,
   RouterContextProvider,
 } from "@tanstack/react-router";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { SessionSummary } from "@vde-monitor/shared";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildSessionGroups } from "@/lib/session-group";
 
@@ -149,11 +149,21 @@ const createViewProps = (overrides: Partial<SessionListViewProps> = {}): Session
     onOpenPaneHere: vi.fn(),
     onOpenHere: vi.fn(),
     onOpenNewTab: vi.fn(),
+    isRepoPinned: vi.fn(() => false),
+    isWindowPinned: vi.fn(() => false),
+    isPanePinned: vi.fn(() => false),
+    onToggleRepoPin: vi.fn(),
+    onToggleWindowPin: vi.fn(),
+    onTogglePanePin: vi.fn(),
     ...overrides,
   };
 };
 
 describe("SessionListView", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders empty state when no sessions", () => {
     const props = createViewProps({
       sessions: [],
@@ -294,6 +304,34 @@ describe("SessionListView", () => {
     renderWithRouter(<SessionListView {...props} />);
 
     expect(screen.getByTestId("session-sidebar").getAttribute("data-count")).toBe("2");
+  });
+
+  it("wires repo, window, and pane pin handlers", () => {
+    const session = buildSession({
+      paneId: "pane-pin-target",
+      sessionName: "session-pin-target",
+      windowIndex: 7,
+      repoRoot: "/Users/test/repo-pin-target",
+    });
+    const onToggleRepoPin = vi.fn();
+    const onToggleWindowPin = vi.fn();
+    const onTogglePanePin = vi.fn();
+    const props = createViewProps({
+      sessions: [session],
+      onToggleRepoPin,
+      onToggleWindowPin,
+      onTogglePanePin,
+    });
+
+    renderWithRouter(<SessionListView {...props} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Pin repo to top" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin window to top" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin pane to top" }));
+
+    expect(onToggleRepoPin).toHaveBeenCalledWith("/Users/test/repo-pin-target");
+    expect(onToggleWindowPin).toHaveBeenCalledWith("session-pin-target", 7);
+    expect(onTogglePanePin).toHaveBeenCalledWith("pane-pin-target");
   });
 
   it("wires LogModal actions", () => {

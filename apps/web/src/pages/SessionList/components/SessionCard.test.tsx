@@ -6,10 +6,10 @@ import {
   createRouter,
   RouterContextProvider,
 } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { SessionSummary } from "@vde-monitor/shared";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SessionCard } from "./SessionCard";
 
@@ -57,6 +57,10 @@ const buildSession = (overrides: Partial<SessionSummary> = {}): SessionSummary =
 });
 
 describe("SessionCard", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("prefers customTitle over title and sessionName", () => {
     const session = buildSession();
     renderWithRouter(<SessionCard session={session} nowMs={Date.now()} />);
@@ -105,5 +109,21 @@ describe("SessionCard", () => {
     expect(link.firstElementChild?.className).toContain("border-latte-maroon/55");
     expect(screen.getByText("EDITOR")).toBeTruthy();
     expect(screen.queryByText("UNKNOWN")).toBeNull();
+  });
+
+  it("calls onTogglePin when pane pin button is pressed", () => {
+    const session = buildSession();
+    const onTogglePin = vi.fn();
+    renderWithRouter(
+      <SessionCard
+        session={session}
+        nowMs={Date.now()}
+        isPinned={false}
+        onTogglePin={onTogglePin}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Pin pane to top" }));
+    expect(onTogglePin).toHaveBeenCalledWith("pane-1");
   });
 });

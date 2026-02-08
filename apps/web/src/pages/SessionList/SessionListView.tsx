@@ -41,6 +41,12 @@ export const SessionListView = ({
   onOpenPaneHere,
   onOpenHere,
   onOpenNewTab,
+  isRepoPinned,
+  isWindowPinned,
+  isPanePinned,
+  onToggleRepoPin,
+  onToggleWindowPin,
+  onTogglePanePin,
 }: SessionListViewProps) => {
   return (
     <>
@@ -129,6 +135,12 @@ export const SessionListView = ({
                   group={group}
                   allSessions={sessions}
                   nowMs={nowMs}
+                  isRepoPinned={isRepoPinned}
+                  isWindowPinned={isWindowPinned}
+                  isPanePinned={isPanePinned}
+                  onToggleRepoPin={onToggleRepoPin}
+                  onToggleWindowPin={onToggleWindowPin}
+                  onTogglePanePin={onTogglePanePin}
                 />
               ))}
             </div>

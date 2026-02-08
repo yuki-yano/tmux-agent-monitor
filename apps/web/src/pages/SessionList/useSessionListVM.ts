@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { buildSessionGroups } from "@/lib/session-group";
 import { useNowMs } from "@/lib/use-now-ms";
@@ -15,6 +15,13 @@ import {
   SESSION_LIST_FILTER_VALUES,
   storeSessionListFilter,
 } from "./sessionListFilters";
+import {
+  createRepoPinKey,
+  createSessionWindowPinKey,
+  readStoredSessionListPins,
+  storeSessionListPins,
+  toggleSessionListPin,
+} from "./sessionListPins";
 
 const FILTER_OPTIONS = SESSION_LIST_FILTER_VALUES.map((value) => ({
   value,
@@ -37,18 +44,40 @@ export const useSessionListVM = () => {
   const navigate = useNavigate({ from: "/" });
   const { resolvedTheme } = useTheme();
   const { sidebarWidth, handlePointerDown } = useSidebarWidth();
+  const [pins, setPins] = useState(() => readStoredSessionListPins());
+  const pinnedRepoKeys = useMemo(() => new Set(pins.repos), [pins.repos]);
+  const pinnedWindowKeys = useMemo(() => new Set(pins.windows), [pins.windows]);
+  const pinnedPaneIds = useMemo(() => new Set(pins.panes), [pins.panes]);
 
   useEffect(() => {
     storeSessionListFilter(filter);
   }, [filter]);
 
+  useEffect(() => {
+    storeSessionListPins(pins);
+  }, [pins]);
+
+  const isRepoPinned = useCallback(
+    (repoRoot: string | null) => pinnedRepoKeys.has(createRepoPinKey(repoRoot)),
+    [pinnedRepoKeys],
+  );
+
   const visibleSessions = useMemo(() => {
     return sessions.filter((session) => matchesSessionListFilter(session, filter));
   }, [filter, sessions]);
 
-  const groups = useMemo(() => buildSessionGroups(visibleSessions), [visibleSessions]);
-  const sidebarSessionGroups = useMemo(() => buildSessionGroups(sessions), [sessions]);
-  const quickPanelGroups = useMemo(() => buildSessionGroups(visibleSessions), [visibleSessions]);
+  const groups = useMemo(
+    () => buildSessionGroups(visibleSessions, { isRepoPinned }),
+    [isRepoPinned, visibleSessions],
+  );
+  const sidebarSessionGroups = useMemo(
+    () => buildSessionGroups(sessions, { isRepoPinned }),
+    [isRepoPinned, sessions],
+  );
+  const quickPanelGroups = useMemo(
+    () => buildSessionGroups(visibleSessions, { isRepoPinned }),
+    [isRepoPinned, visibleSessions],
+  );
 
   const {
     quickPanelOpen,
@@ -107,6 +136,28 @@ export const useSessionListVM = () => {
     refreshSessions();
   }, [refreshSessions]);
 
+  const handleToggleRepoPin = useCallback((repoRoot: string | null) => {
+    const key = createRepoPinKey(repoRoot);
+    setPins((prev) => toggleSessionListPin(prev, "repos", key));
+  }, []);
+
+  const handleToggleWindowPin = useCallback((sessionName: string, windowIndex: number) => {
+    const key = createSessionWindowPinKey(sessionName, windowIndex);
+    setPins((prev) => toggleSessionListPin(prev, "windows", key));
+  }, []);
+
+  const handleTogglePanePin = useCallback((paneId: string) => {
+    setPins((prev) => toggleSessionListPin(prev, "panes", paneId));
+  }, []);
+
+  const isWindowPinned = useCallback(
+    (sessionName: string, windowIndex: number) =>
+      pinnedWindowKeys.has(createSessionWindowPinKey(sessionName, windowIndex)),
+    [pinnedWindowKeys],
+  );
+
+  const isPanePinned = useCallback((paneId: string) => pinnedPaneIds.has(paneId), [pinnedPaneIds]);
+
   return {
     sessions,
     groups,
@@ -135,6 +186,12 @@ export const useSessionListVM = () => {
     onOpenPaneHere: handleOpenPaneHere,
     onOpenHere: handleOpenHere,
     onOpenNewTab: handleOpenInNewTab,
+    isRepoPinned,
+    isWindowPinned,
+    isPanePinned,
+    onToggleRepoPin: handleToggleRepoPin,
+    onToggleWindowPin: handleToggleWindowPin,
+    onTogglePanePin: handleTogglePanePin,
   };
 };
 

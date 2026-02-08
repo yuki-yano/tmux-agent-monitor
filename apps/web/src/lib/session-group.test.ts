@@ -87,4 +87,25 @@ describe("buildSessionGroups", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]?.sessions.map((session) => session.paneId)).toEqual(["%2", "%1", "%3"]);
   });
+
+  it("prioritizes pinned repos before time-based sorting", () => {
+    const sessions = [
+      buildSession({
+        paneId: "%1",
+        repoRoot: "/repo/a",
+        lastInputAt: "2026-02-01T01:00:00Z",
+      }),
+      buildSession({
+        paneId: "%2",
+        repoRoot: "/repo/b",
+        lastInputAt: "2026-02-01T02:00:00Z",
+      }),
+    ];
+
+    const groups = buildSessionGroups(sessions, {
+      isRepoPinned: (repoRoot) => repoRoot === "/repo/a",
+    });
+
+    expect(groups.map((group) => group.repoRoot)).toEqual(["/repo/a", "/repo/b"]);
+  });
 });
