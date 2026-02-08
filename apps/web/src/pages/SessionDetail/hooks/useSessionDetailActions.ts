@@ -35,6 +35,13 @@ export const useSessionDetailActions = ({
     void touchSession(paneId).catch(() => null);
   }, [paneId, touchSession]);
 
+  const handleTouchPane = useCallback(
+    (targetPaneId: string) => {
+      void touchSession(targetPaneId).catch(() => null);
+    },
+    [touchSession],
+  );
+
   const handleFocusPane = useCallback(
     async (targetPaneId: string) => {
       const result = await focusPane(targetPaneId);
@@ -62,6 +69,7 @@ export const useSessionDetailActions = ({
   return {
     handleOpenInNewTab,
     handleTouchSession,
+    handleTouchPane,
     handleFocusPane,
     handleOpenPaneHere,
     handleOpenHere,

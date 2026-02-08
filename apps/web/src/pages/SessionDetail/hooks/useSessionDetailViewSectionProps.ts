@@ -130,7 +130,13 @@ export const useSessionDetailViewSectionProps = ({
     saveTitle,
     clearTitle,
   } = title;
-  const { handleFocusPane, handleOpenPaneHere, handleOpenHere, handleOpenInNewTab } = actions;
+  const {
+    handleFocusPane,
+    handleTouchPane,
+    handleOpenPaneHere,
+    handleOpenHere,
+    handleOpenInNewTab,
+  } = actions;
 
   const diffSectionProps = useMemo(
     () => ({
@@ -392,6 +398,7 @@ export const useSessionDetailViewSectionProps = ({
       },
       actions: {
         onFocusPane: handleFocusPane,
+        onTouchSession: handleTouchPane,
       },
     }),
     [
@@ -405,6 +412,7 @@ export const useSessionDetailViewSectionProps = ({
       resolvedTheme,
       paneId,
       handleFocusPane,
+      handleTouchPane,
     ],
   );
 

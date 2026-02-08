@@ -189,6 +189,7 @@ const createViewProps = (overrides: SessionDetailViewOverrides = {}): SessionDet
     },
     actions: {
       handleFocusPane: vi.fn(),
+      handleTouchPane: vi.fn(),
       handleOpenPaneHere: vi.fn(),
       handleOpenHere: vi.fn(),
       handleOpenInNewTab: vi.fn(),

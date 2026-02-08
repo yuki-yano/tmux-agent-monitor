@@ -7,8 +7,8 @@ import type {
   SessionStateValue,
   SessionSummary,
 } from "@vde-monitor/shared";
-import { Clock, SquareTerminal } from "lucide-react";
-import { memo, type MouseEvent, useCallback, useMemo, useState } from "react";
+import { Clock, Pin, SquareTerminal } from "lucide-react";
+import { memo, type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   Badge,
@@ -33,6 +33,12 @@ import {
   SESSION_LIST_FILTER_VALUES,
   type SessionListFilter,
 } from "@/pages/SessionList/sessionListFilters";
+import {
+  createRepoPinKey,
+  readStoredSessionListPins,
+  storeSessionListPins,
+  touchSessionListPin,
+} from "@/pages/SessionList/sessionListPins";
 
 import { type PreviewFrame, useSidebarPreview } from "../hooks/useSidebarPreview";
 import {
@@ -68,6 +74,7 @@ type SessionSidebarState = {
 type SessionSidebarActions = {
   onSelectSession?: (paneId: string) => void;
   onFocusPane?: (paneId: string) => Promise<void> | void;
+  onTouchSession?: (paneId: string) => void;
 };
 
 type SessionSidebarProps = {
@@ -139,6 +146,7 @@ type SessionSidebarItemProps = {
   onBlur: (paneId: string) => void;
   onSelect: () => void;
   onFocusPane?: (paneId: string) => Promise<void> | void;
+  onTouchSession?: (paneId: string) => void;
   registerItemRef: (paneId: string, node: HTMLDivElement | null) => void;
 };
 
@@ -154,6 +162,7 @@ const SessionSidebarItem = memo(
     onBlur,
     onSelect,
     onFocusPane,
+    onTouchSession,
     registerItemRef,
   }: SessionSidebarItemProps) => {
     const displayTitle = item.customTitle ?? item.title ?? item.sessionName;
@@ -211,6 +220,15 @@ const SessionSidebarItem = memo(
       [isFocusPending, item.paneId, onFocusPane],
     );
 
+    const handlePinButtonClick = useCallback(
+      (event: MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onTouchSession?.(item.paneId);
+      },
+      [item.paneId, onTouchSession],
+    );
+
     return (
       <div
         className="flex items-center gap-2"
@@ -261,18 +279,36 @@ const SessionSidebarItem = memo(
             />
           </div>
         </Link>
-        {onFocusPane ? (
-          <IconButton
-            type="button"
-            size="md"
-            variant="lavender"
-            aria-label="Focus terminal pane"
-            className="shrink-0"
-            onClick={handleFocusButtonClick}
-            disabled={isFocusPending}
-          >
-            <SquareTerminal className="h-4 w-4" />
-          </IconButton>
+        {onTouchSession || onFocusPane ? (
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            {onTouchSession ? (
+              <IconButton
+                type="button"
+                size="md"
+                variant="base"
+                aria-label="Pin pane to top"
+                title="Pin pane to top"
+                className="border-latte-lavender/35 bg-latte-base/90 text-latte-lavender hover:bg-latte-lavender/12 h-8 w-8"
+                onClick={handlePinButtonClick}
+              >
+                <Pin className="h-4 w-4" />
+              </IconButton>
+            ) : null}
+            {onFocusPane ? (
+              <IconButton
+                type="button"
+                size="md"
+                variant="lavender"
+                aria-label="Focus terminal pane"
+                title="Focus terminal pane"
+                className="h-8 w-8"
+                onClick={handleFocusButtonClick}
+                disabled={isFocusPending}
+              >
+                <SquareTerminal className="h-4 w-4" />
+              </IconButton>
+            ) : null}
+          </div>
         ) : null}
       </div>
     );
@@ -492,9 +528,20 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
     currentPaneId,
     className,
   } = state;
-  const { onSelectSession, onFocusPane } = actions;
+  const { onSelectSession, onFocusPane, onTouchSession } = actions;
   const [filter, setFilter] = useState<SessionListFilter>(DEFAULT_SESSION_LIST_FILTER);
+  const [pins, setPins] = useState(() => readStoredSessionListPins());
   const [focusPendingPaneIds, setFocusPendingPaneIds] = useState<Set<string>>(() => new Set());
+  const repoPinValues = pins.repos;
+
+  useEffect(() => {
+    storeSessionListPins(pins);
+  }, [pins]);
+
+  const getRepoPinnedAt = useCallback(
+    (repoRoot: string | null) => repoPinValues[createRepoPinKey(repoRoot)] ?? null,
+    [repoPinValues],
+  );
 
   const filteredSessions = useMemo(
     () =>
@@ -503,10 +550,19 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
         .filter((session) => matchesSessionListFilter(session, filter)),
     [filter, sessionGroups],
   );
+  const paneRepoRootMap = useMemo(
+    () =>
+      new Map(
+        sessionGroups
+          .flatMap((group) => group.sessions)
+          .map((session) => [session.paneId, session.repoRoot ?? null] as const),
+      ),
+    [sessionGroups],
+  );
 
   const filteredSessionGroups = useMemo(() => {
-    return buildSessionGroups(filteredSessions);
-  }, [filteredSessions]);
+    return buildSessionGroups(filteredSessions, { getRepoPinnedAt });
+  }, [filteredSessions, getRepoPinnedAt]);
 
   const sidebarGroups = useMemo(() => {
     return filteredSessionGroups
@@ -609,6 +665,21 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
     setFilter(next);
   }, []);
 
+  const handleToggleRepoPin = useCallback((repoRoot: string | null) => {
+    setPins((prev) => touchSessionListPin(prev, "repos", createRepoPinKey(repoRoot)));
+  }, []);
+
+  const handleTouchPane = useCallback(
+    (paneId: string) => {
+      if (paneRepoRootMap.has(paneId)) {
+        const repoRoot = paneRepoRootMap.get(paneId) ?? null;
+        setPins((prev) => touchSessionListPin(prev, "repos", createRepoPinKey(repoRoot)));
+      }
+      onTouchSession?.(paneId);
+    },
+    [onTouchSession, paneRepoRootMap],
+  );
+
   return (
     <Card
       className={cn(
@@ -651,9 +722,22 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
                         {formatRepoDirLabel(group.repoRoot)}
                       </span>
                     </div>
-                    <TagPill tone="neutral" className="text-[9px]">
-                      {group.windowGroups.length} windows
-                    </TagPill>
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <IconButton
+                        type="button"
+                        size="xs"
+                        variant="base"
+                        aria-label="Pin repo to top"
+                        title="Pin repo to top"
+                        className="border-latte-lavender/35 bg-latte-base/85 text-latte-lavender hover:bg-latte-lavender/12"
+                        onClick={() => handleToggleRepoPin(group.repoRoot)}
+                      >
+                        <Pin className="h-3.5 w-3.5" />
+                      </IconButton>
+                      <TagPill tone="neutral" className="text-[9px]">
+                        {group.windowGroups.length} windows
+                      </TagPill>
+                    </div>
                   </div>
                   <div className="space-y-4 pl-2.5">
                     {group.windowGroups.map((windowGroup) => (
@@ -688,6 +772,7 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
                               onBlur={handleBlur}
                               onSelect={() => handleSelect(item.paneId)}
                               onFocusPane={handleFocusPane}
+                              onTouchSession={handleTouchPane}
                               registerItemRef={registerItemRef}
                             />
                           ))}

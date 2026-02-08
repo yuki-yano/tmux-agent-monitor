@@ -263,6 +263,48 @@ describe("useSessionDetailVM", () => {
     expect(setScreenErrorMock).toHaveBeenCalledWith("rate limited");
   });
 
+  it("touches target pane when sidebar pin action is triggered", () => {
+    const touchSession = vi.fn().mockResolvedValue(undefined);
+    const sessionApi = {
+      reconnect: vi.fn(),
+      requestDiffSummary: vi.fn(),
+      requestDiffFile: vi.fn(),
+      requestCommitLog: vi.fn(),
+      requestCommitDetail: vi.fn(),
+      requestCommitFile: vi.fn(),
+      requestStateTimeline: vi.fn(),
+      requestScreen: vi.fn(),
+      focusPane: vi.fn().mockResolvedValue({ ok: true }),
+      uploadImageAttachment: vi.fn(),
+      sendText: vi.fn(),
+      sendKeys: vi.fn(),
+      sendRaw: vi.fn(),
+      touchSession,
+      updateSessionTitle: vi.fn(),
+    };
+
+    const store = createStore();
+    store.set(paneIdAtom, "pane-1");
+    store.set(sessionsAtom, [session]);
+    store.set(connectedAtom, true);
+    store.set(connectionIssueAtom, null);
+    store.set(highlightCorrectionsAtom, { codex: false, claude: true });
+    store.set(resolvedThemeAtom, "mocha");
+    store.set(sessionApiAtom, sessionApi);
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <JotaiProvider store={store}>{children}</JotaiProvider>
+    );
+
+    const { result } = renderHook(() => useSessionDetailVM("pane-1"), { wrapper });
+
+    act(() => {
+      result.current.actions.handleTouchPane("pane-2");
+    });
+
+    expect(touchSession).toHaveBeenCalledWith("pane-2");
+  });
+
   it("derives latest codex context-left label from screen text", () => {
     const sessionApi = {
       reconnect: vi.fn(),

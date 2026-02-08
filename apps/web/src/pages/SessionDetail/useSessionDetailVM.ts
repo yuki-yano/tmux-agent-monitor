@@ -182,6 +182,7 @@ export const useSessionDetailVM = (paneId: string) => {
   const {
     handleOpenInNewTab,
     handleTouchSession,
+    handleTouchPane,
     handleFocusPane,
     handleOpenPaneHere,
     handleOpenHere,
@@ -384,6 +385,7 @@ export const useSessionDetailVM = (paneId: string) => {
     },
     actions: {
       handleFocusPane,
+      handleTouchPane,
       handleOpenPaneHere,
       handleOpenHere,
       handleOpenInNewTab,
