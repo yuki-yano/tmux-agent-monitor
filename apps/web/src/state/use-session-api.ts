@@ -161,19 +161,40 @@ export const useSessionApi = ({
     [ensureToken, handleSessionMissing, onConnectionIssue, onSessionUpdated, refreshSessions],
   );
 
+  const requestPaneField = useCallback(
+    async <T, K extends keyof T>({
+      paneId,
+      request,
+      field,
+      fallbackMessage,
+    }: {
+      paneId: string;
+      request: Promise<Response>;
+      field: K;
+      fallbackMessage: string;
+    }) =>
+      requestSessionField<T, K>({
+        paneId,
+        request,
+        field,
+        fallbackMessage,
+        includeStatus: true,
+      }),
+    [requestSessionField],
+  );
+
   const requestDiffSummary = useCallback(
     async (paneId: string, options?: { force?: boolean }) => {
       const param = buildPaneParam(paneId);
       const query = buildForceQuery(options);
-      return requestSessionField<{ summary?: DiffSummary }, "summary">({
+      return requestPaneField<{ summary?: DiffSummary }, "summary">({
         paneId,
         request: apiClient.sessions[":paneId"].diff.$get({ param, query }),
         field: "summary",
         fallbackMessage: API_ERROR_MESSAGES.diffSummary,
-        includeStatus: true,
       });
     },
-    [apiClient, requestSessionField],
+    [apiClient, requestPaneField],
   );
 
   const requestDiffFile = useCallback(
@@ -185,52 +206,49 @@ export const useSessionApi = ({
     ) => {
       const param = buildPaneParam(paneId);
       const query = buildDiffFileQuery(filePath, rev, options);
-      return requestSessionField<{ file?: DiffFile }, "file">({
+      return requestPaneField<{ file?: DiffFile }, "file">({
         paneId,
         request: apiClient.sessions[":paneId"].diff.file.$get({ param, query }),
         field: "file",
         fallbackMessage: API_ERROR_MESSAGES.diffFile,
-        includeStatus: true,
       });
     },
-    [apiClient, requestSessionField],
+    [apiClient, requestPaneField],
   );
 
   const requestCommitLog = useCallback(
     async (paneId: string, options?: { limit?: number; skip?: number; force?: boolean }) => {
       const param = buildPaneParam(paneId);
       const query = buildCommitLogQuery(options);
-      return requestSessionField<{ log?: CommitLog }, "log">({
+      return requestPaneField<{ log?: CommitLog }, "log">({
         paneId,
         request: apiClient.sessions[":paneId"].commits.$get({ param, query }),
         field: "log",
         fallbackMessage: API_ERROR_MESSAGES.commitLog,
-        includeStatus: true,
       });
     },
-    [apiClient, requestSessionField],
+    [apiClient, requestPaneField],
   );
 
   const requestCommitDetail = useCallback(
     async (paneId: string, hash: string, options?: { force?: boolean }) => {
       const param = buildPaneHashParam(paneId, hash);
       const query = buildForceQuery(options);
-      return requestSessionField<{ commit?: CommitDetail }, "commit">({
+      return requestPaneField<{ commit?: CommitDetail }, "commit">({
         paneId,
         request: apiClient.sessions[":paneId"].commits[":hash"].$get({ param, query }),
         field: "commit",
         fallbackMessage: API_ERROR_MESSAGES.commitDetail,
-        includeStatus: true,
       });
     },
-    [apiClient, requestSessionField],
+    [apiClient, requestPaneField],
   );
 
   const requestCommitFile = useCallback(
     async (paneId: string, hash: string, path: string, options?: { force?: boolean }) => {
       const param = buildPaneHashParam(paneId, hash);
       const query = buildCommitFileQuery(path, options);
-      return requestSessionField<{ file?: CommitFileDiff }, "file">({
+      return requestPaneField<{ file?: CommitFileDiff }, "file">({
         paneId,
         request: apiClient.sessions[":paneId"].commits[":hash"].file.$get({
           param,
@@ -238,10 +256,9 @@ export const useSessionApi = ({
         }),
         field: "file",
         fallbackMessage: API_ERROR_MESSAGES.commitFile,
-        includeStatus: true,
       });
     },
-    [apiClient, requestSessionField],
+    [apiClient, requestPaneField],
   );
 
   const requestStateTimeline = useCallback(
@@ -257,15 +274,14 @@ export const useSessionApi = ({
       if (typeof options?.limit === "number" && Number.isFinite(options.limit)) {
         query.limit = String(Math.max(1, Math.floor(options.limit)));
       }
-      return requestSessionField<{ timeline?: SessionStateTimeline }, "timeline">({
+      return requestPaneField<{ timeline?: SessionStateTimeline }, "timeline">({
         paneId,
         request: apiClient.sessions[":paneId"].timeline.$get({ param, query }),
         field: "timeline",
         fallbackMessage: API_ERROR_MESSAGES.timeline,
-        includeStatus: true,
       });
     },
-    [apiClient, requestSessionField],
+    [apiClient, requestPaneField],
   );
 
   const requestScreen = useCallback(
