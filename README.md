@@ -2,18 +2,22 @@
 
 Monitor terminal multiplexer sessions from a web UI with a single CLI.  
 Built for Codex CLI and Claude Code workflows running inside tmux/WezTerm panes.
+Designed with a mobile-prioritized UX so core monitoring/control flows work well on phone browsers.
+Supports remote control of PC-hosted AI agent sessions from smartphone browsers.
 
 ## Purpose
 
 - Provide a single operational view for AI coding sessions running in tmux
 - Reduce context switching between terminal panes and monitoring tools
 - Offer safe remote interaction for active sessions from desktop/mobile browsers
+- Keep core monitoring and control flows mobile-prioritized, not desktop-only
+- Enable remote operation of AI agents running on a host PC from smartphone browsers
 
 ## Scope
 
 - Discover and track tmux/WezTerm pane/session state in near real time
 - Expose authenticated HTTP APIs for session inspection and interaction
-- Provide a web UI for monitoring, input dispatch, timeline tracking, and Git context checks
+- Provide a mobile-prioritized responsive web UI for monitoring, input dispatch, timeline tracking, and Git context checks
 - Persist session metadata and timeline history across restarts
 - Ingest Claude hook events for activity/state enrichment
 
@@ -35,11 +39,15 @@ Built for Codex CLI and Claude Code workflows running inside tmux/WezTerm panes.
 
 - Developers running Codex CLI or Claude Code inside tmux
 - Users who need lightweight remote visibility/control of coding sessions
+- Developers who frequently monitor sessions from smartphone browsers
+- Developers who need to operate PC-hosted agent sessions while away from their desk
 - Teams that want session observability without adopting a heavy terminal platform
 
 ## Feature highlights
 
 - Live session list with activity state and per-session details
+- Mobile-prioritized session list/detail UX for quick checks and control from phone browsers
+- Remote operation of PC-hosted agent panes from smartphone browsers via text/key/raw input
 - Send text, key inputs, and raw input to panes
 - Session title customization
 - Screen capture in text mode on all platforms, optional image mode on macOS terminals
@@ -83,6 +91,14 @@ Recommended remote access:
 - SSH port-forward
 - Tailscale
 - Private LAN only (avoid public internet exposure)
+
+Smartphone remote operation (PC-hosted agents):
+
+1. Start `vde-monitor` on your PC.
+   If you are not using Tailscale and want direct access from another device, start with `vde-monitor --public`.
+   If you use Tailscale, `vde-monitor --tailscale` is recommended.
+2. Make the printed URL reachable from your phone via SSH port-forward, Tailscale, or private LAN.
+3. Open the URL on your phone browser and use the session detail view to send text/key/raw input to the agent pane.
 
 ## CLI options
 
