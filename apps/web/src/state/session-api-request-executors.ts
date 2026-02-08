@@ -1,5 +1,6 @@
-import type { ApiEnvelope, SessionSummary } from "@vde-monitor/shared";
+import type { ApiEnvelope, ApiError, CommandResponse, SessionSummary } from "@vde-monitor/shared";
 
+import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { expectField, extractErrorMessage, requestJson } from "@/lib/api-utils";
 
 type EnsureToken = () => void;
@@ -90,4 +91,56 @@ export const mutateSession = async ({
   }
   await refreshSessions();
   return null;
+};
+
+type RequestCommandParams = {
+  paneId: string;
+  request: Promise<Response>;
+  fallbackMessage: string;
+  ensureToken: EnsureToken;
+  onConnectionIssue: OnConnectionIssue;
+  handleSessionMissing: HandleSessionMissing;
+  buildApiError: (code: ApiError["code"], message: string) => ApiError;
+  isPaneMissingError: (error?: ApiError | null) => boolean;
+  onSessionRemoved: (paneId: string) => void;
+};
+
+export const requestCommand = async ({
+  paneId,
+  request,
+  fallbackMessage,
+  ensureToken,
+  onConnectionIssue,
+  handleSessionMissing,
+  buildApiError,
+  isPaneMissingError,
+  onSessionRemoved,
+}: RequestCommandParams): Promise<CommandResponse> => {
+  ensureToken();
+  try {
+    const { res, data } = await requestJson<ApiEnvelope<{ command?: CommandResponse }>>(request);
+    if (!res.ok) {
+      const message = extractErrorMessage(res, data, fallbackMessage, { includeStatus: true });
+      onConnectionIssue(message);
+      handleSessionMissing(paneId, res, data);
+      return {
+        ok: false,
+        error: data?.error ?? buildApiError("INTERNAL", message),
+      };
+    }
+    if (!data?.command) {
+      const message = API_ERROR_MESSAGES.invalidResponse;
+      onConnectionIssue(message);
+      return { ok: false, error: buildApiError("INTERNAL", message) };
+    }
+    if (isPaneMissingError(data.command.error)) {
+      onSessionRemoved(paneId);
+    }
+    onConnectionIssue(null);
+    return data.command;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : fallbackMessage;
+    onConnectionIssue(message);
+    return { ok: false, error: buildApiError("INTERNAL", message) };
+  }
 };

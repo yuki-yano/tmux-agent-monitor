@@ -26,6 +26,7 @@ import { extractErrorMessage, requestJson } from "@/lib/api-utils";
 import { createApiClient } from "./session-api-contract";
 import {
   mutateSession as executeMutateSession,
+  requestCommand as executeRequestCommand,
   requestSessionField as executeRequestSessionField,
 } from "./session-api-request-executors";
 import {
@@ -42,7 +43,6 @@ import {
   resolveInflightScreenRequest,
   resolveScreenMode,
   resolveUnknownErrorMessage,
-  runCommandResponseSideEffects,
   type SessionsResponseEnvelope,
 } from "./session-api-utils";
 
@@ -379,39 +379,18 @@ export const useSessionApi = ({
       paneId: string,
       request: Promise<Response>,
       fallbackMessage: string,
-    ): Promise<CommandResponse> => {
-      ensureToken();
-      try {
-        const { res, data } =
-          await requestJson<ApiEnvelope<{ command?: CommandResponse }>>(request);
-        if (!res.ok) {
-          const message = extractErrorMessage(res, data, fallbackMessage, { includeStatus: true });
-          onConnectionIssue(message);
-          handleSessionMissing(paneId, res, data);
-          return {
-            ok: false,
-            error: data?.error ?? buildApiError("INTERNAL", message),
-          };
-        }
-        if (!data?.command) {
-          const message = API_ERROR_MESSAGES.invalidResponse;
-          onConnectionIssue(message);
-          return { ok: false, error: buildApiError("INTERNAL", message) };
-        }
-        runCommandResponseSideEffects({
-          response: data.command,
-          isPaneMissingError,
-          onSessionRemoved,
-          paneId,
-        });
-        onConnectionIssue(null);
-        return data.command;
-      } catch (err) {
-        const message = resolveUnknownErrorMessage(err, fallbackMessage);
-        onConnectionIssue(message);
-        return { ok: false, error: buildApiError("INTERNAL", message) };
-      }
-    },
+    ): Promise<CommandResponse> =>
+      executeRequestCommand({
+        paneId,
+        request,
+        fallbackMessage,
+        ensureToken,
+        onConnectionIssue,
+        handleSessionMissing,
+        buildApiError,
+        isPaneMissingError,
+        onSessionRemoved,
+      }),
     [
       buildApiError,
       ensureToken,

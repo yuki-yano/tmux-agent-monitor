@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { requestJson } from "@/lib/api-utils";
 
-import { mutateSession, requestSessionField } from "./session-api-request-executors";
+import {
+  mutateSession,
+  requestCommand,
+  requestSessionField,
+} from "./session-api-request-executors";
 
 vi.mock("@/lib/api-utils", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api-utils")>("@/lib/api-utils");
@@ -157,5 +161,95 @@ describe("session-api-request-executors", () => {
     expect(updated).toBeNull();
     expect(onSessionUpdated).not.toHaveBeenCalled();
     expect(refreshSessions).toHaveBeenCalledTimes(1);
+  });
+
+  it("requestCommand returns command payload and clears connection issue", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const ensureToken = vi.fn();
+    const onConnectionIssue = vi.fn();
+    const handleSessionMissing = vi.fn();
+    const onSessionRemoved = vi.fn();
+    requestJsonMock.mockResolvedValueOnce({
+      res: new Response(null, { status: 200 }),
+      data: { command: { ok: true } },
+    });
+
+    const response = await requestCommand({
+      paneId: "pane-1",
+      request: Promise.resolve(new Response()),
+      fallbackMessage: "failed",
+      ensureToken,
+      onConnectionIssue,
+      handleSessionMissing,
+      buildApiError: (code, message) => ({ code, message }),
+      isPaneMissingError: vi.fn(() => false),
+      onSessionRemoved,
+    });
+
+    expect(response).toEqual({ ok: true });
+    expect(onConnectionIssue).toHaveBeenCalledWith(null);
+    expect(handleSessionMissing).not.toHaveBeenCalled();
+    expect(onSessionRemoved).not.toHaveBeenCalled();
+  });
+
+  it("requestCommand returns api error response when request fails", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const ensureToken = vi.fn();
+    const onConnectionIssue = vi.fn();
+    const handleSessionMissing = vi.fn();
+    const onSessionRemoved = vi.fn();
+    requestJsonMock.mockResolvedValueOnce({
+      res: new Response(null, { status: 404 }),
+      data: { error: { code: "INVALID_PANE", message: "pane not found" } },
+    });
+
+    const response = await requestCommand({
+      paneId: "pane-1",
+      request: Promise.resolve(new Response()),
+      fallbackMessage: "failed",
+      ensureToken,
+      onConnectionIssue,
+      handleSessionMissing,
+      buildApiError: (code, message) => ({ code, message }),
+      isPaneMissingError: vi.fn(() => false),
+      onSessionRemoved,
+    });
+
+    expect(response).toEqual({
+      ok: false,
+      error: { code: "INVALID_PANE", message: "pane not found" },
+    });
+    expect(onConnectionIssue).toHaveBeenCalledWith("pane not found");
+    expect(handleSessionMissing).toHaveBeenCalledTimes(1);
+    expect(onSessionRemoved).not.toHaveBeenCalled();
+  });
+
+  it("requestCommand handles thrown errors as INTERNAL", async () => {
+    const requestJsonMock = vi.mocked(requestJson);
+    const ensureToken = vi.fn();
+    const onConnectionIssue = vi.fn();
+    const handleSessionMissing = vi.fn();
+    const onSessionRemoved = vi.fn();
+    requestJsonMock.mockRejectedValueOnce(new Error("network down"));
+
+    const response = await requestCommand({
+      paneId: "pane-1",
+      request: Promise.resolve(new Response()),
+      fallbackMessage: "failed",
+      ensureToken,
+      onConnectionIssue,
+      handleSessionMissing,
+      buildApiError: (code, message) => ({ code, message }),
+      isPaneMissingError: vi.fn(() => false),
+      onSessionRemoved,
+    });
+
+    expect(response).toEqual({
+      ok: false,
+      error: { code: "INTERNAL", message: "network down" },
+    });
+    expect(onConnectionIssue).toHaveBeenCalledWith("network down");
+    expect(handleSessionMissing).not.toHaveBeenCalled();
+    expect(onSessionRemoved).not.toHaveBeenCalled();
   });
 });
