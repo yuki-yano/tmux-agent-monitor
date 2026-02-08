@@ -81,7 +81,7 @@ const parseListPanes = (stdout: string): WeztermListPane[] => {
     return [];
   }
   return parsed.filter(
-    (entry): entry is WeztermListPane => typeof entry === "object" && entry !== null,
+    (entry): entry is WeztermListPane => typeof entry === "object" && entry != null,
   );
 };
 
@@ -91,10 +91,10 @@ const toPaneCellGeometry = (pane: WeztermListPane): PaneCellGeometry | null => {
   const width = toInteger(pane.size?.cols);
   const height = toInteger(pane.size?.rows);
   if (
-    left === null ||
-    top === null ||
-    width === null ||
-    height === null ||
+    left == null ||
+    top == null ||
+    width == null ||
+    height == null ||
     left < 0 ||
     top < 0 ||
     width <= 0 ||
@@ -108,7 +108,7 @@ const toPaneCellGeometry = (pane: WeztermListPane): PaneCellGeometry | null => {
 const toPanePixelSize = (pane: WeztermListPane): { width: number; height: number } | null => {
   const width = toInteger(pane.size?.pixel_width);
   const height = toInteger(pane.size?.pixel_height);
-  if (width === null || height === null || width <= 0 || height <= 0) {
+  if (width == null || height == null || width <= 0 || height <= 0) {
     return null;
   }
   return { width, height };
@@ -143,7 +143,7 @@ export const getWeztermPaneGeometry = async (
     const tabPanes = panes
       .filter((pane) => toPaneId(pane.tab_id) === tabId && toPaneId(pane.window_id) === windowId)
       .map((pane) => toPaneCellGeometry(pane))
-      .filter((pane): pane is PaneCellGeometry => pane !== null);
+      .filter((pane): pane is PaneCellGeometry => pane != null);
 
     const windowWidth =
       tabPanes.length > 0

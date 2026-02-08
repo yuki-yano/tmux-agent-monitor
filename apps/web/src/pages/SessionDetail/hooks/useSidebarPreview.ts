@@ -372,7 +372,7 @@ export const useSidebarPreview = ({
     (paneId: string) => {
       if (!paneId || typeof window === "undefined") return;
       pendingPreviewPaneRef.current = paneId;
-      if (rafIdRef.current !== null) return;
+      if (rafIdRef.current != null) return;
       rafIdRef.current = window.requestAnimationFrame(() => {
         rafIdRef.current = null;
         const target = pendingPreviewPaneRef.current;
@@ -385,7 +385,7 @@ export const useSidebarPreview = ({
   );
 
   const clearHoverTimer = useCallback(() => {
-    if (hoverTimerRef.current !== null) {
+    if (hoverTimerRef.current != null) {
       window.clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
     }
@@ -501,7 +501,7 @@ export const useSidebarPreview = ({
   useEffect(() => {
     return () => {
       clearHoverTimer();
-      if (typeof window !== "undefined" && rafIdRef.current !== null) {
+      if (typeof window !== "undefined" && rafIdRef.current != null) {
         window.cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
       }

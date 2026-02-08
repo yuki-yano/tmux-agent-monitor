@@ -40,7 +40,7 @@ export const runGit = async (
       throw err;
     }
     const stdout = extractStdoutFromError(err);
-    if (stdout !== null) {
+    if (stdout != null) {
       return stdout;
     }
     throw err;

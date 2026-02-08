@@ -39,11 +39,11 @@ const findSequenceIndex = (
 ): number | null => {
   if (sequence.length === 0 || lines.length < sequence.length) return null;
   const maxStart = lines.length - sequence.length;
-  if (expectedIndex !== null) {
+  if (expectedIndex != null) {
     const windowStart = Math.max(0, expectedIndex - windowSize);
     const windowEnd = Math.min(maxStart, expectedIndex + windowSize);
     const nearbyMatch = findSequenceInRange(lines, sequence, windowStart, windowEnd);
-    if (nearbyMatch !== null) {
+    if (nearbyMatch != null) {
       return nearbyMatch;
     }
   }
@@ -80,7 +80,7 @@ export const mapAnchorIndex = (prev: string[], next: string[], anchorIndex: numb
     const signature = buildSignature(prev, safeAnchor, size);
     if (!signature.length) continue;
     const match = findSequenceIndex(next, signature, expectedIndex);
-    if (match !== null) return match;
+    if (match != null) return match;
   }
   return expectedIndex;
 };

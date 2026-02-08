@@ -113,7 +113,7 @@ const isIPv4 = (value: string) => {
 };
 
 const parseBind = (value: FlagValue) => {
-  if (value === undefined) {
+  if (value == null) {
     return null;
   }
   if (value === true) {
@@ -224,7 +224,7 @@ const resolveRequiredStringFlag = (
     return null;
   }
   const value = flags.get(flag);
-  if (value === true || value === undefined) {
+  if (value === true || value == null) {
     throw new Error(`${flag} requires a value.`);
   }
   if (typeof value !== "string") {

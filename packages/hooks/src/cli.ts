@@ -96,7 +96,7 @@ export const extractPayloadFields = (
 };
 
 const buildFallback = (fields: HookPayloadFields): HookEvent["fallback"] => {
-  if (fields.tmuxPane !== null) {
+  if (fields.tmuxPane != null) {
     return undefined;
   }
   return {

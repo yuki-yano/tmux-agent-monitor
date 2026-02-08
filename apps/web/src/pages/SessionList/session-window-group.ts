@@ -18,8 +18,8 @@ const pickLatestInputAt = (sessions: SessionSummary[]) => {
   let latestTs: number | null = null;
   sessions.forEach((session) => {
     const ts = parseTime(session.lastInputAt);
-    if (ts === null) return;
-    if (latestTs === null || ts > latestTs) {
+    if (ts == null) return;
+    if (latestTs == null || ts > latestTs) {
       latestTs = ts;
       latestValue = session.lastInputAt ?? null;
     }

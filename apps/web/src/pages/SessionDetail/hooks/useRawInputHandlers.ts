@@ -118,7 +118,7 @@ export const useRawInputHandlers = ({
   useEffect(() => {
     if (!rawMode) {
       rawQueueRef.current = [];
-      if (rawFlushTimerRef.current !== null) {
+      if (rawFlushTimerRef.current != null) {
         window.clearTimeout(rawFlushTimerRef.current);
         rawFlushTimerRef.current = null;
       }
@@ -167,7 +167,7 @@ export const useRawInputHandlers = ({
     (items: RawItem[]) => {
       if (items.length === 0) return;
       rawQueueRef.current.push(...items);
-      if (rawFlushTimerRef.current !== null) return;
+      if (rawFlushTimerRef.current != null) return;
       rawFlushTimerRef.current = window.setTimeout(() => {
         rawFlushTimerRef.current = null;
         const batch = rawQueueRef.current.splice(0, rawQueueRef.current.length);

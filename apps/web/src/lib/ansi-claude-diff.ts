@@ -79,7 +79,7 @@ const isSegmentContinuation = ({
   segmentIndent: number | null;
   line: string;
 }) => {
-  if (segmentStart === -1 || segmentIndent === null) {
+  if (segmentStart === -1 || segmentIndent == null) {
     return false;
   }
   return leadingWhitespaceLength(line) >= segmentIndent;

@@ -72,7 +72,7 @@ export const useSessionScreen = ({
 
   const flushPendingScreen = useCallback(() => {
     const pending = pendingScreenRef.current;
-    if (pending === null) return;
+    if (pending == null) return;
     pendingScreenRef.current = null;
     startTransition(() => {
       setScreen(pending);

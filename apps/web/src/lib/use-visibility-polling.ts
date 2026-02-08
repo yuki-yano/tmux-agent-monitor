@@ -28,12 +28,12 @@ export const useVisibilityPolling = ({
       return true;
     };
     const stop = () => {
-      if (intervalId === null) return;
+      if (intervalId == null) return;
       window.clearInterval(intervalId);
       intervalId = null;
     };
     const start = () => {
-      if (intervalId !== null) return;
+      if (intervalId != null) return;
       intervalId = window.setInterval(() => {
         if (!canPoll()) {
           stop();

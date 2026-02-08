@@ -66,7 +66,7 @@ const applyBackgroundCode = (
     return 1;
   }
   const extendedStep = resolveExtendedBackgroundStep(code, codes, index);
-  if (extendedStep === null) {
+  if (extendedStep == null) {
     return 1;
   }
   activateBackground(state);

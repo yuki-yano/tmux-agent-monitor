@@ -52,7 +52,7 @@ const createTimeline = (items: SessionStateTimelineItem[]): SessionStateTimeline
     SHELL: 0,
     UNKNOWN: 0,
   },
-  current: items.find((item) => item.endedAt === null) ?? null,
+  current: items.find((item) => item.endedAt == null) ?? null,
 });
 
 describe("buildTimelineDisplay", () => {

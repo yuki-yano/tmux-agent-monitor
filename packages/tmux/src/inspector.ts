@@ -122,7 +122,7 @@ export const createInspector = (adapter: TmuxAdapter) => {
       .map((line) => line.replace(/\r$/, ""))
       .filter((line) => line.length > 0)
       .map(parseLine)
-      .filter((pane): pane is PaneMeta => pane !== null);
+      .filter((pane): pane is PaneMeta => pane != null);
   };
 
   const readUserOption = async (paneId: string, key: string): Promise<string | null> => {
@@ -138,7 +138,7 @@ export const createInspector = (adapter: TmuxAdapter) => {
     key: string,
     value: string | null,
   ): Promise<void> => {
-    if (value === null) {
+    if (value == null) {
       await adapter.run(["set-option", "-t", paneId, "-u", key]);
       return;
     }

@@ -90,7 +90,7 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
       const touch = event.touches[0];
       if (!touch) return;
       const startY = touchStartYRef.current;
-      if (startY === null) return;
+      if (startY == null) return;
       const currentY = touch.clientY;
       const deltaY = startY - currentY;
       const { scrollHeight, clientHeight, scrollTop } = target;

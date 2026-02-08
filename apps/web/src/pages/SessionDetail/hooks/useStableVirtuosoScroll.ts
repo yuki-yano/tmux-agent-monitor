@@ -49,7 +49,7 @@ const resolveScrollDelta = ({
   nextIndex: number;
   anchorIndex: number;
 }) => {
-  if (nextOffset !== null && prevOffset !== null) {
+  if (nextOffset != null && prevOffset != null) {
     return nextOffset - prevOffset;
   }
   const lineHeight = prevAnchorHeight ?? nextHeight;
@@ -141,7 +141,7 @@ export const useStableVirtuosoScroll = ({
   );
 
   const scheduleScrollEnd = useCallback(() => {
-    if (scrollEndTimerRef.current !== null) {
+    if (scrollEndTimerRef.current != null) {
       window.clearTimeout(scrollEndTimerRef.current);
     }
     scrollEndTimerRef.current = window.setTimeout(() => {
@@ -195,11 +195,11 @@ export const useStableVirtuosoScroll = ({
         anchorIndex,
       });
 
-      if (delta !== null && Math.abs(delta) >= 0.5) {
+      if (delta != null && Math.abs(delta) >= 0.5) {
         withAdjustingScroll(scroller, scroller.scrollTop + delta);
         return;
       }
-      if (prevScrollTopRef.current !== null) {
+      if (prevScrollTopRef.current != null) {
         withAdjustingScroll(scroller, prevScrollTopRef.current);
       }
     },
@@ -240,7 +240,7 @@ export const useStableVirtuosoScroll = ({
 
   useEffect(() => {
     return () => {
-      if (scrollEndTimerRef.current !== null) {
+      if (scrollEndTimerRef.current != null) {
         window.clearTimeout(scrollEndTimerRef.current);
       }
     };

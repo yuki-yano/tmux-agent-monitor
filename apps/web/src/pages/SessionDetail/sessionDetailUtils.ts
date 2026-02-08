@@ -98,7 +98,7 @@ export const diffStatusClass = (status: string) => {
 export const formatDiffStatusLabel = (status: string) => (status === "?" ? "A" : status);
 
 export const formatDiffCount = (value: number | null | undefined) =>
-  value === null || typeof value === "undefined" ? "—" : String(value);
+  value == null || typeof value === "undefined" ? "—" : String(value);
 
 export const sumFileStats = (
   files: Array<{ additions?: number | null; deletions?: number | null }> | null | undefined,

@@ -247,7 +247,7 @@ const buildDiffFileFromPatch = (
   numstat: NumstatResult | null,
 ): DiffFile => {
   const truncatedPatch = truncatePatch(patch);
-  const binary = isBinaryPatch(patch) || numstat?.additions === null || numstat?.deletions === null;
+  const binary = isBinaryPatch(patch) || numstat?.additions == null || numstat?.deletions == null;
   return {
     path: file.path,
     status: file.status,

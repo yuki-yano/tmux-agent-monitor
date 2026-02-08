@@ -10,7 +10,7 @@ const parseBounds = (input: string): Bounds | null => {
     return null;
   }
   const [x, y, width, height] = parts;
-  if (x === undefined || y === undefined || width === undefined || height === undefined) {
+  if (x == null || y == null || width == null || height == null) {
     return null;
   }
   if (width <= 0 || height <= 0) {

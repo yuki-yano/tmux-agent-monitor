@@ -100,7 +100,7 @@ const toDurationMs = (value: unknown): number | null => {
   const duration = value as WeztermDurationRaw;
   const secs = toNumber(duration.secs ?? duration.seconds);
   const nanos = toNumber(duration.nanos ?? duration.nanoseconds) ?? 0;
-  if (secs === null || secs < 0 || nanos < 0) {
+  if (secs == null || secs < 0 || nanos < 0) {
     return null;
   }
   return secs * 1000 + Math.floor(nanos / 1_000_000);
@@ -156,18 +156,18 @@ const buildActivityMaps = ({
       continue;
     }
     const idleMs = toDurationMs(client.idle_time ?? client.idleTime);
-    if (idleMs === null) {
+    if (idleMs == null) {
       continue;
     }
     const activityAt = toActivityEpochSeconds(idleMs, nowMs);
-    if (activityAt === null) {
+    if (activityAt == null) {
       continue;
     }
     const prevPane = paneActivityByPaneId.get(paneId) ?? 0;
     paneActivityByPaneId.set(paneId, Math.max(prevPane, activityAt));
 
     const windowIndex = paneWindowIndexById.get(paneId);
-    if (windowIndex === undefined) {
+    if (windowIndex == null) {
       continue;
     }
     const prevWindow = windowActivityByWindowIndex.get(windowIndex) ?? 0;

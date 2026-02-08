@@ -50,9 +50,9 @@ const readSessionAccessFromUrl = () => {
   const token = hashParams.get("token");
   const apiBaseUrlRaw = hashParams.get("api");
   const apiBaseUrl = normalizeApiBaseUrl(apiBaseUrlRaw);
-  const hasApiParam = apiBaseUrlRaw !== null;
+  const hasApiParam = apiBaseUrlRaw != null;
   const hasApiDirective = hasApiParam || Boolean(token);
-  const shouldStripFromUrl = Boolean(token) || apiBaseUrlRaw !== null;
+  const shouldStripFromUrl = Boolean(token) || apiBaseUrlRaw != null;
   if (token) {
     localStorage.setItem(TOKEN_KEY, token);
   }

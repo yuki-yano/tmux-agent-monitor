@@ -108,7 +108,7 @@ const parseUnicodeTableRow = (plainLine: string) => {
 };
 
 const isUnicodeTableCandidateLine = (plainLine: string) =>
-  parseUnicodeTableBorder(plainLine) !== null || parseUnicodeTableRow(plainLine) !== null;
+  parseUnicodeTableBorder(plainLine) != null || parseUnicodeTableRow(plainLine) != null;
 
 const padCells = (cells: UnicodeTableCell[], columnCount: number) => {
   if (cells.length >= columnCount) return cells;
@@ -143,7 +143,7 @@ const isFullWidthCodePoint = (codePoint: number): boolean =>
 
 const getCharacterDisplayWidth = (char: string): number => {
   const codePoint = char.codePointAt(0);
-  if (codePoint === undefined) return 0;
+  if (codePoint == null) return 0;
   if (codePoint === 0) return 0;
   if (codePoint < 0x20 || (codePoint >= 0x7f && codePoint < 0xa0)) return 0;
   if (isCombiningCharacter.test(char)) return 0;
@@ -225,7 +225,7 @@ export const normalizeUnicodeTableLines = (lines: string[]): string[] => {
 
     const parsedRows = blockRows
       .map((line) => parseUnicodeTableRow(line))
-      .filter((row): row is { indent: string; cells: UnicodeTableCell[] } => row !== null);
+      .filter((row): row is { indent: string; cells: UnicodeTableCell[] } => row != null);
 
     if (parsedRows.length === 0) {
       normalized.push(...blockOriginal);
@@ -236,7 +236,7 @@ export const normalizeUnicodeTableLines = (lines: string[]): string[] => {
     const borderLines = blockRows
       .map((line) => parseUnicodeTableBorder(line))
       .filter(
-        (border): border is { indent: string; left: string; right: string } => border !== null,
+        (border): border is { indent: string; left: string; right: string } => border != null,
       );
     if (borderLines.length < 2) {
       normalized.push(...blockOriginal);

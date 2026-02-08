@@ -36,7 +36,7 @@ export const useScreenScroll = ({
       const index = screenLinesLength - 1;
       virtuosoRef.current.scrollToIndex({ index, align: "end", behavior });
       setForceFollow(true);
-      if (forceFollowTimerRef.current !== null) {
+      if (forceFollowTimerRef.current != null) {
         window.clearTimeout(forceFollowTimerRef.current);
       }
       forceFollowTimerRef.current = window.setTimeout(() => {
@@ -58,7 +58,7 @@ export const useScreenScroll = ({
       setIsAtBottom(value);
       if (value) {
         setForceFollow(false);
-        if (forceFollowTimerRef.current !== null) {
+        if (forceFollowTimerRef.current != null) {
           window.clearTimeout(forceFollowTimerRef.current);
           forceFollowTimerRef.current = null;
         }
@@ -104,7 +104,7 @@ export const useScreenScroll = ({
 
   useEffect(() => {
     return () => {
-      if (forceFollowTimerRef.current !== null) {
+      if (forceFollowTimerRef.current != null) {
         window.clearTimeout(forceFollowTimerRef.current);
       }
     };

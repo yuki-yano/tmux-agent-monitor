@@ -119,7 +119,7 @@ const resolveSegmentItems = (
       };
     })
     .filter(
-      (segment): segment is { item: SessionStateTimelineItem; width: number } => segment !== null,
+      (segment): segment is { item: SessionStateTimelineItem; width: number } => segment != null,
     );
 };
 

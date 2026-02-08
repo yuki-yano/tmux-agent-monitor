@@ -97,7 +97,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
 
   const resolveAtMs = (at: string | undefined, fallbackMs: number) => {
     const parsed = parseIso(at);
-    return parsed === null ? fallbackMs : parsed;
+    return parsed == null ? fallbackMs : parsed;
   };
 
   const getOrCreatePaneEvents = (paneId: string) => {
@@ -121,7 +121,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
         return true;
       }
       const endedAtMs = parseIso(event.endedAt);
-      if (endedAtMs === null) {
+      if (endedAtMs == null) {
         return true;
       }
       return endedAtMs >= thresholdMs;
@@ -210,7 +210,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
     const withDuration = events
       .map<SessionStateTimelineItem | null>((event) => {
         const startedAtMs = parseIso(event.startedAt);
-        if (startedAtMs === null) {
+        if (startedAtMs == null) {
           return null;
         }
         const endedAtMs = parseIso(event.endedAt) ?? nowMs;
@@ -223,7 +223,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
         totals[event.state] += durationMs;
         return { ...event, durationMs };
       })
-      .filter((event): event is SessionStateTimelineItem => event !== null)
+      .filter((event): event is SessionStateTimelineItem => event != null)
       .sort((a, b) => {
         const aMs = parseIso(a.startedAt) ?? 0;
         const bMs = parseIso(b.startedAt) ?? 0;
@@ -231,7 +231,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
       });
 
     const items = withDuration.slice(0, resolvedLimit);
-    const current = items.find((item) => item.endedAt === null) ?? null;
+    const current = items.find((item) => item.endedAt == null) ?? null;
     return {
       paneId,
       now: nowIso,
@@ -283,7 +283,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
       const sorted = events
         .map((event) => {
           const startedAtMs = parseIso(event.startedAt);
-          if (startedAtMs === null) {
+          if (startedAtMs == null) {
             return null;
           }
           return {
@@ -310,7 +310,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
             source: SessionStateTimelineSource;
             startedAtMs: number;
             endedAtMs: number | null;
-          } => event !== null,
+          } => event != null,
         )
         .sort((a, b) => a.startedAtMs - b.startedAtMs);
 
@@ -321,13 +321,13 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
         const nextStartMs = next?.startedAtMs ?? null;
         const startedAtMs = Math.max(event.startedAtMs, lastBoundaryMs);
         let endedAtMs = event.endedAtMs;
-        if (endedAtMs === null && nextStartMs !== null) {
+        if (endedAtMs == null && nextStartMs != null) {
           endedAtMs = nextStartMs;
         }
-        if (endedAtMs !== null) {
+        if (endedAtMs != null) {
           endedAtMs = Math.max(endedAtMs, startedAtMs);
         }
-        if (endedAtMs !== null && endedAtMs === startedAtMs) {
+        if (endedAtMs != null && endedAtMs === startedAtMs) {
           return;
         }
         restored.push({
@@ -336,7 +336,7 @@ export const createSessionTimelineStore = (options: StoreOptions = {}) => {
           state: event.state,
           reason: event.reason,
           startedAt: toIso(startedAtMs),
-          endedAt: endedAtMs === null ? null : toIso(endedAtMs),
+          endedAt: endedAtMs == null ? null : toIso(endedAtMs),
           source: event.source,
         });
         sequence = Math.max(sequence, parseSequenceFromId(event.id));

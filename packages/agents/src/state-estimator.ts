@@ -27,7 +27,7 @@ export const estimateState = (
   }
 
   const lastOutputTs = toTimestamp(signals.lastOutputAt);
-  if (lastOutputTs !== null) {
+  if (lastOutputTs != null) {
     const diff = Date.now() - lastOutputTs;
     if (diff <= signals.thresholds.runningThresholdMs) {
       return { state: "RUNNING", reason: "recent_output" };

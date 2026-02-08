@@ -154,7 +154,7 @@ export const runServe = async (flags: Map<string, string | boolean>) => {
   const parsedWebPort = parsePort(webPortFlag);
   const displayPort = parsedWebPort ?? port;
   const apiBaseUrl =
-    parsedWebPort !== null && parsedWebPort !== port ? `http://${displayHost}:${port}/api` : null;
+    parsedWebPort != null && parsedWebPort !== port ? `http://${displayHost}:${port}/api` : null;
   const url = buildAccessUrl({
     displayHost,
     displayPort,

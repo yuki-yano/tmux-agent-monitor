@@ -74,8 +74,8 @@ const toSegments = ({
   return [...timeline.items]
     .map<TimelineSegment | null>((item) => {
       const startMs = parseIsoMs(item.startedAt);
-      const endMs = item.endedAt === null ? nowMs : parseIsoMs(item.endedAt);
-      if (startMs === null || endMs === null) {
+      const endMs = item.endedAt == null ? nowMs : parseIsoMs(item.endedAt);
+      if (startMs == null || endMs == null) {
         return null;
       }
       const clippedStartMs = Math.max(startMs, rangeStartMs);
@@ -91,10 +91,10 @@ const toSegments = ({
         source: item.source,
         startedAtMs: clippedStartMs,
         endedAtMs: clippedEndMs,
-        isOpen: item.endedAt === null,
+        isOpen: item.endedAt == null,
       };
     })
-    .filter((segment): segment is TimelineSegment => segment !== null)
+    .filter((segment): segment is TimelineSegment => segment != null)
     .sort((a, b) => a.startedAtMs - b.startedAtMs);
 };
 
@@ -227,7 +227,7 @@ export const buildTimelineDisplay = (
   }
 
   const nowMs = parseIsoMs(timeline.now);
-  if (nowMs === null) {
+  if (nowMs == null) {
     return {
       items: [],
       totalsMs: createEmptyTotals(),
@@ -260,7 +260,7 @@ export const buildTimelineDisplay = (
 
   const items = toDisplayItems(timeline.paneId, outputSegments);
   const totalsMs = resolveTotals(items);
-  const current = items.find((item) => item.endedAt === null) ?? null;
+  const current = items.find((item) => item.endedAt == null) ?? null;
   return {
     items,
     totalsMs,

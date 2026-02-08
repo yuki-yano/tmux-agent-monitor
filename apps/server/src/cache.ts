@@ -14,7 +14,7 @@ export const setMapEntryWithLimit = <K, V>(
   map.set(key, value);
   while (map.size > maxEntries) {
     const oldestKey = map.keys().next().value;
-    if (oldestKey === undefined) {
+    if (oldestKey == null) {
       break;
     }
     map.delete(oldestKey);

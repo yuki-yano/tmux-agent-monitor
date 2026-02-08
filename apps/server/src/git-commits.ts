@@ -414,7 +414,7 @@ export const fetchCommitFile = async (
     return cached.file;
   }
   const patch = await loadCommitPatch(repoRoot, hash, file);
-  const binary = isBinaryPatch(patch) || file.additions === null || file.deletions === null;
+  const binary = isBinaryPatch(patch) || file.additions == null || file.deletions == null;
   const { patch: normalizedPatch, truncated } = truncateCommitPatch(patch);
   const diff: CommitFileDiff = {
     path: file.path,

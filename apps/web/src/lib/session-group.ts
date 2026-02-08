@@ -37,8 +37,8 @@ const pickLatestInputAt = (sessions: SessionSummary[]) => {
   let latestTs: number | null = null;
   sessions.forEach((session) => {
     const ts = parseTime(session.lastInputAt);
-    if (ts === null) return;
-    if (latestTs === null || ts > latestTs) {
+    if (ts == null) return;
+    if (latestTs == null || ts > latestTs) {
       latestTs = ts;
       latestValue = session.lastInputAt ?? null;
     }
@@ -70,9 +70,9 @@ export const buildSessionGroups = (sessions: SessionSummary[]): SessionGroup[] =
   groups.sort((a, b) => {
     const inputCompare = compareTimeDesc(a.lastInputAt, b.lastInputAt);
     if (inputCompare !== 0) return inputCompare;
-    if (a.repoRoot === null && b.repoRoot === null) return 0;
-    if (a.repoRoot === null) return 1;
-    if (b.repoRoot === null) return -1;
+    if (a.repoRoot == null && b.repoRoot == null) return 0;
+    if (a.repoRoot == null) return 1;
+    if (b.repoRoot == null) return -1;
     return a.repoRoot.localeCompare(b.repoRoot);
   });
 

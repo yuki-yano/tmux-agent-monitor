@@ -136,7 +136,7 @@ export const useSessionControls = ({
   ]);
 
   useEffect(() => {
-    if (!rawMode && prevAutoEnterRef.current !== null) {
+    if (!rawMode && prevAutoEnterRef.current != null) {
       setAutoEnter(prevAutoEnterRef.current);
       prevAutoEnterRef.current = null;
     }

@@ -49,6 +49,22 @@ export default [
     rules: {
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: [
+            "BinaryExpression[operator='==='][left.type='Literal'][left.raw='null']",
+            "BinaryExpression[operator='==='][right.type='Literal'][right.raw='null']",
+            "BinaryExpression[operator='!=='][left.type='Literal'][left.raw='null']",
+            "BinaryExpression[operator='!=='][right.type='Literal'][right.raw='null']",
+            "BinaryExpression[operator='==='][left.type='Identifier'][left.name='undefined']",
+            "BinaryExpression[operator='==='][right.type='Identifier'][right.name='undefined']",
+            "BinaryExpression[operator='!=='][left.type='Identifier'][left.name='undefined']",
+            "BinaryExpression[operator='!=='][right.type='Identifier'][right.name='undefined']",
+          ].join(", "),
+          message: "Use == null or != null for nullish comparisons.",
+        },
+      ],
       "prefer-arrow/prefer-arrow-functions": [
         "error",
         {

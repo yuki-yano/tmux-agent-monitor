@@ -77,7 +77,7 @@ const isPersistedTimelineEvent = (value: unknown): value is PersistedTimelineEve
     isStateValue(event.state) &&
     typeof event.reason === "string" &&
     typeof event.startedAt === "string" &&
-    (event.endedAt === null || typeof event.endedAt === "string") &&
+    (event.endedAt == null || typeof event.endedAt === "string") &&
     isTimelineSource(event.source)
   );
 };

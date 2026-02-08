@@ -49,8 +49,7 @@ const shouldUseCachedResponse = ({
   cached: ScreenCacheEntry | undefined;
   options: FetchOptions;
   ttlMs: number | null;
-}) =>
-  !options.force && ttlMs !== null && cached !== undefined && Date.now() - cached.updatedAt < ttlMs;
+}) => !options.force && ttlMs != null && cached != null && Date.now() - cached.updatedAt < ttlMs;
 
 const shouldShowLoadingState = (options: FetchOptions, cached: ScreenCacheEntry | undefined) =>
   options.loading === "if-empty" ? !cached : true;

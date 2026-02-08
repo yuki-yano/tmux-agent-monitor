@@ -96,7 +96,7 @@ export const createScreenCapture = (adapter: TmuxAdapter) => {
     }
 
     const size = await getPaneSize(adapter, options.paneId);
-    const truncated = size === null ? null : size.historySize + size.paneHeight > options.lines;
+    const truncated = size == null ? null : size.historySize + size.paneHeight > options.lines;
 
     return {
       screen: normalizeScreen(result.stdout, options.lines),

@@ -183,7 +183,7 @@ export const useSegmentTruncate = ({
       retryRef.current = 0;
       const available = Math.max(0, containerWidth - reservePx);
       const nextLabel = findSegmentLabel(text, segments, available, measureEl);
-      if (nextLabel === null) {
+      if (nextLabel == null) {
         scheduleRetry(retryRef, update, setRetryTimeout);
         return;
       }
@@ -191,7 +191,7 @@ export const useSegmentTruncate = ({
     };
 
     const schedule = () => {
-      if (rafId !== null) {
+      if (rafId != null) {
         cancelAnimationFrame(rafId);
       }
       rafId = requestAnimationFrame(update);
@@ -202,10 +202,10 @@ export const useSegmentTruncate = ({
     scheduleOnFontReady(schedule);
     return () => {
       observer?.disconnect();
-      if (rafId !== null) {
+      if (rafId != null) {
         cancelAnimationFrame(rafId);
       }
-      if (timeoutId !== null) {
+      if (timeoutId != null) {
         window.clearTimeout(timeoutId);
       }
     };

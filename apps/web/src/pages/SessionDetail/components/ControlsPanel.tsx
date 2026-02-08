@@ -111,7 +111,7 @@ const extractAllowedImageFileFromClipboard = (data: DataTransfer | null): File |
   const itemFiles = Array.from(data.items ?? [])
     .filter((item) => item.kind === "file")
     .map((item) => item.getAsFile())
-    .filter((file): file is File => file !== null);
+    .filter((file): file is File => file != null);
   for (const file of itemFiles) {
     if (isAllowedImageMimeType(file)) {
       return file;

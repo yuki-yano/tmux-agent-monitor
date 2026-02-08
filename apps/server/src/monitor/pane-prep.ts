@@ -5,7 +5,7 @@ type PanePrepDeps = {
 };
 
 export const ensurePipeTagValue = async (pane: PaneMeta, deps: PanePrepDeps): Promise<PaneMeta> => {
-  if (pane.pipeTagValue !== null) {
+  if (pane.pipeTagValue != null) {
     return pane;
   }
   const fallback = await deps.readUserOption(pane.paneId, "@vde-monitor_pipe");

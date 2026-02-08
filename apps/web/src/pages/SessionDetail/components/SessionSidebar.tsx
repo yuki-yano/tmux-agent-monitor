@@ -301,7 +301,7 @@ const SessionPreviewMeta = ({
 }) => (
   <div className="mt-1 flex flex-wrap items-center gap-1.5">
     {sessionName && <TagPill tone="meta">Session {sessionName}</TagPill>}
-    {windowIndex !== null && <TagPill tone="meta">Window {windowIndex}</TagPill>}
+    {windowIndex != null && <TagPill tone="meta">Window {windowIndex}</TagPill>}
   </div>
 );
 

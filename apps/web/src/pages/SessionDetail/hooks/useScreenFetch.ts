@@ -21,7 +21,7 @@ import { DISCONNECTED_MESSAGE } from "../sessionDetailUtils";
 const normalizeScreenText = (text: string) => text.replace(/\r\n/g, "\n");
 
 const shouldUseFullResponse = (response: ScreenResponse) =>
-  response.full || response.screen !== undefined || !response.deltas;
+  response.full || response.screen != null || !response.deltas;
 
 const buildScreenOptions = (mode: ScreenMode, cursor: string | null) => {
   const options: { mode: ScreenMode; cursor?: string } = { mode };
@@ -124,7 +124,7 @@ export const useScreenFetch = ({
         pendingScreenRef.current = nextScreen;
         return;
       }
-      if (screenRef.current !== nextScreen || imageRef.current !== null) {
+      if (screenRef.current !== nextScreen || imageRef.current != null) {
         startTransition(() => {
           setScreen(nextScreen);
           setImageBase64(null);
