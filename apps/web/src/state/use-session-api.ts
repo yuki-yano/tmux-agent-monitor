@@ -3,17 +3,10 @@ import {
   type ApiEnvelope,
   type ApiError,
   type CommandResponse,
-  type CommitDetail,
-  type CommitFileDiff,
-  type CommitLog,
-  type DiffFile,
-  type DiffSummary,
   type HighlightCorrectionConfig,
   type ImageAttachment,
   type RawItem,
   type ScreenResponse,
-  type SessionStateTimeline,
-  type SessionStateTimelineRange,
   type SessionSummary,
 } from "@vde-monitor/shared";
 import { useCallback, useMemo, useRef } from "react";
@@ -21,6 +14,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 
 import { createApiClient } from "./session-api-contract";
+import { createSessionQueryRequests } from "./session-api-query-requests";
 import {
   mutateSession as executeMutateSession,
   refreshSessions as executeRefreshSessions,
@@ -30,10 +24,6 @@ import {
   requestSessionField as executeRequestSessionField,
 } from "./session-api-request-executors";
 import {
-  buildCommitFileQuery,
-  buildCommitLogQuery,
-  buildDiffFileQuery,
-  buildForceQuery,
   buildPaneHashParam,
   buildPaneParam,
   buildScreenRequestJson,
@@ -42,7 +32,6 @@ import {
   buildSendRawJson,
   buildSendTextJson,
   buildSessionTitleJson,
-  buildTimelineQuery,
   buildUploadImageForm,
   executeInflightRequest,
   type RefreshSessionsResult,
@@ -231,93 +220,21 @@ export const useSessionApi = ({
     [requestPaneField],
   );
 
-  const requestDiffSummary = useCallback(
-    async (paneId: string, options?: { force?: boolean }) => {
-      const query = buildForceQuery(options);
-      return requestPaneQueryField<{ summary?: DiffSummary }, "summary">({
-        paneId,
-        request: (param) => apiClient.sessions[":paneId"].diff.$get({ param, query }),
-        field: "summary",
-        fallbackMessage: API_ERROR_MESSAGES.diffSummary,
-      });
-    },
-    [apiClient, requestPaneQueryField],
-  );
-
-  const requestDiffFile = useCallback(
-    async (
-      paneId: string,
-      filePath: string,
-      rev?: string | null,
-      options?: { force?: boolean },
-    ) => {
-      const query = buildDiffFileQuery(filePath, rev, options);
-      return requestPaneQueryField<{ file?: DiffFile }, "file">({
-        paneId,
-        request: (param) => apiClient.sessions[":paneId"].diff.file.$get({ param, query }),
-        field: "file",
-        fallbackMessage: API_ERROR_MESSAGES.diffFile,
-      });
-    },
-    [apiClient, requestPaneQueryField],
-  );
-
-  const requestCommitLog = useCallback(
-    async (paneId: string, options?: { limit?: number; skip?: number; force?: boolean }) => {
-      const query = buildCommitLogQuery(options);
-      return requestPaneQueryField<{ log?: CommitLog }, "log">({
-        paneId,
-        request: (param) => apiClient.sessions[":paneId"].commits.$get({ param, query }),
-        field: "log",
-        fallbackMessage: API_ERROR_MESSAGES.commitLog,
-      });
-    },
-    [apiClient, requestPaneQueryField],
-  );
-
-  const requestCommitDetail = useCallback(
-    async (paneId: string, hash: string, options?: { force?: boolean }) => {
-      const query = buildForceQuery(options);
-      return requestPaneHashField<{ commit?: CommitDetail }, "commit">({
-        paneId,
-        hash,
-        request: (param) => apiClient.sessions[":paneId"].commits[":hash"].$get({ param, query }),
-        field: "commit",
-        fallbackMessage: API_ERROR_MESSAGES.commitDetail,
-      });
-    },
-    [apiClient, requestPaneHashField],
-  );
-
-  const requestCommitFile = useCallback(
-    async (paneId: string, hash: string, path: string, options?: { force?: boolean }) => {
-      const query = buildCommitFileQuery(path, options);
-      return requestPaneHashField<{ file?: CommitFileDiff }, "file">({
-        paneId,
-        hash,
-        request: (param) =>
-          apiClient.sessions[":paneId"].commits[":hash"].file.$get({ param, query }),
-        field: "file",
-        fallbackMessage: API_ERROR_MESSAGES.commitFile,
-      });
-    },
-    [apiClient, requestPaneHashField],
-  );
-
-  const requestStateTimeline = useCallback(
-    async (
-      paneId: string,
-      options?: { range?: SessionStateTimelineRange; limit?: number },
-    ): Promise<SessionStateTimeline> => {
-      const query = buildTimelineQuery(options);
-      return requestPaneQueryField<{ timeline?: SessionStateTimeline }, "timeline">({
-        paneId,
-        request: (param) => apiClient.sessions[":paneId"].timeline.$get({ param, query }),
-        field: "timeline",
-        fallbackMessage: API_ERROR_MESSAGES.timeline,
-      });
-    },
-    [apiClient, requestPaneQueryField],
+  const {
+    requestDiffSummary,
+    requestDiffFile,
+    requestCommitLog,
+    requestCommitDetail,
+    requestCommitFile,
+    requestStateTimeline,
+  } = useMemo(
+    () =>
+      createSessionQueryRequests({
+        apiClient,
+        requestPaneQueryField,
+        requestPaneHashField,
+      }),
+    [apiClient, requestPaneHashField, requestPaneQueryField],
   );
 
   const requestScreen = useCallback(
