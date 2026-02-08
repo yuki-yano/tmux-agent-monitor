@@ -55,6 +55,7 @@ type UseSessionApiParams = {
 };
 
 type PaneParam = ReturnType<typeof buildPaneParam>;
+type PaneHashParam = ReturnType<typeof buildPaneHashParam>;
 
 export type { RefreshSessionsResult } from "./session-api-utils";
 
@@ -202,6 +203,29 @@ export const useSessionApi = ({
     [requestPaneField],
   );
 
+  const requestPaneHashField = useCallback(
+    async <T, K extends keyof T>({
+      paneId,
+      hash,
+      request,
+      field,
+      fallbackMessage,
+    }: {
+      paneId: string;
+      hash: string;
+      request: (param: PaneHashParam) => Promise<Response>;
+      field: K;
+      fallbackMessage: string;
+    }) =>
+      requestPaneField<T, K>({
+        paneId,
+        request: request(buildPaneHashParam(paneId, hash)),
+        field,
+        fallbackMessage,
+      }),
+    [requestPaneField],
+  );
+
   const requestDiffSummary = useCallback(
     async (paneId: string, options?: { force?: boolean }) => {
       const query = buildForceQuery(options);
@@ -249,33 +273,30 @@ export const useSessionApi = ({
   const requestCommitDetail = useCallback(
     async (paneId: string, hash: string, options?: { force?: boolean }) => {
       const query = buildForceQuery(options);
-      return requestPaneField<{ commit?: CommitDetail }, "commit">({
+      return requestPaneHashField<{ commit?: CommitDetail }, "commit">({
         paneId,
-        request: apiClient.sessions[":paneId"].commits[":hash"].$get({
-          param: buildPaneHashParam(paneId, hash),
-          query,
-        }),
+        hash,
+        request: (param) => apiClient.sessions[":paneId"].commits[":hash"].$get({ param, query }),
         field: "commit",
         fallbackMessage: API_ERROR_MESSAGES.commitDetail,
       });
     },
-    [apiClient, requestPaneField],
+    [apiClient, requestPaneHashField],
   );
 
   const requestCommitFile = useCallback(
     async (paneId: string, hash: string, path: string, options?: { force?: boolean }) => {
       const query = buildCommitFileQuery(path, options);
-      return requestPaneField<{ file?: CommitFileDiff }, "file">({
+      return requestPaneHashField<{ file?: CommitFileDiff }, "file">({
         paneId,
-        request: apiClient.sessions[":paneId"].commits[":hash"].file.$get({
-          param: buildPaneHashParam(paneId, hash),
-          query,
-        }),
+        hash,
+        request: (param) =>
+          apiClient.sessions[":paneId"].commits[":hash"].file.$get({ param, query }),
         field: "file",
         fallbackMessage: API_ERROR_MESSAGES.commitFile,
       });
     },
-    [apiClient, requestPaneField],
+    [apiClient, requestPaneHashField],
   );
 
   const requestStateTimeline = useCallback(
