@@ -1,5 +1,5 @@
 import { MonitorX, RefreshCw, Search } from "lucide-react";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button, EmptyCard } from "@/components/ui";
@@ -9,9 +9,12 @@ import { SessionSidebar } from "@/pages/SessionDetail/components/SessionSidebar"
 
 import { SessionGroupSection } from "./components/SessionGroupSection";
 import { SessionListHeader } from "./components/SessionListHeader";
+import { createRepoPinKey } from "./sessionListPins";
 import type { SessionListVM } from "./useSessionListVM";
 
 export type SessionListViewProps = SessionListVM;
+
+type PinScrollTarget = { scope: "repo"; key: string } | { scope: "pane"; key: string };
 
 export const SessionListView = ({
   sessions,
@@ -44,6 +47,63 @@ export const SessionListView = ({
   onToggleRepoPin,
   onTogglePanePin,
 }: SessionListViewProps) => {
+  const [pinScrollTarget, setPinScrollTarget] = useState<PinScrollTarget | null>(null);
+
+  const handleToggleRepoPinWithScroll = useCallback(
+    (repoRoot: string | null) => {
+      onToggleRepoPin(repoRoot);
+      setPinScrollTarget({
+        scope: "repo",
+        key: createRepoPinKey(repoRoot),
+      });
+    },
+    [onToggleRepoPin],
+  );
+
+  const handleTogglePanePinWithScroll = useCallback(
+    (paneId: string) => {
+      onTogglePanePin(paneId);
+      setPinScrollTarget({
+        scope: "pane",
+        key: paneId,
+      });
+    },
+    [onTogglePanePin],
+  );
+
+  useEffect(() => {
+    if (pinScrollTarget == null) {
+      return;
+    }
+
+    const resolveTarget = () => {
+      if (pinScrollTarget.scope === "repo") {
+        return Array.from(document.querySelectorAll<HTMLElement>("[data-repo-scroll-key]")).find(
+          (element) => element.dataset.repoScrollKey === pinScrollTarget.key,
+        );
+      }
+      return Array.from(document.querySelectorAll<HTMLElement>("[data-pane-scroll-key]")).find(
+        (element) => element.dataset.paneScrollKey === pinScrollTarget.key,
+      );
+    };
+
+    const tryScroll = () => {
+      const target = resolveTarget();
+      if (!target) {
+        return;
+      }
+      target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      setPinScrollTarget(null);
+    };
+
+    const delays = pinScrollTarget.scope === "repo" ? [0, 80, 180] : [220, 420, 700, 1100, 1600];
+    const timeoutIds = delays.map((delay) => window.setTimeout(tryScroll, delay));
+
+    return () => {
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [groups, pinScrollTarget, sessions]);
+
   return (
     <>
       <div
@@ -126,14 +186,18 @@ export const SessionListView = ({
                 />
               )}
               {groups.map((group) => (
-                <SessionGroupSection
+                <div
                   key={group.repoRoot ?? "no-repo"}
-                  group={group}
-                  allSessions={sessions}
-                  nowMs={nowMs}
-                  onToggleRepoPin={onToggleRepoPin}
-                  onTogglePanePin={onTogglePanePin}
-                />
+                  data-repo-scroll-key={createRepoPinKey(group.repoRoot)}
+                >
+                  <SessionGroupSection
+                    group={group}
+                    allSessions={sessions}
+                    nowMs={nowMs}
+                    onToggleRepoPin={handleToggleRepoPinWithScroll}
+                    onTogglePanePin={handleTogglePanePinWithScroll}
+                  />
+                </div>
               ))}
             </div>
           </div>

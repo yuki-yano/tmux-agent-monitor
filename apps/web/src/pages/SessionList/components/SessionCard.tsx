@@ -81,6 +81,7 @@ export const SessionCard = ({ session, nowMs, onTouchPin }: SessionCardProps) =>
     <Link
       to="/sessions/$paneId"
       params={{ paneId: session.paneId }}
+      data-pane-scroll-key={session.paneId}
       className="group block w-full min-w-0 max-w-full"
     >
       <Card
