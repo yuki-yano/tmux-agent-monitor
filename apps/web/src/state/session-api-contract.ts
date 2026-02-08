@@ -11,6 +11,10 @@ export const createApiClient = (apiBasePath: string, authHeaders: Record<string,
 type ApiClientContract = ReturnType<typeof createApiClient>;
 type SessionClient = ApiClientContract["sessions"][":paneId"];
 
+export type PaneParam = NonNullable<InferRequestType<SessionClient["focus"]["$post"]>["param"]>;
+export type PaneHashParam = NonNullable<
+  InferRequestType<SessionClient["commits"][":hash"]["$get"]>["param"]
+>;
 export type ForceQuery = NonNullable<InferRequestType<SessionClient["diff"]["$get"]>["query"]>;
 export type DiffFileQuery = NonNullable<
   InferRequestType<SessionClient["diff"]["file"]["$get"]>["query"]

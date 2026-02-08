@@ -8,7 +8,6 @@ import {
   type CommitLog,
   type DiffFile,
   type DiffSummary,
-  encodePaneId,
   type HighlightCorrectionConfig,
   type ImageAttachment,
   imageAttachmentSchema,
@@ -35,6 +34,8 @@ import {
   buildCommitLogQuery,
   buildDiffFileQuery,
   buildForceQuery,
+  buildPaneHashParam,
+  buildPaneParam,
   buildScreenRequestJson,
   buildScreenRequestKeys,
   buildTimelineQuery,
@@ -53,11 +54,6 @@ type UseSessionApiParams = {
   onHighlightCorrections: (config: HighlightCorrectionConfig) => void;
 };
 
-const buildPaneParam = (paneId: string) => ({ paneId: encodePaneId(paneId) });
-const buildPaneHashParam = (paneId: string, hash: string) => ({
-  paneId: encodePaneId(paneId),
-  hash,
-});
 type PaneParam = ReturnType<typeof buildPaneParam>;
 
 export type { RefreshSessionsResult } from "./session-api-utils";

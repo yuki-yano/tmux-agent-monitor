@@ -6,6 +6,7 @@ import type {
   ScreenResponse,
   SessionSummary,
 } from "@vde-monitor/shared";
+import { encodePaneId } from "@vde-monitor/shared";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { extractErrorMessage } from "@/lib/api-utils";
@@ -15,6 +16,8 @@ import type {
   CommitLogQuery,
   DiffFileQuery,
   ForceQuery,
+  PaneHashParam,
+  PaneParam,
   ScreenRequestJson,
   TimelineQuery,
 } from "./session-api-contract";
@@ -150,6 +153,15 @@ export const resolveInflightScreenRequest = <T>({
   }
   return inFlightMap.get(fallbackKey) ?? null;
 };
+
+export const buildPaneParam = (paneId: string): PaneParam => ({
+  paneId: encodePaneId(paneId),
+});
+
+export const buildPaneHashParam = (paneId: string, hash: string): PaneHashParam => ({
+  paneId: encodePaneId(paneId),
+  hash,
+});
 
 const applyForceQuery = <T extends { force?: string }>(query: T, force?: boolean): T => {
   if (force) {

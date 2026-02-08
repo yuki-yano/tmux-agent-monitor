@@ -5,6 +5,8 @@ import {
   buildCommitLogQuery,
   buildDiffFileQuery,
   buildForceQuery,
+  buildPaneHashParam,
+  buildPaneParam,
   buildRefreshFailureResult,
   buildScreenRequestJson,
   buildScreenRequestKeys,
@@ -87,6 +89,9 @@ describe("session-api-utils", () => {
   });
 
   it("builds query helpers", () => {
+    expect(buildPaneParam("pane-1")).toEqual({ paneId: "pane-1" });
+    expect(buildPaneHashParam("pane-1", "hash")).toEqual({ paneId: "pane-1", hash: "hash" });
+
     expect(buildForceQuery()).toEqual({});
     expect(buildForceQuery({ force: true })).toEqual({ force: "1" });
 
