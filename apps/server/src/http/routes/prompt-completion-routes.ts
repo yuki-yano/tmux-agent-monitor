@@ -7,7 +7,7 @@ import { buildError } from "../helpers";
 import type { ResolvePane } from "./types";
 
 const querySchema = z.object({
-  trigger: z.enum(["dollar", "slash"]),
+  trigger: z.enum(["at", "dollar", "slash"]),
   q: z.string().max(256).optional(),
 });
 

@@ -39,7 +39,7 @@ const FILE_SEARCH_DEBOUNCE_MS = 150;
 
 const toAgentOptions = (
   items: PromptCompletionItem[],
-  trigger: "dollar" | "slash",
+  trigger: "at" | "dollar" | "slash",
 ): PromptCompletionOption[] => items.map((item) => ({ ...item, trigger }));
 
 const toFileOptions = (page: RepoFileSearchPage): PromptCompletionOption[] =>
@@ -111,6 +111,7 @@ export const usePromptCompletion = ({
   }, [token]);
 
   const paneId = config?.paneId;
+  const agent = config?.agent;
   const requestPromptCompletions = config?.requestPromptCompletions;
   const requestRepoFileSearch = config?.requestRepoFileSearch;
   const tokenTrigger = token?.trigger;
@@ -131,7 +132,7 @@ export const usePromptCompletion = ({
       setError(null);
       return;
     }
-    if (tokenTrigger === "at" && tokenQuery.length === 0) {
+    if (tokenTrigger === "at" && tokenQuery.length === 0 && agent !== "codex") {
       setOptions([]);
       setLoading(false);
       setError(null);
@@ -141,17 +142,30 @@ export const usePromptCompletion = ({
     setError(null);
     const load = async () => {
       try {
-        const nextOptions =
-          tokenTrigger === "at"
-            ? toFileOptions(
-                await requestRepoFileSearch(paneId, tokenQuery, {
-                  limit: MAX_FILE_OPTIONS,
-                }),
-              )
-            : toAgentOptions(
-                (await requestPromptCompletions(paneId, tokenTrigger, tokenQuery)).items,
-                tokenTrigger,
-              );
+        let nextOptions: PromptCompletionOption[];
+        if (tokenTrigger === "at" && agent === "codex") {
+          const [pluginResult, fileResult] = await Promise.all([
+            requestPromptCompletions(paneId, "at", tokenQuery),
+            tokenQuery
+              ? requestRepoFileSearch(paneId, tokenQuery, { limit: MAX_FILE_OPTIONS })
+              : null,
+          ]);
+          nextOptions = [
+            ...toAgentOptions(pluginResult.items, "at"),
+            ...(fileResult ? toFileOptions(fileResult) : []),
+          ];
+        } else if (tokenTrigger === "at") {
+          nextOptions = toFileOptions(
+            await requestRepoFileSearch(paneId, tokenQuery, {
+              limit: MAX_FILE_OPTIONS,
+            }),
+          );
+        } else {
+          nextOptions = toAgentOptions(
+            (await requestPromptCompletions(paneId, tokenTrigger, tokenQuery)).items,
+            tokenTrigger,
+          );
+        }
         if (requestIdRef.current === requestId) {
           setOptions(nextOptions);
           setActiveIndex(0);
@@ -170,7 +184,15 @@ export const usePromptCompletion = ({
       tokenTrigger === "at" ? FILE_SEARCH_DEBOUNCE_MS : 0,
     );
     return () => clearTimeout(timeout);
-  }, [enabled, paneId, requestPromptCompletions, requestRepoFileSearch, tokenQuery, tokenTrigger]);
+  }, [
+    agent,
+    enabled,
+    paneId,
+    requestPromptCompletions,
+    requestRepoFileSearch,
+    tokenQuery,
+    tokenTrigger,
+  ]);
 
   const select = useCallback(
     (option: PromptCompletionOption) => {
@@ -266,7 +288,9 @@ export const usePromptCompletion = ({
     loading,
     error,
     emptyMessage:
-      token?.trigger === "at" && token.query.length === 0 ? "Type a file name to search." : null,
+      token?.trigger === "at" && token.query.length === 0 && agent !== "codex"
+        ? "Type a file name to search."
+        : null,
     evaluate,
     select,
     insertTrigger,

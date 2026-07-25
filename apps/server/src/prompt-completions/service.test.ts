@@ -13,14 +13,32 @@ const skill = (name: string): PromptCompletionItem => ({
   scope: "user",
 });
 
+const plugin = (name: string): PromptCompletionItem => ({
+  id: `plugin:${name}`,
+  label: `@${name}`,
+  insertText: `@${name}`,
+  description: `${name} description`,
+  argumentHint: "",
+  kind: "plugin",
+  scope: "openai-bundled",
+});
+
 describe("createPromptCompletionService", () => {
   it("routes completion triggers by agent", async () => {
+    const listCodexPlugins = vi.fn(async () => [plugin("Chrome")]);
     const listCodexSkills = vi.fn(async () => [skill("react-doctor")]);
     const listClaudeCommands = vi.fn(async () => [
       { ...skill("frontend-design"), label: "/frontend-design", insertText: "/frontend-design" },
     ]);
-    const service = createPromptCompletionService({ listCodexSkills, listClaudeCommands });
+    const service = createPromptCompletionService({
+      listCodexPlugins,
+      listCodexSkills,
+      listClaudeCommands,
+    });
 
+    expect(
+      await service.list({ agent: "codex", cwd: "/repo", trigger: "at", query: "chr" }),
+    ).toEqual({ items: [plugin("Chrome")] });
     expect(
       await service.list({ agent: "codex", cwd: "/repo", trigger: "dollar", query: "react" }),
     ).toEqual({ items: [skill("react-doctor")] });
@@ -35,6 +53,7 @@ describe("createPromptCompletionService", () => {
   it("caches dynamic candidates per agent and working directory", async () => {
     const listCodexSkills = vi.fn(async () => [skill("react-doctor")]);
     const service = createPromptCompletionService({
+      listCodexPlugins: vi.fn(async () => []),
       listCodexSkills,
       listClaudeCommands: vi.fn(async () => []),
     });
@@ -58,6 +77,7 @@ describe("createPromptCompletionService", () => {
       cachedPluginSkill,
     ];
     const service = createPromptCompletionService({
+      listCodexPlugins: vi.fn(async () => []),
       listCodexSkills: vi.fn(async () => skills),
       listClaudeCommands: vi.fn(async () => []),
     });

@@ -138,7 +138,7 @@ export type RepoFileContentQuery = {
 };
 
 export type PromptCompletionQuery = {
-  trigger: "dollar" | "slash";
+  trigger: "at" | "dollar" | "slash";
   q?: string;
 };
 

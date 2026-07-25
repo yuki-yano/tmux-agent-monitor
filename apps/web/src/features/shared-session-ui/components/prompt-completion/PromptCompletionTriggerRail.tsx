@@ -41,8 +41,10 @@ export const PromptCompletionTriggerRail = ({
         variant="ghost"
         className={triggerButtonClass("at")}
         onClick={() => onTrigger("at")}
-        aria-label="Open File completions"
-        title="Files"
+        aria-label={
+          agent === "codex" ? "Open Plugin and File completions" : "Open File completions"
+        }
+        title={agent === "codex" ? "Plugins and files" : "Files"}
       >
         <strong>@</strong>
       </Button>

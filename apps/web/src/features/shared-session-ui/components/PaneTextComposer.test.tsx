@@ -235,7 +235,7 @@ describe("PaneTextComposer", () => {
     expect(
       completionButtons?.contains(screen.getByRole("button", { name: "Open Skill completions" })),
     ).toBe(true);
-    expect(screen.getByRole("button", { name: "Open File completions" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open Plugin and File completions" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Open Command completions" })).toBeTruthy();
   });
 
@@ -311,6 +311,62 @@ describe("PaneTextComposer", () => {
 
     expect(await screen.findByText("$visualize:visualize")).toBeTruthy();
     expect(screen.getAllByRole("option")).toHaveLength(items.length);
+  });
+
+  it("loads Codex plugins before repository files for at completions", async () => {
+    const requestPromptCompletions = vi.fn(async () => ({
+      items: [
+        {
+          id: "codex-plugin:chrome@openai-bundled",
+          label: "@Chrome",
+          insertText: "@Chrome",
+          description: "Control Chrome with ChatGPT.",
+          argumentHint: "",
+          kind: "plugin" as const,
+          scope: "openai-bundled",
+        },
+      ],
+    }));
+    const requestRepoFileSearch = vi.fn(async (_paneId: string, query: string) => ({
+      query,
+      items: [
+        {
+          path: "docs/chrome.md",
+          name: "chrome.md",
+          kind: "file" as const,
+          score: 1,
+          highlights: [],
+        },
+      ],
+      truncated: false,
+      totalMatchedCount: 1,
+    }));
+    render(
+      <PaneTextComposer
+        state={buildState({
+          completion: buildCompletion("codex", {
+            requestPromptCompletions,
+            requestRepoFileSearch,
+          }),
+        })}
+        actions={buildActions()}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText("Type a prompt…") as HTMLTextAreaElement;
+    fireEvent.input(textarea, { target: { value: "@chr", selectionStart: 4 } });
+
+    expect(await screen.findByText("@Chrome")).toBeTruthy();
+    expect(screen.getByText("docs/chrome.md")).toBeTruthy();
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      expect.stringContaining("@Chrome"),
+      expect.stringContaining("docs/chrome.md"),
+    ]);
+    expect(requestPromptCompletions).toHaveBeenCalledWith("pane-1", "at", "chr");
+    expect(requestRepoFileSearch).toHaveBeenCalledWith("pane-1", "chr", { limit: 5 });
+
+    fireEvent.click(screen.getByText("@Chrome"));
+    expect(textarea.value).toBe("@Chrome ");
   });
 
   it("opens and inserts slash completions at the current caret after existing text", async () => {
@@ -404,7 +460,7 @@ describe("PaneTextComposer", () => {
     type Result = Awaited<ReturnType<PromptCompletionConfig["requestPromptCompletions"]>>;
     const resolvers = new Map<string, (value: Result) => void>();
     const requestPromptCompletions = vi.fn(
-      async (_paneId: string, _trigger: "dollar" | "slash", query = "") =>
+      async (_paneId: string, _trigger: "at" | "dollar" | "slash", query = "") =>
         new Promise<Result>((resolve) => {
           resolvers.set(query, resolve);
         }),
@@ -523,6 +579,6 @@ describe("PaneTextComposer", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Open Skill completions" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open File completions" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Plugin and File completions" })).toBeNull();
   });
 });

@@ -350,7 +350,7 @@ export const rawItemSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("key"), value: allowedKeySchema }),
 ]);
 
-export const promptCompletionTriggerSchema = z.enum(["dollar", "slash"]);
+export const promptCompletionTriggerSchema = z.enum(["at", "dollar", "slash"]);
 
 export const promptCompletionItemSchema = z.object({
   id: z.string().min(1),
@@ -358,7 +358,7 @@ export const promptCompletionItemSchema = z.object({
   insertText: z.string().min(1),
   description: z.string(),
   argumentHint: z.string(),
-  kind: z.enum(["skill", "command"]),
+  kind: z.enum(["skill", "command", "plugin"]),
   scope: z.string().nullable(),
   disabledReason: z.string().optional(),
 });
