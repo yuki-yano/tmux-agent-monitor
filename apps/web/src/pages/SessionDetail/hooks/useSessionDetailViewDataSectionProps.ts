@@ -45,7 +45,7 @@ export const useSessionDetailViewDataSectionProps = ({
     refreshDiff,
     toggleDiff,
   } = diffs;
-  const { onResolveLogFileReference, onResolveLogFileReferenceCandidates } = files;
+  const { onOpenFileModal, onResolveLogFileReference, onResolveLogFileReferenceCandidates } = files;
   const {
     commitLog,
     commitError,
@@ -124,6 +124,7 @@ export const useSessionDetailViewDataSectionProps = ({
       actions: {
         onRefresh: refreshDiff,
         onToggle: toggleDiff,
+        onPreviewFile: onOpenFileModal,
         onClearVirtualBranch,
         onResolveFileReference: handleResolveFileReference,
         onResolveFileReferenceCandidates: handleResolveFileReferenceCandidates,
@@ -140,6 +141,7 @@ export const useSessionDetailViewDataSectionProps = ({
       diffLoadingFiles,
       refreshDiff,
       toggleDiff,
+      onOpenFileModal,
       onClearVirtualBranch,
       handleResolveFileReference,
       handleResolveFileReferenceCandidates,

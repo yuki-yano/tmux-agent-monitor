@@ -40,6 +40,14 @@ import { createSessionDetail } from "./test-helpers";
 // their "disabled" early-return path instead of touching `fetch`/
 // `EventSource`.
 const session = createSessionDetail({ paneId: "pane-1" });
+const requestRepoFileContent = vi.fn(async () => ({
+  path: "README.md",
+  sizeBytes: 18,
+  isBinary: false,
+  truncated: false,
+  languageHint: "markdown" as const,
+  content: "# Changed preview",
+}));
 
 const sessionContextValue = createSessionContextMock({
   stream: {
@@ -82,7 +90,15 @@ const sessionContextValue = createSessionContextMock({
       repoRoot: session.repoRoot,
       rev: "HEAD",
       generatedAt: new Date(0).toISOString(),
-      files: [],
+      files: [
+        {
+          path: "README.md",
+          status: "M" as const,
+          staged: false,
+          additions: 1,
+          deletions: 0,
+        },
+      ],
     })),
     requestCommitLog: vi.fn(async () => ({
       repoRoot: session.repoRoot,
@@ -101,6 +117,7 @@ const sessionContextValue = createSessionContextMock({
   },
   files: {
     requestRepoFileTree: vi.fn(async () => ({ basePath: ".", entries: [] })),
+    requestRepoFileContent,
   },
   notes: {
     requestRepoNotes: vi.fn(async () => []),
@@ -166,5 +183,27 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
 
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Worktrees panel" }), { button: 0 });
     expect(screen.getByTestId("worktree-section")).toBeTruthy();
+  });
+
+  it("opens a changed file in the shared content preview", async () => {
+    const store = createStore();
+
+    renderWithRouter(
+      <JotaiProvider store={store}>
+        <SessionDetailProvider paneId="pane-1">
+          <SessionDetailView />
+        </SessionDetailProvider>
+      </JotaiProvider>,
+    );
+
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: "Changes panel" }), { button: 0 });
+    fireEvent.click(await screen.findByRole("button", { name: "Preview README.md" }));
+
+    expect(await screen.findByRole("heading", { name: "Changed preview" })).toBeTruthy();
+    expect(requestRepoFileContent).toHaveBeenCalledWith(
+      "pane-1",
+      "README.md",
+      expect.objectContaining({ maxBytes: 256 * 1024 }),
+    );
   });
 });

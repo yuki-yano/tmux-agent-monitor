@@ -37,6 +37,7 @@ type DiffSectionState = {
 type DiffSectionActions = {
   onRefresh: () => void;
   onToggle: (path: string) => void;
+  onPreviewFile: (path: string) => void;
   onClearVirtualBranch: () => void;
   onResolveFileReference?: (rawToken: string) => Promise<void>;
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
@@ -276,6 +277,7 @@ export const DiffSection = memo(({ state, actions }: DiffSectionProps) => {
   const {
     onRefresh,
     onToggle,
+    onPreviewFile,
     onClearVirtualBranch,
     onResolveFileReference,
     onResolveFileReferenceCandidates,
@@ -363,7 +365,9 @@ export const DiffSection = memo(({ state, actions }: DiffSectionProps) => {
           diffLoadingFiles={diffLoadingFiles}
           diffFiles={diffFiles}
           renderedPatches={renderedPatches}
+          previewEnabled={virtualBranch == null}
           onToggle={onToggle}
+          onPreviewFile={onPreviewFile}
           onExpandDiff={handleExpandDiff}
           onResolveFileReference={onResolveFileReference}
           onResolveFileReferenceCandidates={onResolveFileReferenceCandidates}

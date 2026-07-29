@@ -34,6 +34,7 @@ describe("DiffSection", () => {
   const buildActions = (overrides: Partial<DiffSectionActions> = {}): DiffSectionActions => ({
     onRefresh: vi.fn(),
     onToggle: vi.fn(),
+    onPreviewFile: vi.fn(),
     onClearVirtualBranch: vi.fn(),
     ...overrides,
   });
@@ -57,6 +58,53 @@ describe("DiffSection", () => {
 
     fireEvent.click(screen.getByText("src/index.ts"));
     expect(onToggle).toHaveBeenCalledWith("src/index.ts");
+  });
+
+  it("opens a changed file preview without toggling its diff", () => {
+    const onToggle = vi.fn();
+    const onPreviewFile = vi.fn();
+    const state = buildState({ diffSummary: createDiffSummary() });
+    const actions = buildActions({ onToggle, onPreviewFile });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={actions} />, { wrapper });
+
+    fireEvent.click(screen.getByRole("button", { name: "Preview src/index.ts" }));
+
+    expect(onPreviewFile).toHaveBeenCalledWith("src/index.ts");
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a preview for a deleted file", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary({
+        files: [
+          {
+            path: "src/removed.ts",
+            status: "D",
+            staged: false,
+            additions: 0,
+            deletions: 4,
+          },
+        ],
+      }),
+    });
+    const actions = buildActions();
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={actions} />, { wrapper });
+
+    expect(screen.queryByRole("button", { name: "Preview src/removed.ts" })).toBeNull();
+  });
+
+  it("does not offer a working-tree preview while inspecting a virtual branch", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary(),
+      virtualBranch: "feature/virtual",
+    });
+    const actions = buildActions();
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={actions} />, { wrapper });
+
+    expect(screen.queryByRole("button", { name: "Preview src/index.ts" })).toBeNull();
   });
 
   it("shows branch name next to total changes", () => {

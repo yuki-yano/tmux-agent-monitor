@@ -1,10 +1,11 @@
 import { type DiffFile, type DiffSummary } from "@vde-monitor/shared";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { memo } from "react";
 
 import {
   Button,
   FilePathLabel,
+  IconButton,
   InsetPanel,
   PanelSection,
   RowButton,
@@ -32,7 +33,9 @@ type DiffFileItemProps = {
   loadingFile: boolean;
   fileData?: DiffFile;
   renderedPatch?: RenderedPatch;
+  previewEnabled: boolean;
   onToggle: (path: string) => void;
+  onPreviewFile: (path: string) => void;
   onExpandDiff: (path: string) => void;
   onResolveFileReference?: (rawToken: string) => Promise<void>;
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
@@ -44,7 +47,9 @@ type DiffFileListProps = {
   diffLoadingFiles: Record<string, boolean>;
   diffFiles: Record<string, DiffFile>;
   renderedPatches: Record<string, RenderedPatch>;
+  previewEnabled: boolean;
   onToggle: (path: string) => void;
+  onPreviewFile: (path: string) => void;
   onExpandDiff: (path: string) => void;
   onResolveFileReference?: (rawToken: string) => Promise<void>;
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
@@ -126,7 +131,9 @@ const DiffFileItem = memo(
     loadingFile,
     fileData,
     renderedPatch,
+    previewEnabled,
     onToggle,
+    onPreviewFile,
     onExpandDiff,
     onResolveFileReference,
     onResolveFileReferenceCandidates,
@@ -136,24 +143,42 @@ const DiffFileItem = memo(
     const deletionsLabel = formatDiffCount(file.deletions);
     return (
       <InsetPanel key={`${file.path}-${file.status}`}>
-        <RowButton type="button" onClick={() => onToggle(file.path)}>
-          <div className="flex min-w-0 items-center gap-3">
-            <TagPill tone="status" className={cn(diffStatusClass(statusLabel), "shrink-0")}>
-              {statusLabel}
-            </TagPill>
-            <FilePathLabel path={file.path} size="sm" tailSegments={3} className="font-mono" />
-          </div>
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-latte-green-text tabular-nums">+{additionsLabel}</span>
-            <span className="text-latte-red-text tabular-nums">-{deletionsLabel}</span>
-            {isOpen ? (
-              <ChevronUp className="text-latte-subtext0 h-4 w-4" />
-            ) : (
-              <ChevronDown className="text-latte-subtext0 h-4 w-4" />
-            )}
-            <span className="sr-only">{isOpen ? "Hide" : "Show"}</span>
-          </div>
-        </RowButton>
+        <div className="flex min-w-0 items-center gap-2 pr-1.5 sm:pr-2">
+          <RowButton
+            type="button"
+            onClick={() => onToggle(file.path)}
+            className="min-h-10 min-w-0 flex-1 rounded-l-2xl"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <TagPill tone="status" className={cn(diffStatusClass(statusLabel), "shrink-0")}>
+                {statusLabel}
+              </TagPill>
+              <FilePathLabel path={file.path} size="sm" tailSegments={3} className="font-mono" />
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-latte-green-text tabular-nums">+{additionsLabel}</span>
+              <span className="text-latte-red-text tabular-nums">-{deletionsLabel}</span>
+              {isOpen ? (
+                <ChevronUp className="text-latte-subtext0 h-4 w-4" />
+              ) : (
+                <ChevronDown className="text-latte-subtext0 h-4 w-4" />
+              )}
+              <span className="sr-only">{isOpen ? "Hide" : "Show"} diff</span>
+            </div>
+          </RowButton>
+          {previewEnabled && file.status !== "D" ? (
+            <IconButton
+              type="button"
+              size="sm"
+              className="text-latte-subtext0/65 hover:bg-latte-surface0/55 hover:text-latte-text shrink-0 border-transparent bg-transparent shadow-none backdrop-blur-none after:-inset-1 hover:border-transparent hover:shadow-none"
+              onClick={() => onPreviewFile(file.path)}
+              aria-label={`Preview ${file.path}`}
+              title="Preview file"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </IconButton>
+          ) : null}
+        </div>
         {isOpen ? (
           <PanelSection>
             <DiffFilePatchContent
@@ -181,7 +206,9 @@ export const DiffFileList = memo(
     diffLoadingFiles,
     diffFiles,
     renderedPatches,
+    previewEnabled,
     onToggle,
+    onPreviewFile,
     onExpandDiff,
     onResolveFileReference,
     onResolveFileReferenceCandidates,
@@ -195,7 +222,9 @@ export const DiffFileList = memo(
           loadingFile={Boolean(diffLoadingFiles[file.path])}
           fileData={diffFiles[file.path]}
           renderedPatch={renderedPatches[file.path]}
+          previewEnabled={previewEnabled}
           onToggle={onToggle}
+          onPreviewFile={onPreviewFile}
           onExpandDiff={onExpandDiff}
           onResolveFileReference={onResolveFileReference}
           onResolveFileReferenceCandidates={onResolveFileReferenceCandidates}
