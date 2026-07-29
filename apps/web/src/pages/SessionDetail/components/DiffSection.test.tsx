@@ -74,6 +74,24 @@ describe("DiffSection", () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
+  it("keeps the diff toggle at the trailing edge after the preview action", () => {
+    const onToggle = vi.fn();
+    const state = buildState({ diffSummary: createDiffSummary() });
+    const actions = buildActions({ onToggle });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={actions} />, { wrapper });
+
+    const previewButton = screen.getByRole("button", { name: "Preview src/index.ts" });
+    const diffButton = screen.getByRole("button", { name: "Show diff for src/index.ts" });
+
+    expect(
+      previewButton.compareDocumentPosition(diffButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    fireEvent.click(diffButton);
+    expect(onToggle).toHaveBeenCalledWith("src/index.ts");
+  });
+
   it("does not offer a preview for a deleted file", () => {
     const state = buildState({
       diffSummary: createDiffSummary({

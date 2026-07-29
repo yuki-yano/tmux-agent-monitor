@@ -55,6 +55,9 @@ type DiffFileListProps = {
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
 };
 
+const DIFF_ROW_ICON_BUTTON_CLASS_NAME =
+  "text-latte-subtext0/65 hover:bg-latte-surface0/55 hover:text-latte-text shrink-0 border-transparent bg-transparent shadow-none backdrop-blur-none after:-inset-1 hover:border-transparent hover:shadow-none";
+
 const resolveDiffPatchMessage = ({
   loadingFile,
   fileData,
@@ -158,19 +161,13 @@ const DiffFileItem = memo(
             <div className="flex items-center gap-3 text-xs">
               <span className="text-latte-green-text tabular-nums">+{additionsLabel}</span>
               <span className="text-latte-red-text tabular-nums">-{deletionsLabel}</span>
-              {isOpen ? (
-                <ChevronUp className="text-latte-subtext0 h-4 w-4" />
-              ) : (
-                <ChevronDown className="text-latte-subtext0 h-4 w-4" />
-              )}
-              <span className="sr-only">{isOpen ? "Hide" : "Show"} diff</span>
             </div>
           </RowButton>
           {previewEnabled && file.status !== "D" ? (
             <IconButton
               type="button"
               size="sm"
-              className="text-latte-subtext0/65 hover:bg-latte-surface0/55 hover:text-latte-text shrink-0 border-transparent bg-transparent shadow-none backdrop-blur-none after:-inset-1 hover:border-transparent hover:shadow-none"
+              className={DIFF_ROW_ICON_BUTTON_CLASS_NAME}
               onClick={() => onPreviewFile(file.path)}
               aria-label={`Preview ${file.path}`}
               title="Preview file"
@@ -178,6 +175,16 @@ const DiffFileItem = memo(
               <Eye className="h-3.5 w-3.5" />
             </IconButton>
           ) : null}
+          <IconButton
+            type="button"
+            size="sm"
+            className={DIFF_ROW_ICON_BUTTON_CLASS_NAME}
+            onClick={() => onToggle(file.path)}
+            aria-label={`${isOpen ? "Hide" : "Show"} diff for ${file.path}`}
+            title={`${isOpen ? "Hide" : "Show"} diff`}
+          >
+            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </IconButton>
         </div>
         {isOpen ? (
           <PanelSection>
