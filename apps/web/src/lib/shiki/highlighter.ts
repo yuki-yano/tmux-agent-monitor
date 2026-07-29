@@ -49,6 +49,8 @@ const languageAliasMap: Record<string, string> = {
   golang: "go",
   rs: "rust",
   rust: "rust",
+  lua: "lua",
+  toml: "toml",
   text: "txt",
   txt: "txt",
   plaintext: "txt",
@@ -91,6 +93,8 @@ const getHighlighter = async () => {
         "dockerfile",
         "go",
         "rust",
+        "lua",
+        "toml",
         "txt",
       ],
     });

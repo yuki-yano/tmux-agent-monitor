@@ -205,6 +205,43 @@ describe("file content resolver", () => {
     }
   });
 
+  it.each([
+    {
+      extension: "lua",
+      content: "local value = 1\n",
+      languageHint: "lua",
+    },
+    {
+      extension: "toml",
+      content: 'name = "vde-monitor"\n',
+      languageHint: "toml",
+    },
+  ])("returns $languageHint language hint for .$extension files", async (fixture) => {
+    const repoRoot = await mkdtemp(
+      path.join(os.tmpdir(), `vde-monitor-file-content-${fixture.extension}-`),
+    );
+    try {
+      const normalizedPath = `config.${fixture.extension}`;
+      await writeFile(path.join(repoRoot, normalizedPath), fixture.content);
+
+      const result = await resolveFileContent({
+        repoRoot,
+        normalizedPath,
+        maxBytes: 1024,
+      });
+
+      expect(result).toMatchObject({
+        path: normalizedPath,
+        isBinary: false,
+        truncated: false,
+        languageHint: fixture.languageHint,
+        content: fixture.content,
+      });
+    } finally {
+      await rm(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it("rejects non-file paths", async () => {
     const repoRoot = await mkdtemp(path.join(os.tmpdir(), "vde-monitor-file-content-dir-"));
     try {

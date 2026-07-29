@@ -158,6 +158,12 @@ const resolveLanguageHint = (targetPath: string): RepoFileLanguageHint => {
   if (extension === ".go") {
     return "go";
   }
+  if (extension === ".lua") {
+    return "lua";
+  }
+  if (extension === ".toml") {
+    return "toml";
+  }
   return "text";
 };
 

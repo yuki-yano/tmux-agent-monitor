@@ -100,6 +100,29 @@ describe("highlightCode", () => {
     });
   });
 
+  it.each([
+    ["lua", "local value = 1"],
+    ["toml", 'name = "vde-monitor"'],
+  ])("loads %s highlighting", async (lang, code) => {
+    codeToHtmlMock.mockReturnValue(`<pre>${lang}</pre>`);
+
+    const result = await highlightCode({
+      code,
+      lang,
+      theme: "mocha",
+    });
+
+    expect(result.language).toBe(lang);
+    expect(createHighlighterMock).toHaveBeenCalledWith({
+      themes: ["catppuccin-latte", "catppuccin-mocha"],
+      langs: expect.arrayContaining([lang]),
+    });
+    expect(codeToHtmlMock).toHaveBeenCalledWith(code, {
+      lang,
+      theme: "catppuccin-mocha",
+    });
+  });
+
   it("caches highlighted html for identical input", async () => {
     codeToHtmlMock.mockReturnValue("<pre>cached</pre>");
 

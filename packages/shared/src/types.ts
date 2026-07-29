@@ -297,6 +297,8 @@ export type RepoFileLanguageHint =
   | "dockerfile"
   | "go"
   | "rust"
+  | "lua"
+  | "toml"
   | "text";
 
 export type RepoFilePreview = {
