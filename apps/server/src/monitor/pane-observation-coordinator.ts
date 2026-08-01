@@ -410,7 +410,9 @@ export const createPaneObservationCoordinator = ({
   };
 
   const requeueQueuedEntriesForPane = (paneId: string): void => {
-    const staleEntries = [...queuedEntries.values()].filter((entry) => entry.paneId === paneId);
+    const staleEntries = [...queuedEntries.values()].filter(
+      (entry) => entry.paneId === paneId && entry.purpose === "fingerprint",
+    );
     for (const entry of staleEntries) {
       queuedEntries.delete(entry.identityKey);
       deletePendingEntry(entry);
@@ -428,7 +430,10 @@ export const createPaneObservationCoordinator = ({
       deletePendingEntry(entry);
       if (entry.cancelled) continue;
       const currentRevision = ensureRevision(entry.paneId).currentRevision;
-      if (currentRevision !== entry.revision) {
+      // Fingerprints drive monitor state and must match the latest pane revision.
+      // Screens are user-facing snapshots: deliver the captured frame immediately
+      // and let the next stream tick follow output that arrived during capture.
+      if (currentRevision !== entry.revision && entry.purpose === "fingerprint") {
         requeueForCurrentRevision(entry);
         continue;
       }
@@ -457,7 +462,9 @@ export const createPaneObservationCoordinator = ({
         capturedAt,
         promise,
       });
-      ensureRevision(entry.paneId).lastReconciledAt = capturedAt;
+      if (currentRevision === entry.revision) {
+        ensureRevision(entry.paneId).lastReconciledAt = capturedAt;
+      }
       counters.capturesCompleted += 1;
       emit({
         type: "capture-completed",
@@ -483,7 +490,11 @@ export const createPaneObservationCoordinator = ({
       deletePendingEntry(entry);
       if (entry.cancelled) continue;
       const currentRevision = ensureRevision(entry.paneId).currentRevision;
-      if (currentRevision !== entry.revision && (!isTimeout || entry.priority === "background")) {
+      if (
+        currentRevision !== entry.revision &&
+        entry.purpose === "fingerprint" &&
+        (!isTimeout || entry.priority === "background")
+      ) {
         requeueForCurrentRevision(entry);
         continue;
       }

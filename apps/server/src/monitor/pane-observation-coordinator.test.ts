@@ -164,7 +164,7 @@ describe("createPaneObservationCoordinator", () => {
     expect(executeBatch.mock.calls[0]?.[0]).toHaveLength(3);
   });
 
-  it("requeues a capture when its pane becomes dirty while the batch is running", async () => {
+  it("requeues a fingerprint when its pane becomes dirty while the batch is running", async () => {
     vi.useFakeTimers();
     let resolveFirst: ((results: ReturnType<typeof successfulResults>) => void) | undefined;
     const executeBatch = vi.fn((requests: PaneObservationCaptureRequest[]) => {
@@ -183,7 +183,7 @@ describe("createPaneObservationCoordinator", () => {
       onDiagnostic: (event) => diagnostics.push(event.type),
     });
     const capture = coordinator.requestCapture({
-      purpose: "screen",
+      purpose: "fingerprint",
       options: captureOptions("%1"),
       priority: "foreground",
     });
@@ -208,12 +208,46 @@ describe("createPaneObservationCoordinator", () => {
     expect(diagnostics).toContain("capture-requeued");
   });
 
-  it("moves queued requests directly to the newest dirty revision", async () => {
+  it("delivers a screen captured while its pane revision changes", async () => {
+    vi.useFakeTimers();
+    let resolveCapture!: (results: PaneObservationCaptureResult[]) => void;
+    const executeBatch = vi.fn(
+      (_requests: PaneObservationCaptureRequest[]) =>
+        new Promise<PaneObservationCaptureResult[]>((resolve) => {
+          resolveCapture = (results) => resolve(results);
+        }),
+    );
+    const coordinator = createPaneObservationCoordinator({ executeBatch });
+    const capture = coordinator.requestCapture({
+      purpose: "screen",
+      options: captureOptions("%active"),
+      priority: "foreground",
+    });
+
+    await vi.advanceTimersByTimeAsync(OBSERVATION_COALESCING_WINDOW_MS);
+    coordinator.markDirty("%active", "pipe");
+    resolveCapture(
+      executeBatch.mock.calls[0]?.[0].map(({ requestId }) => ({
+        requestId,
+        result: captureResult("visible-snapshot"),
+      })) ?? [],
+    );
+    await vi.advanceTimersByTimeAsync(0);
+
+    await expect(capture).resolves.toEqual(captureResult("visible-snapshot"));
+    expect(executeBatch).toHaveBeenCalledTimes(1);
+    expect(coordinator.getDiagnostics()).toMatchObject({
+      capturesRequeued: 0,
+      queuedRequests: 0,
+    });
+  });
+
+  it("moves queued fingerprints directly to the newest dirty revision", async () => {
     vi.useFakeTimers();
     const executeBatch = vi.fn(async (requests) => successfulResults(requests));
     const coordinator = createPaneObservationCoordinator({ executeBatch });
     const capture = coordinator.requestCapture({
-      purpose: "screen",
+      purpose: "fingerprint",
       options: captureOptions("%1"),
       priority: "background",
     });
@@ -225,6 +259,25 @@ describe("createPaneObservationCoordinator", () => {
     expect(executeBatch).toHaveBeenCalledTimes(1);
     expect(executeBatch.mock.calls[0]?.[0][0]?.revision).toBe(1);
     expect(coordinator.getDiagnostics().capturesRequeued).toBe(1);
+  });
+
+  it("keeps a queued screen request when its pane becomes dirty", async () => {
+    vi.useFakeTimers();
+    const executeBatch = vi.fn(async (requests) => successfulResults(requests));
+    const coordinator = createPaneObservationCoordinator({ executeBatch });
+    const capture = coordinator.requestCapture({
+      purpose: "screen",
+      options: captureOptions("%active"),
+      priority: "foreground",
+    });
+
+    coordinator.markDirty("%active", "hook");
+    await vi.advanceTimersByTimeAsync(OBSERVATION_COALESCING_WINDOW_MS);
+
+    await expect(capture).resolves.toEqual(captureResult("%active"));
+    expect(executeBatch).toHaveBeenCalledTimes(1);
+    expect(executeBatch.mock.calls[0]?.[0][0]?.revision).toBe(0);
+    expect(coordinator.getDiagnostics().capturesRequeued).toBe(0);
   });
 
   it("uses a fresh cache until the five second reconciliation interval", async () => {
