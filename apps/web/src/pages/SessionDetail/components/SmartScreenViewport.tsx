@@ -248,7 +248,7 @@ export const SmartScreenViewport = ({
       className="border-latte-surface2/80 bg-latte-crust/95 shadow-inner-soft relative min-h-[260px] w-full min-w-0 max-w-full flex-1 rounded-2xl border-2 sm:min-h-[320px]"
       onCopy={handleCopy}
     >
-      {loading && <LoadingOverlay label={loadingLabel} />}
+      {loading && <LoadingOverlay label={loadingLabel} entrance="delayed" />}
       <div
         ref={scrollerRef}
         data-testid="smart-screen-scroller"

@@ -1,5 +1,12 @@
 import { useAtom } from "jotai";
-import { type Dispatch, type MutableRefObject, useCallback, useEffect, useRef } from "react";
+import {
+  type Dispatch,
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 
 import type { ScreenLoadingEvent, ScreenMode } from "@/lib/screen-loading";
 
@@ -32,7 +39,8 @@ export const useScreenMode = ({
     modeLoadedRef.current = modeLoaded;
   }, [modeLoaded]);
 
-  useEffect(() => {
+  // Keep pane mode state in sync before useScreenFetch starts its passive request.
+  useLayoutEffect(() => {
     modeLoadedRef.current = initialModeLoaded;
     setMode("text");
     setModeLoaded(initialModeLoaded);

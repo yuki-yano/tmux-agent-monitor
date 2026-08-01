@@ -1,6 +1,6 @@
 import type { HighlightCorrectionConfig, ScreenResponse } from "@vde-monitor/shared";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { startTransition, useCallback, useEffect, useMemo, useRef } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import { renderAnsiLines } from "@/lib/ansi";
 import {
@@ -187,7 +187,9 @@ export const useSessionScreen = ({
   const isScreenLoading =
     (screenLoadingState.loading && screenLoadingState.mode === mode) || isInitialModeLoading;
 
-  useEffect(() => {
+  // Reset pane-scoped refs before useScreenFetch starts its passive initial request.
+  // Otherwise a tab switch can send the previous pane's cursor and discard the response.
+  useLayoutEffect(() => {
     setScreenLoadingState(initialScreenLoadingState);
     modeSwitchRef.current = null;
     screenRef.current = "";

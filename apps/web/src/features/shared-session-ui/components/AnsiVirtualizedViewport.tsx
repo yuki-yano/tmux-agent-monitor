@@ -35,6 +35,7 @@ type AnsiVirtualizedViewportProps = {
   lines: string[];
   loading: boolean;
   loadingLabel: string;
+  loadingEntrance?: "immediate" | "delayed";
   isAtBottom: boolean;
   onAtBottomChange: (value: boolean) => void;
   onRangeChanged?: (range: { startIndex: number; endIndex: number }) => void;
@@ -114,6 +115,7 @@ export const AnsiVirtualizedViewport = ({
   lines,
   loading,
   loadingLabel,
+  loadingEntrance = "immediate",
   isAtBottom,
   onAtBottomChange,
   onRangeChanged,
@@ -207,7 +209,7 @@ export const AnsiVirtualizedViewport = ({
       onClick={onLineClick}
       onKeyDown={onLineKeyDown}
     >
-      {loading && <LoadingOverlay label={loadingLabel} />}
+      {loading && <LoadingOverlay label={loadingLabel} entrance={loadingEntrance} />}
       <Virtuoso<string, AnsiVirtuosoContext>
         ref={virtuosoRef}
         data={lines}

@@ -32,6 +32,17 @@ const neverEndingStream = () =>
     cancel() {},
   });
 
+const openSseResponse = (chunks: string[]) =>
+  new HttpResponse(
+    new ReadableStream({
+      start(controller) {
+        chunks.forEach((chunk) => controller.enqueue(enc.encode(chunk)));
+      },
+      cancel() {},
+    }),
+    { headers: { "Content-Type": "text/event-stream" } },
+  );
+
 const SCREEN_URL = "/api/streams/sessions/pane-1/screen";
 const ENCODED_URL = "/api/streams/sessions/pane%20x/screen";
 
@@ -83,16 +94,73 @@ describe("useScreenStream", () => {
     expect(result.current.transport).toBe("polling");
   });
 
-  it("transport becomes 'sse' when connection opens", async () => {
+  it("transport is 'connecting' before the initial stream opens", async () => {
+    let releaseConnection!: () => void;
+    const connectionGate = new Promise<void>((resolve) => {
+      releaseConnection = resolve;
+    });
     server.use(
-      http.get(
-        SCREEN_URL,
-        () =>
-          new HttpResponse(neverEndingStream(), {
-            headers: { "Content-Type": "text/event-stream" },
-          }),
-      ),
+      http.get(SCREEN_URL, async () => {
+        await connectionGate;
+        return openSseResponse([buildScreenEvent()]);
+      }),
     );
+
+    const { result, unmount } = renderHook(() =>
+      useScreenStream({
+        enabled: true,
+        paneId: "pane-1",
+        apiBasePath: "/api",
+        token: "tok",
+        onScreenEvent: vi.fn(),
+      }),
+    );
+
+    expect(result.current.transport).toBe("connecting");
+    releaseConnection();
+    await waitFor(() => {
+      expect(result.current.transport).toBe("sse");
+    });
+    unmount();
+  });
+
+  it("falls back to polling when the first screen event misses its deadline", async () => {
+    let releaseConnection!: () => void;
+    const connectionGate = new Promise<void>((resolve) => {
+      releaseConnection = resolve;
+    });
+    server.use(
+      http.get(SCREEN_URL, async () => {
+        await connectionGate;
+        return openSseResponse([buildScreenEvent()]);
+      }),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useScreenStream({
+        enabled: true,
+        paneId: "pane-1",
+        apiBasePath: "/api",
+        token: "tok",
+        onScreenEvent: vi.fn(),
+        fallbackDelayMs: 20,
+      }),
+    );
+
+    expect(result.current.transport).toBe("connecting");
+    await waitFor(() => {
+      expect(result.current.transport).toBe("polling");
+    });
+
+    releaseConnection();
+    await waitFor(() => {
+      expect(result.current.transport).toBe("sse");
+    });
+    unmount();
+  });
+
+  it("transport becomes 'sse' when the first screen event arrives", async () => {
+    server.use(http.get(SCREEN_URL, () => openSseResponse([buildScreenEvent()])));
 
     const { result } = renderHook(() =>
       useScreenStream({
@@ -250,9 +318,7 @@ describe("useScreenStream", () => {
     server.use(
       http.get(SCREEN_URL, () => {
         requestCount++;
-        return new HttpResponse(neverEndingStream(), {
-          headers: { "Content-Type": "text/event-stream" },
-        });
+        return openSseResponse([buildScreenEvent()]);
       }),
     );
 
@@ -290,9 +356,7 @@ describe("useScreenStream", () => {
     server.use(
       http.get("/api/streams/sessions/:paneId/screen", ({ request }) => {
         requestedUrls.push(new URL(request.url).pathname);
-        return new HttpResponse(neverEndingStream(), {
-          headers: { "Content-Type": "text/event-stream" },
-        });
+        return openSseResponse([buildScreenEvent()]);
       }),
     );
 
@@ -313,6 +377,7 @@ describe("useScreenStream", () => {
 
     paneId = "pane-2";
     rerender();
+    expect(result.current.transport).toBe("connecting");
 
     await waitFor(() => {
       expect(requestedUrls).toContain("/api/streams/sessions/pane-2/screen");

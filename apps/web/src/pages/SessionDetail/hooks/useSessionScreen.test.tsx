@@ -122,6 +122,7 @@ describe("useSessionScreen", () => {
           paneId,
           mode: "text" as const,
           capturedAt: new Date(0).toISOString(),
+          cursor: "pane-1-cursor",
           screen: "old-1\nold-2\nold-3",
         });
       }
@@ -149,6 +150,13 @@ describe("useSessionScreen", () => {
 
     expect(result.current.screenLines).toEqual([]);
     expect(result.current.isScreenLoading).toBe(true);
+    await waitFor(() => {
+      expect(requestScreen).toHaveBeenCalledWith("pane-2", { mode: "text" });
+    });
+    expect(requestScreen).not.toHaveBeenCalledWith("pane-2", {
+      mode: "text",
+      cursor: "pane-1-cursor",
+    });
     resolvePaneTwo({
       ok: true,
       paneId: "pane-2",

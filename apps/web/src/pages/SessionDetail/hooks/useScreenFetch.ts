@@ -27,7 +27,7 @@ import {
   screenFetchLifecycleReducer,
 } from "./screen-fetch-lifecycle";
 import { useScreenPollingPauseReason } from "./useScreenPollingPauseReason";
-import { useScreenStream } from "./useScreenStream";
+import { type ScreenStreamTransport, useScreenStream } from "./useScreenStream";
 
 const normalizeScreenText = (text: string) => text.replace(/\r\n/g, "\n");
 
@@ -86,6 +86,8 @@ type UseScreenFetchParams = {
   apiBasePath?: string;
   /** Bearer token for SSE authentication. SSE is disabled when null. */
   token?: string | null;
+  /** Initial SSE screen deadline before REST polling takes over. */
+  streamFallbackDelayMs?: number;
 };
 
 type CommitTextScreenRefsParams = {
@@ -141,6 +143,7 @@ export const useScreenFetch = ({
   onModeLoaded,
   apiBasePath = "/api",
   token = null,
+  streamFallbackDelayMs,
 }: UseScreenFetchParams) => {
   const [fallbackReason, setFallbackReason] = useAtom(screenFallbackReasonAtom);
   const [error, setError] = useAtom(screenErrorAtom);
@@ -321,6 +324,15 @@ export const useScreenFetch = ({
     [cursorRef, screenLinesRef, updateTextScreen],
   );
 
+  const markCurrentModeLoaded = useCallback(() => {
+    // Advance the shared ref before scheduling parent state so a fallback
+    // refresh cannot reopen loading in the render-to-effect synchronization gap.
+    if (!modeLoadedRef.current[mode]) {
+      modeLoadedRef.current = { ...modeLoadedRef.current, [mode]: true };
+    }
+    onModeLoaded(mode);
+  }, [mode, modeLoadedRef, onModeLoaded]);
+
   const resetDisconnectedState = useCallback(
     (skipWhenErrorPresent: boolean) => {
       applyRefreshLifecycleAction({ type: "reset" });
@@ -388,13 +400,12 @@ export const useScreenFetch = ({
       } else {
         applyTextResponse(response, suppressRender, immediateCommit);
       }
-      onModeLoaded(mode);
+      markCurrentModeLoaded();
     },
     [
       acceptCurrentResponse,
       applyTextResponse,
-      mode,
-      onModeLoaded,
+      markCurrentModeLoaded,
       setError,
       setFallbackReason,
       updateImageScreen,
@@ -475,24 +486,38 @@ export const useScreenFetch = ({
       if (!response.ok) {
         setFallbackReason(null);
         setError(response.error?.message ?? API_ERROR_MESSAGES.screenCapture);
-        onModeLoaded(mode);
+        markCurrentModeLoaded();
+        dispatchScreenLoading({ type: "finish", mode });
         return;
       }
       sseGenerationRef.current += 1;
+      applyRefreshLifecycleAction({ type: "reset" });
+      if (modeSwitchRef.current === mode) {
+        modeSwitchRef.current = null;
+      }
       setError(null);
       setFallbackReason(response.fallbackReason ?? null);
+      const isInitialScreen = !modeLoadedRef.current[mode];
       // react-doctor-disable-next-line no-event-handler
       const suppressRender = shouldSuppressTextRender(mode, isUserScrollingRef.current);
-      applyTextResponse(response, suppressRender, false);
+      // The first stream frame replaces the blocking loading state and must not
+      // be deferred behind later screen events. Subsequent updates stay in a
+      // transition so continuous output does not interrupt interaction.
+      applyTextResponse(response, suppressRender, isInitialScreen);
       // react-doctor-disable-next-line no-event-handler
-      onModeLoaded(mode);
+      markCurrentModeLoaded();
+      dispatchScreenLoading({ type: "finish", mode });
     },
     [
       acceptCurrentResponse,
+      applyRefreshLifecycleAction,
       applyTextResponse,
+      dispatchScreenLoading,
       isUserScrollingRef,
+      markCurrentModeLoaded,
       mode,
-      onModeLoaded,
+      modeLoadedRef,
+      modeSwitchRef,
       setError,
       setFallbackReason,
     ],
@@ -507,16 +532,17 @@ export const useScreenFetch = ({
     apiBasePath,
     // react-doctor-disable-next-line no-event-handler
     token,
+    fallbackDelayMs: streamFallbackDelayMs,
     onScreenEvent: handleSseScreenEvent,
   });
 
   // When SSE transitions back to polling (close/reconnect), reset the cursor so
   // the next REST request fetches a full response rather than a stale delta.
-  const prevTransportRef = useRef<"sse" | "polling">("polling");
+  const prevTransportRef = useRef<ScreenStreamTransport>("polling");
   useEffect(() => {
     const prev = prevTransportRef.current;
     prevTransportRef.current = transport;
-    if (prev === "sse" && transport === "polling") {
+    if (prev === "sse" && transport !== "sse") {
       cursorRef.current = null;
     }
   }, [cursorRef, transport]);
@@ -524,9 +550,14 @@ export const useScreenFetch = ({
   // False positive: initial and parameter-change screen loads are lifecycle IO,
   // not render-time data flowing back to the parent.
   useEffect(() => {
+    // Text screens arrive through the stream. REST is reserved for image mode
+    // and for polling fallback after the stream fails to connect.
+    if (transport !== "polling") {
+      return;
+    }
     // react-doctor-disable-next-line no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent
     refreshScreen();
-  }, [refreshScreen]);
+  }, [refreshScreen, transport]);
 
   // False positive: this reconciles connection lifecycle state owned by the
   // screen hook when the shared connection status changes.
@@ -545,7 +576,7 @@ export const useScreenFetch = ({
   // Suspend REST polling while SSE is actively streaming text updates;
   // image mode always uses polling (SSE is text-only).
   useVisibilityPolling({
-    enabled: Boolean(paneId) && connected && transport !== "sse",
+    enabled: Boolean(paneId) && connected && transport === "polling",
     intervalMs: resolveScreenPollIntervalMs(mode),
     shouldPoll: canPollScreen,
     onTick: pollScreen,

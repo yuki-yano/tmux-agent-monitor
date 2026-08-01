@@ -776,6 +776,10 @@ button,
   animation: fade-in 0.3s ease-out forwards;
 }
 
+.animate-delayed-fade-in {
+  animation: fade-in 0.2s ease-out 0.3s both;
+}
+
 /* Staggered animation delays */
 .stagger-1 {
   animation-delay: 0.05s;
@@ -854,6 +858,7 @@ button,
   */
   .animate-fade-in-up,
   .animate-fade-in,
+  .animate-delayed-fade-in,
   .animate-fade-out,
   .animate-panel-enter,
   .animate-panel-exit {

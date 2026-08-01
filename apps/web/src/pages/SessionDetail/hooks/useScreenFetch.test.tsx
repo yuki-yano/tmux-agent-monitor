@@ -330,10 +330,23 @@ describe("useScreenFetch", () => {
   // SSE integration
   // ---------------------------------------------------------------------------
 
-  it("suspends REST polling while SSE is open", async () => {
-    const neverEndingStream = () =>
+  it("does not start REST while the initial SSE connection is opening or open", async () => {
+    const enc = new TextEncoder();
+    const screenPayload: ScreenResponse = {
+      ok: true,
+      paneId: "pane-1",
+      mode: "text",
+      capturedAt: new Date(0).toISOString(),
+      screen: "initial-sse",
+      full: true,
+    };
+    const screenStream = () =>
       new ReadableStream({
-        start() {},
+        start(controller) {
+          controller.enqueue(
+            enc.encode(`event: screen\ndata: ${JSON.stringify(screenPayload)}\n\n`),
+          );
+        },
         cancel() {},
       });
 
@@ -341,7 +354,7 @@ describe("useScreenFetch", () => {
       http.get(
         "/api/streams/sessions/pane-1/screen",
         () =>
-          new HttpResponse(neverEndingStream(), {
+          new HttpResponse(screenStream(), {
             headers: { "Content-Type": "text/event-stream" },
           }),
       ),
@@ -387,17 +400,12 @@ describe("useScreenFetch", () => {
 
     const { result } = renderHook(() => useScreenFetch(params), { wrapper });
 
-    // Wait for the initial REST fetch to complete
-    await waitFor(() => {
-      expect(requestScreen).toHaveBeenCalledTimes(1);
-    });
-
     // Wait for SSE to open (transport === "sse")
     await waitFor(() => {
       expect(result.current.transport).toBe("sse");
     });
 
-    const callsAfterSseOpen = requestScreen.mock.calls.length;
+    expect(requestScreen).not.toHaveBeenCalled();
 
     // Wait well below the polling interval (1000ms) — polling is suspended so
     // no additional REST calls should fire.
@@ -405,8 +413,79 @@ describe("useScreenFetch", () => {
       setTimeout(resolve, 200);
     });
 
-    // REST polling should not have fired additional calls while SSE is open
-    expect(requestScreen.mock.calls.length).toBe(callsAfterSseOpen);
+    // REST polling should stay suspended while SSE is open.
+    expect(requestScreen).not.toHaveBeenCalled();
+  });
+
+  it("falls back to REST when the initial SSE connection fails", async () => {
+    server.use(
+      http.get(
+        "/api/streams/sessions/pane-1/screen",
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    );
+
+    const { result, requestScreen } = setup({
+      apiBasePath: "/api",
+      token: "test-token",
+    });
+
+    expect(result.current.transport).toBe("connecting");
+    await waitFor(() => {
+      expect(result.current.transport).toBe("polling");
+      expect(requestScreen).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("uses REST after the first SSE screen deadline and returns to SSE on recovery", async () => {
+    const enc = new TextEncoder();
+    const screenPayload: ScreenResponse = {
+      ok: true,
+      paneId: "pane-1",
+      mode: "text",
+      capturedAt: new Date(1_000).toISOString(),
+      screen: "recovered-sse",
+      full: true,
+    };
+    let releaseConnection!: () => void;
+    const connectionGate = new Promise<void>((resolve) => {
+      releaseConnection = resolve;
+    });
+    server.use(
+      http.get("/api/streams/sessions/pane-1/screen", async () => {
+        await connectionGate;
+        return new HttpResponse(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                enc.encode(`event: screen\ndata: ${JSON.stringify(screenPayload)}\n\n`),
+              );
+            },
+            cancel() {},
+          }),
+          { headers: { "Content-Type": "text/event-stream" } },
+        );
+      }),
+    );
+
+    const { result, requestScreen } = setup({
+      apiBasePath: "/api",
+      token: "test-token",
+      streamFallbackDelayMs: 20,
+    });
+
+    expect(result.current.transport).toBe("connecting");
+    await waitFor(() => {
+      expect(result.current.transport).toBe("polling");
+      expect(requestScreen).toHaveBeenCalledTimes(1);
+    });
+
+    releaseConnection();
+    await waitFor(() => {
+      expect(result.current.transport).toBe("sse");
+    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 200));
+    expect(requestScreen).toHaveBeenCalledTimes(1);
   });
 
   it("updates screen via SSE event without REST polling", async () => {
@@ -441,8 +520,22 @@ describe("useScreenFetch", () => {
       }),
     );
 
-    // requestScreen never resolves so we can isolate the SSE path
-    const requestScreen = vi.fn(() => new Promise<ScreenResponse>(() => {}));
+    let resolveRest!: (response: ScreenResponse) => void;
+    const requestScreen = vi.fn(
+      () =>
+        new Promise<ScreenResponse>((resolve) => {
+          resolveRest = resolve;
+        }),
+    );
+    const dispatchScreenLoading = vi.fn();
+    const isUserScrollingRef = { current: false };
+    const modeLoadedRef = { current: { text: false, image: false } };
+    const modeSwitchRef = { current: "text" as "text" | "image" | null };
+    const screenRef = { current: "" };
+    const imageRef = { current: null as string | null };
+    const cursorRef = { current: null as string | null };
+    const screenLinesRef = { current: [] as string[] };
+    const pendingScreenRef = { current: null as string | null };
     const setScreen = vi.fn().mockImplementation(() => {
       resolveFirstEvent();
     });
@@ -454,7 +547,7 @@ describe("useScreenFetch", () => {
       <JotaiProvider store={store}>{children}</JotaiProvider>
     );
 
-    renderHook(
+    const { result } = renderHook(
       () =>
         useScreenFetch({
           paneId: "pane-1",
@@ -462,18 +555,18 @@ describe("useScreenFetch", () => {
           connectionIssue: null,
           requestScreen,
           mode: "text",
-          isUserScrollingRef: { current: false },
-          modeLoadedRef: { current: { text: false, image: false } },
-          modeSwitchRef: { current: null },
-          screenRef: { current: "" },
-          imageRef: { current: null },
-          cursorRef: { current: null },
-          screenLinesRef: { current: [] },
-          pendingScreenRef: { current: null },
+          isUserScrollingRef,
+          modeLoadedRef,
+          modeSwitchRef,
+          screenRef,
+          imageRef,
+          cursorRef,
+          screenLinesRef,
+          pendingScreenRef,
           setScreen,
           setImageBase64: vi.fn(),
           setScreenContentContextKey: vi.fn(),
-          dispatchScreenLoading: vi.fn(),
+          dispatchScreenLoading,
           onModeLoaded: vi.fn(),
           apiBasePath: "/api",
           token: "test-token",
@@ -484,10 +577,46 @@ describe("useScreenFetch", () => {
     await firstEventDelivered;
 
     expect(setScreen).toHaveBeenCalledWith("from-sse");
+    expect(dispatchScreenLoading).toHaveBeenCalledWith({ type: "finish", mode: "text" });
+    const finishCallIndex = dispatchScreenLoading.mock.calls.findIndex(
+      ([event]) => event.type === "finish" && event.mode === "text",
+    );
+    expect(setScreen.mock.invocationCallOrder[0]).toBeLessThan(
+      dispatchScreenLoading.mock.invocationCallOrder[finishCallIndex] ?? Number.POSITIVE_INFINITY,
+    );
+    expect(modeSwitchRef.current).toBeNull();
+    expect(requestScreen).not.toHaveBeenCalled();
+
+    const loadingDispatchCount = dispatchScreenLoading.mock.calls.length;
+    act(() => {
+      void result.current.refreshScreen();
+    });
+    await waitFor(() => {
+      expect(requestScreen).toHaveBeenCalledTimes(1);
+    });
+    expect(dispatchScreenLoading).toHaveBeenCalledTimes(loadingDispatchCount);
+
+    await act(async () => {
+      resolveRest({
+        ok: true,
+        paneId: "pane-1",
+        mode: "text",
+        capturedAt: new Date(-1_000).toISOString(),
+        screen: "stale-rest",
+        full: true,
+      });
+    });
+
+    expect(setScreen).not.toHaveBeenCalledWith("stale-rest");
+    expect(dispatchScreenLoading).toHaveBeenCalledTimes(loadingDispatchCount);
   });
 
   it("does not let an older REST response overwrite a newer SSE screen", async () => {
     const enc = new TextEncoder();
+    let resolveRestStarted!: () => void;
+    const restStarted = new Promise<void>((resolve) => {
+      resolveRestStarted = resolve;
+    });
     const sseResponse: ScreenResponse = {
       ok: true,
       paneId: "pane-1",
@@ -498,7 +627,8 @@ describe("useScreenFetch", () => {
     };
 
     server.use(
-      http.get("/api/streams/sessions/pane-1/screen", () => {
+      http.get("/api/streams/sessions/pane-1/screen", async () => {
+        await restStarted;
         const stream = new ReadableStream({
           start(controller) {
             controller.enqueue(
@@ -514,20 +644,27 @@ describe("useScreenFetch", () => {
     );
 
     let resolveRest!: (response: ScreenResponse) => void;
-    const requestScreen = vi.fn(
-      () =>
-        new Promise<ScreenResponse>((resolve) => {
-          resolveRest = resolve;
-        }),
-    );
+    const requestScreen = vi.fn(() => {
+      resolveRestStarted();
+      return new Promise<ScreenResponse>((resolve) => {
+        resolveRest = resolve;
+      });
+    });
     const screenRef = { current: "" };
     const setScreen = vi.fn();
-    const { params } = setup({
+    const { result, params } = setup({
       requestScreen,
       screenRef,
       setScreen,
       apiBasePath: "/api",
       token: "test-token",
+    });
+
+    act(() => {
+      void result.current.refreshScreen();
+    });
+    await waitFor(() => {
+      expect(requestScreen).toHaveBeenCalledTimes(1);
     });
 
     await waitFor(() => {
@@ -552,6 +689,10 @@ describe("useScreenFetch", () => {
 
   it("rejects a newer REST delta when SSE changed its cursor base", async () => {
     const enc = new TextEncoder();
+    let resolveRestStarted!: () => void;
+    const restStarted = new Promise<void>((resolve) => {
+      resolveRestStarted = resolve;
+    });
     const sseResponse: ScreenResponse = {
       ok: true,
       paneId: "pane-1",
@@ -562,7 +703,8 @@ describe("useScreenFetch", () => {
       full: true,
     };
     server.use(
-      http.get("/api/streams/sessions/pane-1/screen", () => {
+      http.get("/api/streams/sessions/pane-1/screen", async () => {
+        await restStarted;
         const stream = new ReadableStream({
           start(controller) {
             controller.enqueue(
@@ -578,17 +720,17 @@ describe("useScreenFetch", () => {
     );
 
     let resolveRest!: (response: ScreenResponse) => void;
-    const requestScreen = vi.fn(
-      () =>
-        new Promise<ScreenResponse>((resolve) => {
-          resolveRest = resolve;
-        }),
-    );
+    const requestScreen = vi.fn(() => {
+      resolveRestStarted();
+      return new Promise<ScreenResponse>((resolve) => {
+        resolveRest = resolve;
+      });
+    });
     const cursorRef = { current: "rest-base" as string | null };
     const screenRef = { current: "rest-a\nrest-b" };
     const screenLinesRef = { current: ["rest-a", "rest-b"] };
     const setScreen = vi.fn();
-    setup({
+    const { result } = setup({
       requestScreen,
       cursorRef,
       screenRef,
@@ -596,6 +738,13 @@ describe("useScreenFetch", () => {
       setScreen,
       apiBasePath: "/api",
       token: "test-token",
+    });
+
+    act(() => {
+      void result.current.refreshScreen();
+    });
+    await waitFor(() => {
+      expect(requestScreen).toHaveBeenCalledTimes(1);
     });
 
     await waitFor(() => {
@@ -694,7 +843,7 @@ describe("useScreenFetch", () => {
 
     const requestScreen = vi.fn(() => new Promise<ScreenResponse>(() => {}));
     const onModeLoaded = vi.fn();
-    const { result } = setup({
+    const { result, params } = setup({
       requestScreen,
       onModeLoaded,
       apiBasePath: "/api",
@@ -704,6 +853,8 @@ describe("useScreenFetch", () => {
     await waitFor(() => {
       expect(result.current.error).toBe("cmux socket closed");
     });
+    expect(params.dispatchScreenLoading).toHaveBeenCalledWith({ type: "finish", mode: "text" });
     expect(onModeLoaded).toHaveBeenCalledWith("text");
+    expect(requestScreen).not.toHaveBeenCalled();
   });
 });

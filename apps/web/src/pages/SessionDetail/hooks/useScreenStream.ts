@@ -5,7 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { createSseSubscription } from "@/lib/sse/sse-subscription";
 import type { SseState } from "@/lib/sse/sse-subscription";
 
-export type ScreenStreamTransport = "sse" | "polling";
+export type ScreenStreamTransport = "connecting" | "sse" | "polling";
+
+type ScreenStreamState = {
+  key: string | null;
+  state: SseState;
+};
 
 type UseScreenStreamParams = {
   enabled: boolean;
@@ -13,7 +18,10 @@ type UseScreenStreamParams = {
   apiBasePath: string;
   token: string | null;
   onScreenEvent: (response: ScreenResponse) => void;
+  fallbackDelayMs?: number;
 };
+
+const DEFAULT_FALLBACK_DELAY_MS = 2_000;
 
 export const useScreenStream = ({
   enabled,
@@ -21,8 +29,15 @@ export const useScreenStream = ({
   apiBasePath,
   token,
   onScreenEvent,
+  fallbackDelayMs = DEFAULT_FALLBACK_DELAY_MS,
 }: UseScreenStreamParams): { transport: ScreenStreamTransport } => {
-  const [sseState, setSseState] = useState<SseState>("closed");
+  const streamKey = enabled && token && paneId ? `${apiBasePath}\0${paneId}\0${token}` : null;
+  const [streamState, setStreamState] = useState<ScreenStreamState>({
+    key: null,
+    state: "closed",
+  });
+  const [screenEventKey, setScreenEventKey] = useState<string | null>(null);
+  const [fallbackKey, setFallbackKey] = useState<string | null>(null);
   const onScreenEventRef = useRef(onScreenEvent);
 
   useEffect(() => {
@@ -30,7 +45,17 @@ export const useScreenStream = ({
   }, [onScreenEvent]);
 
   useEffect(() => {
-    if (!enabled || !token || !paneId) {
+    if (streamKey == null || screenEventKey === streamKey) {
+      return;
+    }
+    const fallbackTimer = setTimeout(() => {
+      setFallbackKey(streamKey);
+    }, fallbackDelayMs);
+    return () => clearTimeout(fallbackTimer);
+  }, [fallbackDelayMs, screenEventKey, streamKey]);
+
+  useEffect(() => {
+    if (streamKey == null || !token) {
       return;
     }
 
@@ -39,7 +64,12 @@ export const useScreenStream = ({
     const sub = createSseSubscription({
       url,
       getHeaders: () => ({ Authorization: `Bearer ${token}` }),
-      onStateChange: setSseState,
+      onStateChange: (state) => {
+        setStreamState({ key: streamKey, state });
+        if (state !== "open") {
+          setScreenEventKey((current) => (current === streamKey ? null : current));
+        }
+      },
       onEvent: (event) => {
         if (event.event !== "screen") return;
         let parsed: ReturnType<typeof screenResponseSchema.safeParse>;
@@ -49,6 +79,8 @@ export const useScreenStream = ({
           return;
         }
         if (!parsed.success) return;
+        setScreenEventKey(streamKey);
+        setFallbackKey((current) => (current === streamKey ? null : current));
         onScreenEventRef.current(parsed.data);
       },
     });
@@ -56,7 +88,17 @@ export const useScreenStream = ({
     return () => {
       sub.close();
     };
-  }, [enabled, paneId, apiBasePath, token]);
+  }, [apiBasePath, paneId, streamKey, token]);
 
-  return { transport: sseState === "open" ? "sse" : "polling" };
+  if (streamKey == null) {
+    return { transport: "polling" };
+  }
+  const sseState = streamState.key === streamKey ? streamState.state : "connecting";
+  if (sseState === "open" && screenEventKey === streamKey && fallbackKey !== streamKey) {
+    return { transport: "sse" };
+  }
+  if ((sseState === "connecting" || sseState === "open") && fallbackKey !== streamKey) {
+    return { transport: "connecting" };
+  }
+  return { transport: "polling" };
 };
