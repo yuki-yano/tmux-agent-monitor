@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   activateTabMock,
+  closeAllTabsMock,
   closeTabMock,
   usePwaTabsDndMock,
   usePwaWorkspaceTabsVMMock,
   workspaceTabsState,
 } = vi.hoisted(() => ({
   activateTabMock: vi.fn(),
+  closeAllTabsMock: vi.fn(),
   closeTabMock: vi.fn(),
   usePwaTabsDndMock: vi.fn(),
   usePwaWorkspaceTabsVMMock: vi.fn(),
@@ -52,6 +54,7 @@ vi.mock("../context/workspace-tabs-context", () => ({
     activeTabId: workspaceTabsState.activeTabId,
     tabs: workspaceTabsState.tabs,
     activateTab: activateTabMock,
+    closeAllTabs: closeAllTabsMock,
     closeTab: closeTabMock,
     reorderTabs: vi.fn(),
     reorderTabsByClosableOrder: vi.fn(),
@@ -100,6 +103,7 @@ const showOnlyPaneB = () => {
 describe("PwaWorkspaceTabs keyboard accessibility", () => {
   beforeEach(() => {
     activateTabMock.mockReset();
+    closeAllTabsMock.mockReset();
     closeTabMock.mockReset();
     workspaceTabsState.activeTabId = paneATab.id;
     workspaceTabsState.tabs = [sessionsTab, paneATab, paneBTab];
@@ -159,12 +163,19 @@ describe("PwaWorkspaceTabs keyboard accessibility", () => {
     const closeButton = screen.getByRole("button", { name: "Close A" });
     expect(closeButton.closest('[role="group"]')).toBe(controlsGroup);
     expect(closeButton.closest('[role="tablist"]')).toBeNull();
+    const closeAllButton = screen.getByRole("button", { name: "Close all tabs" });
     const sequentialTabStops = [...document.querySelectorAll<HTMLButtonElement>("button")].filter(
       (button) => button.tabIndex >= 0 && !button.disabled,
     );
-    expect(sequentialTabStops).toEqual([paneA, reorderPaneAGroup, reorderPaneBGroup]);
+    expect(sequentialTabStops).toEqual([
+      paneA,
+      reorderPaneAGroup,
+      reorderPaneBGroup,
+      closeAllButton,
+    ]);
     expect(sequentialTabStops.map((element) => element.getAttribute("role") ?? "button")).toEqual([
       "tab",
+      "button",
       "button",
       "button",
     ]);
@@ -252,5 +263,86 @@ describe("PwaWorkspaceTabs keyboard accessibility", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Reorder session group TWO" }),
     );
+  });
+
+  it("places the close-all control after the scrollable tabs and requires confirmation", () => {
+    render(<PwaWorkspaceTabs />);
+
+    const closeAllButton = screen.getByRole("button", { name: "Close all tabs" });
+    const closeAllControl = closeAllButton.closest<HTMLElement>("[data-close-all-tabs-control]");
+    const tablist = screen.getByRole("tablist", { name: "PWA workspace tabs" });
+    expect(closeAllControl?.closest(".overflow-x-auto")).toBeTruthy();
+    expect(closeAllControl?.parentElement).toBe(tablist.parentElement);
+    expect(closeAllControl?.parentElement?.lastElementChild).toBe(closeAllControl);
+
+    fireEvent.click(closeAllButton);
+    expect(screen.getByRole("dialog", { name: "Close all tabs?" })).toBeTruthy();
+    expect(
+      screen.getByText("This will close 2 tabs. The Sessions tab will stay open."),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(closeAllTabsMock).not.toHaveBeenCalled();
+
+    fireEvent.click(closeAllButton);
+    fireEvent.click(screen.getByRole("button", { name: "Close all" }));
+
+    expect(closeAllTabsMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog", { name: "Close all tabs?" })).toBeNull();
+  });
+
+  it("keeps the mobile tab row vertically locked with consistently sized controls", () => {
+    render(<PwaWorkspaceTabs />);
+
+    const tablist = screen.getByRole("tablist", { name: "PWA workspace tabs" });
+    const scrollViewport = tablist.closest<HTMLElement>(".overflow-x-auto");
+    expect(scrollViewport?.classList.contains("h-11")).toBe(true);
+    expect(scrollViewport?.classList.contains("overflow-y-hidden")).toBe(true);
+
+    expect(screen.getByRole("tab", { name: "S" }).classList.contains("h-8")).toBe(true);
+    const activeTab = screen.getByRole("tab", { name: "A" });
+    const inactiveTab = screen.getByRole("tab", { name: "B" });
+    expect(activeTab.classList.contains("h-8")).toBe(true);
+    expect(activeTab.classList.contains("min-w-0")).toBe(true);
+    expect(inactiveTab.classList.contains("min-w-0")).toBe(true);
+    expect(activeTab.classList.contains("pr-5")).toBe(true);
+    expect(inactiveTab.classList.contains("pr-2")).toBe(true);
+    expect(inactiveTab.classList.contains("pr-5")).toBe(false);
+    expect(
+      screen.getByRole("button", { name: "Reorder session group ONE" }).classList.contains("h-7"),
+    ).toBe(true);
+    expect(screen.getByRole("button", { name: "Close all tabs" }).classList.contains("h-8")).toBe(
+      true,
+    );
+  });
+
+  it("disables close-all when only the fixed Sessions tab remains", () => {
+    workspaceTabsState.activeTabId = sessionsTab.id;
+    workspaceTabsState.tabs = [sessionsTab];
+    usePwaWorkspaceTabsVMMock.mockReturnValue({
+      fixedSessionsTab: sessionsTab,
+      closableTabs: [],
+      tabGroups: [],
+      resolveTabLabel: () => "S",
+      resolveTabStateClass: () => "state",
+    });
+    usePwaTabsDndMock.mockReturnValue({
+      sensors: [],
+      dragKind: null,
+      activeDragGroup: null,
+      displayedGroupSortableItems: [],
+      orderedTabGroups: [],
+      collisionDetection: vi.fn(),
+      handleDragStart: vi.fn(),
+      handleDragOver: vi.fn(),
+      handleDragEnd: vi.fn(),
+      handleDragCancel: vi.fn(),
+    });
+
+    render(<PwaWorkspaceTabs />);
+
+    expect(
+      (screen.getByRole("button", { name: "Close all tabs" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });

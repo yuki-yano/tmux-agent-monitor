@@ -25,6 +25,7 @@ import {
   type WorkspaceTab,
   type WorkspaceTabsState,
   activateWorkspaceTab,
+  closeAllWorkspaceTabs,
   closeWorkspaceTab,
   createInitialWorkspaceTabsState,
   deserializeWorkspaceTabsState,
@@ -48,6 +49,7 @@ type WorkspaceTabsContextValue = {
   openSessionTab: (paneId: string) => void;
   activateTab: (tabId: string) => void;
   closeTab: (tabId: string) => void;
+  closeAllTabs: () => void;
   dismissSessionTab: (paneId: string) => void;
   reorderTabs: (activeTabId: string, overTabId: string) => void;
   reorderTabsByClosableOrder: (orderedClosableTabIds: string[]) => void;
@@ -61,6 +63,7 @@ const WORKSPACE_TABS_FALLBACK: WorkspaceTabsContextValue = {
   openSessionTab: () => undefined,
   activateTab: () => undefined,
   closeTab: () => undefined,
+  closeAllTabs: () => undefined,
   dismissSessionTab: () => undefined,
   reorderTabs: () => undefined,
   reorderTabsByClosableOrder: () => undefined,
@@ -122,6 +125,19 @@ const resolveDismissSessionTabsTransition = (
       ? null
       : (dismissed.state.tabs.find((tab) => tab.id === dismissed.state.activeTabId) ?? null);
   return { state: dismissed.state, navigationTarget };
+};
+
+const resolveCloseAllTabsTransition = (
+  state: WorkspaceTabsState,
+  now: number,
+): WorkspaceTabsTransition => {
+  const closed = closeAllWorkspaceTabs(state, now);
+  if (!closed.changed) return withoutNavigation(state);
+  const navigationTarget =
+    closed.state.activeTabId === state.activeTabId
+      ? null
+      : (closed.state.tabs.find((tab) => tab.id === closed.state.activeTabId) ?? null);
+  return { state: closed.state, navigationTarget };
 };
 
 // The explicit resume flow has already selected and navigated to its target.
@@ -392,6 +408,13 @@ export const WorkspaceTabsProvider = ({ children }: PropsWithChildren) => {
     [applyTabsTransition, enabled, pathname],
   );
 
+  const closeAllTabs = useCallback(() => {
+    if (!enabled) {
+      return;
+    }
+    applyTabsTransition((previous) => resolveCloseAllTabsTransition(previous, Date.now()));
+  }, [applyTabsTransition, enabled]);
+
   const dismissSessionTab = useCallback(
     (paneId: string) => {
       if (!enabled) {
@@ -440,12 +463,14 @@ export const WorkspaceTabsProvider = ({ children }: PropsWithChildren) => {
       openSessionTab,
       activateTab,
       closeTab,
+      closeAllTabs,
       dismissSessionTab,
       reorderTabs,
       reorderTabsByClosableOrder,
     }),
     [
       activateTab,
+      closeAllTabs,
       closeTab,
       dismissSessionTab,
       enabled,

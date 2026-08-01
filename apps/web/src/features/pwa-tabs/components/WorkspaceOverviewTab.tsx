@@ -18,8 +18,8 @@ export const WorkspaceOverviewTab = ({ tab, active, onActivate }: WorkspaceOverv
     data-tab-id={tab.id}
     onClick={() => onActivate(tab.id)}
     className={[
-      "text-latte-subtext0 hover:text-latte-text hover:border-latte-blue/45 inline-flex min-w-0 items-center gap-1.5 rounded-xl border border-[var(--control-stroke)] bg-[var(--control-track)] px-2 py-1.5 text-[11px] font-semibold transition-[scale,background-color,color,border-color,box-shadow] duration-200 ease-out active:scale-[0.96] active:duration-100",
-      "data-[active=true]:border-latte-blue/70 data-[active=true]:bg-latte-blue/16 data-[active=true]:text-latte-text data-[active=true]:shadow-[inset_0_0_0_1px_rgb(var(--ctp-blue)/0.14),0_1px_3px_rgb(var(--ctp-shadow)/0.14)] data-[active=true]:font-bold",
+      "text-latte-subtext0 hover:text-latte-text hover:border-latte-blue/45 relative inline-flex h-8 min-w-0 items-center gap-1.5 rounded-xl border border-[var(--control-stroke)] bg-[var(--control-track)] px-2 text-[11px] font-semibold transition-[scale,background-color,color,border-color,box-shadow] duration-200 ease-out after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] active:scale-[0.96] active:duration-100",
+      "data-[active=true]:border-latte-blue/70 data-[active=true]:bg-latte-blue/16 data-[active=true]:text-latte-text data-[active=true]:shadow-[inset_0_0_0_1px_rgb(var(--ctp-blue)/0.14),0_1px_3px_rgb(var(--ctp-shadow)/0.14)]",
     ].join(" ")}
     data-active={active ? "true" : "false"}
   >

@@ -99,7 +99,7 @@ export const SortableSessionGroup = ({
         event.preventDefault();
       }}
       className={[
-        "text-latte-subtext0 hover:text-latte-text hover:border-latte-blue/38 pointer-events-auto rounded-md border border-[var(--control-stroke)] bg-[var(--control-track)] px-1.5 py-1 text-[10px] font-semibold tracking-wide transition-[scale,background-color,color,border-color,box-shadow] duration-200 ease-out active:scale-[0.96] active:duration-100",
+        "text-latte-subtext0 hover:text-latte-text hover:border-latte-blue/38 pointer-events-auto relative ml-1.5 inline-flex h-7 items-center rounded-md border border-[var(--control-stroke)] bg-[var(--control-track)] px-1.5 text-[10px] font-semibold tracking-wide transition-[scale,background-color,color,border-color,box-shadow] duration-200 ease-out after:absolute after:inset-x-0 after:-inset-y-2 after:content-[''] active:scale-[0.96] active:duration-100",
         isActiveGroup
           ? "text-latte-text border-latte-blue/62 bg-latte-blue/14 shadow-[inset_0_0_0_1px_rgb(var(--ctp-blue)/0.12)]"
           : "",
@@ -119,7 +119,7 @@ export const SortableSessionGroup = ({
         ref={setNodeRef}
         style={style}
         className={[
-          "border-latte-surface2/65 relative items-center border-l pl-1.5",
+          "relative items-center pl-1.5 before:absolute before:left-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:border-l before:border-latte-surface2/65 before:content-['']",
           isDragging ? "opacity-45" : "",
         ].join(" ")}
         data-group-key={group.key}
@@ -128,7 +128,7 @@ export const SortableSessionGroup = ({
         <span
           aria-hidden="true"
           style={{ gridColumn: 1, gridRow: 1 }}
-          className="invisible rounded-md border px-1.5 py-1 text-[10px] font-semibold tracking-wide"
+          className="invisible inline-flex h-7 items-center rounded-md border px-1.5 text-[10px] font-semibold tracking-wide"
         >
           {group.label}
         </span>

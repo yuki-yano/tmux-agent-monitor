@@ -4,6 +4,7 @@ import {
   SYSTEM_SESSIONS_TAB_ID,
   WORKSPACE_TABS_MAX_COUNT,
   activateWorkspaceTab,
+  closeAllWorkspaceTabs,
   closeWorkspaceTab,
   createInitialWorkspaceTabsState,
   deserializeWorkspaceTabsState,
@@ -73,6 +74,59 @@ describe("workspace-tabs model", () => {
         systemRoute: "sessions",
         closable: false,
         lastActivatedAt: 1234,
+      },
+    ]);
+  });
+
+  it("closes every closable tab and activates the fixed sessions tab", () => {
+    let state = createInitialWorkspaceTabsState(0);
+    state = syncWorkspaceTabsWithPathname(state, "/sessions/a", 1);
+    state = syncWorkspaceTabsWithPathname(state, "/chat-grid", 2);
+
+    const closed = closeAllWorkspaceTabs(state, 999);
+
+    expect(closed.changed).toBe(true);
+    expect(closed.state.activeTabId).toBe(SYSTEM_SESSIONS_TAB_ID);
+    expect(closed.state.tabs.map((tab) => tab.id)).toEqual([SYSTEM_SESSIONS_TAB_ID]);
+  });
+
+  it("reports no change when there are no closable tabs", () => {
+    const state = createInitialWorkspaceTabsState(0);
+
+    const closed = closeAllWorkspaceTabs(state, 999);
+
+    expect(closed.changed).toBe(false);
+    expect(closed.state).toBe(state);
+  });
+
+  it("restores the fixed Sessions tab when all stored tabs are closable", () => {
+    const closed = closeAllWorkspaceTabs(
+      {
+        activeTabId: "session:a",
+        tabs: [
+          {
+            id: "session:a",
+            kind: "session",
+            paneId: "a",
+            systemRoute: null,
+            closable: true,
+            lastActivatedAt: 10,
+          },
+        ],
+      },
+      999,
+    );
+
+    expect(closed.changed).toBe(true);
+    expect(closed.state.activeTabId).toBe(SYSTEM_SESSIONS_TAB_ID);
+    expect(closed.state.tabs).toEqual([
+      {
+        id: SYSTEM_SESSIONS_TAB_ID,
+        kind: "system",
+        paneId: null,
+        systemRoute: "sessions",
+        closable: false,
+        lastActivatedAt: 999,
       },
     ]);
   });

@@ -271,6 +271,32 @@ export const closeWorkspaceTab = (
   };
 };
 
+export const closeAllWorkspaceTabs = (
+  state: WorkspaceTabsState,
+  now = Date.now(),
+): {
+  changed: boolean;
+  state: WorkspaceTabsState;
+} => {
+  if (!state.tabs.some((tab) => tab.closable)) {
+    return {
+      changed: false,
+      state,
+    };
+  }
+  const remainingTabs = ensureSessionsTab(
+    state.tabs.filter((tab) => !tab.closable),
+    now,
+  );
+  return {
+    changed: true,
+    state: {
+      activeTabId: normalizeActiveTabId(remainingTabs, state.activeTabId),
+      tabs: remainingTabs,
+    },
+  };
+};
+
 export const dismissWorkspaceSessionTabByPaneId = (
   state: WorkspaceTabsState,
   paneId: string,

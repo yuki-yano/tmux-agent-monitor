@@ -14,6 +14,7 @@ import { useWorkspaceTabs } from "../context/workspace-tabs-context";
 import { usePwaWorkspaceTabsVM } from "../hooks/usePwaWorkspaceTabsVM";
 import { toGroupSortableId, usePwaTabsDnd } from "../hooks/usePwaTabsDnd";
 import { resolveWorkspaceTabNavigationIndex } from "../model/workspace-tab-keyboard-navigation";
+import { CloseAllWorkspaceTabsButton } from "./CloseAllWorkspaceTabsButton";
 import { SortableSessionGroup } from "./SortableSessionGroup";
 import { StaticTabChip } from "./StaticTabChip";
 import { WorkspaceOverviewTab } from "./WorkspaceOverviewTab";
@@ -27,6 +28,7 @@ export const PwaWorkspaceTabs = () => {
     tabs,
     activateTab,
     closeTab,
+    closeAllTabs,
     reorderTabs,
     reorderTabsByClosableOrder,
   } = useWorkspaceTabs();
@@ -63,7 +65,9 @@ export const PwaWorkspaceTabs = () => {
     nextGridColumn += group.tabs.length + 1;
     return { group, groupColumnStart };
   });
-  const gridColumnCount = Math.max(1, nextGridColumn - 1);
+  const tabGridColumnCount = Math.max(1, nextGridColumn - 1);
+  const closeAllGridColumn = tabGridColumnCount + 1;
+  const gridColumnCount = closeAllGridColumn;
 
   const handleTabListKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -216,8 +220,8 @@ export const PwaWorkspaceTabs = () => {
         aria-hidden="true"
         className="bg-latte-mantle absolute inset-x-0 top-0 h-[env(safe-area-inset-top)]"
       />
-      <div className="pointer-events-auto w-full border-b border-[var(--material-stroke)] bg-[var(--material-raised)] px-2 py-1.5 shadow-[var(--shadow-popover)] backdrop-blur-xl">
-        <div className="no-scrollbar overflow-x-auto">
+      <div className="pointer-events-auto w-full border-b border-[var(--material-stroke)] bg-[var(--material-raised)] px-2 shadow-[var(--shadow-popover)] backdrop-blur-xl">
+        <div className="no-scrollbar h-11 overflow-x-auto overflow-y-hidden">
           <DndContext
             sensors={sensors}
             collisionDetection={collisionDetection}
@@ -232,16 +236,16 @@ export const PwaWorkspaceTabs = () => {
             onDragCancel={handleDragCancel}
           >
             <div
-              className="relative grid min-w-max items-center gap-x-1.5"
+              className="relative grid h-full min-w-max items-center gap-x-1.5"
               style={{ gridTemplateColumns: `repeat(${gridColumnCount}, max-content)` }}
             >
               <div
                 role="tablist"
                 aria-label="PWA workspace tabs"
                 onKeyDown={handleTabListKeyDown}
-                className="grid items-center gap-x-1.5"
+                className="grid h-full items-center gap-x-1.5"
                 style={{
-                  gridColumn: "1 / -1",
+                  gridColumn: `1 / ${closeAllGridColumn}`,
                   gridRow: 1,
                   gridTemplateColumns: "subgrid",
                 }}
@@ -278,18 +282,28 @@ export const PwaWorkspaceTabs = () => {
                 ref={setControlsGroupElement}
                 role="group"
                 aria-label="Workspace tab controls"
-                className="pointer-events-none grid items-center gap-x-1.5"
+                className="pointer-events-none grid h-full items-center gap-x-1.5"
                 style={{
-                  gridColumn: "1 / -1",
+                  gridColumn: `1 / ${closeAllGridColumn}`,
                   gridRow: 1,
                   gridTemplateColumns: "subgrid",
                 }}
               />
+              <div
+                className="flex h-full items-center"
+                data-close-all-tabs-control=""
+                style={{ gridColumn: closeAllGridColumn, gridRow: 1 }}
+              >
+                <CloseAllWorkspaceTabsButton
+                  tabCount={closableTabs.length}
+                  onConfirm={closeAllTabs}
+                />
+              </div>
             </div>
             <DragOverlay>
               {activeDragGroup && (
                 <div className="flex items-center gap-1.5 rounded-xl border border-[var(--material-stroke)] bg-[var(--material-raised)] px-1.5 py-1.5 shadow-[var(--shadow-popover)] backdrop-blur-xl">
-                  <span className="text-latte-text rounded-md bg-[var(--control-track)] px-1.5 py-1 text-[10px] font-semibold tracking-wide">
+                  <span className="text-latte-text inline-flex h-7 items-center rounded-md bg-[var(--control-track)] px-1.5 text-[10px] font-semibold tracking-wide">
                     {activeDragGroup.label}
                   </span>
                   {activeDragGroup.tabs.map((tab) => (

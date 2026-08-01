@@ -45,6 +45,9 @@ const Probe = () => {
       <button type="button" onClick={() => workspaceTabs.closeTab("session:pane-a")}>
         Close active tab
       </button>
+      <button type="button" onClick={workspaceTabs.closeAllTabs}>
+        Close all tabs
+      </button>
       <button
         type="button"
         onClick={() => {
@@ -183,6 +186,26 @@ describe("WorkspaceTabsProvider", () => {
       to: "/sessions/$paneId",
       params: { paneId: "pane-c" },
     });
+  });
+
+  it("closes all closable tabs and navigates to Sessions once", async () => {
+    seedSessionTabs();
+    render(
+      <WorkspaceTabsProvider>
+        <Probe />
+      </WorkspaceTabsProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("active-tab").textContent).toBe("session:pane-a"),
+    );
+    navigateMock.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close all tabs" }));
+
+    expect(screen.getByTestId("tab-order").textContent).toBe("system:sessions");
+    expect(screen.getByTestId("active-tab").textContent).toBe("system:sessions");
+    expect(navigateMock).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith({ href: "/" });
   });
 
   it("composes consecutive dismiss transitions from the latest state", async () => {
