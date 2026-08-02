@@ -217,6 +217,7 @@ const useSessionDetailContextValue = (paneId: string) => {
       branches: {
         branches: branches.branches,
         repoRoot: branches.branchList?.repoRoot ?? null,
+        defaultBranch: branches.defaultBranch,
         currentBranch: branches.currentBranch,
         branchesLoading: branches.branchesLoading,
         branchesError: branches.branchesError,

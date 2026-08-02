@@ -4,6 +4,7 @@ import type {
   CommitFileDiff,
   CommitLog,
   DiffFile,
+  DiffMode,
   DiffSummary,
   PromptCompletionResult,
   PromptCompletionTrigger,
@@ -24,6 +25,7 @@ import {
   buildCommitFileQuery,
   buildCommitLogQuery,
   buildDiffFileQuery,
+  buildDiffQuery,
   buildForceQuery,
   buildRepoFileContentQuery,
   buildRepoFileSearchQuery,
@@ -104,9 +106,14 @@ export const createSessionQueryRequests = ({
 
   const requestDiffSummary = async (
     paneId: string,
-    options?: { force?: boolean; worktreePath?: string; branch?: string },
+    options: {
+      mode: DiffMode;
+      force?: boolean;
+      worktreePath?: string;
+      branch?: string;
+    },
   ) => {
-    const query = buildForceQuery(options);
+    const query = buildDiffQuery(options);
     return requestPaneQueryValue<{ summary?: DiffSummary }, "summary">({
       paneId,
       request: (param) => apiClient.sessions[":paneId"].diff.$get({ param, query }),
@@ -132,8 +139,13 @@ export const createSessionQueryRequests = ({
   const requestDiffFile = async (
     paneId: string,
     filePath: string,
-    rev?: string | null,
-    options?: { force?: boolean; worktreePath?: string; branch?: string },
+    rev: string | null | undefined,
+    options: {
+      mode: DiffMode;
+      force?: boolean;
+      worktreePath?: string;
+      branch?: string;
+    },
   ) => {
     const query = buildDiffFileQuery(filePath, rev, options);
     return requestPaneQueryValue<{ file?: DiffFile }, "file">({

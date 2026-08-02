@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 
+import type { DiffScope } from "../components/DiffSection";
 import { useSessionDetailContext } from "../SessionDetailProvider";
 import { resolveSessionFileRoot } from "../sessionDetailUtils";
 import { useSessionRepoNotes } from "./useSessionRepoNotes";
@@ -42,6 +43,8 @@ export const useSessionDetailViewDataSectionProps = ({
     diffFiles,
     diffOpen,
     diffLoadingFiles,
+    diffMode,
+    setDiffMode,
     refreshDiff,
     toggleDiff,
   } = diffs;
@@ -88,6 +91,36 @@ export const useSessionDetailViewDataSectionProps = ({
   const sessionBranch = screenEffectiveBranch ?? session?.branch ?? null;
   const virtualBranch = scope.virtualBranch.virtualBranch;
   const onClearVirtualBranch = scope.virtualBranch.clearVirtualBranch;
+  const diffScope = useMemo<DiffScope>(
+    () =>
+      virtualBranch == null
+        ? {
+            kind: "workingTree",
+            mode: diffMode,
+            baseBranch: scope.branches.defaultBranch,
+            branch: sessionBranch,
+            path: scope.virtualWorktree.effectiveWorktreePath,
+            selected: scope.virtualWorktree.virtualWorktreePath != null,
+          }
+        : {
+            kind: "branchComparison",
+            mode: "committed",
+            baseBranch: scope.branches.defaultBranch,
+            branch: virtualBranch,
+          },
+    [
+      scope.branches.defaultBranch,
+      diffMode,
+      scope.virtualWorktree.effectiveWorktreePath,
+      scope.virtualWorktree.virtualWorktreePath,
+      sessionBranch,
+      virtualBranch,
+    ],
+  );
+  const onClearDiffScope =
+    diffScope.kind === "branchComparison"
+      ? onClearVirtualBranch
+      : scope.virtualWorktree.clearVirtualWorktree;
 
   const handleResolveFileReference = useCallback(
     (rawToken: string) =>
@@ -118,22 +151,21 @@ export const useSessionDetailViewDataSectionProps = ({
         diffFiles,
         diffOpen,
         diffLoadingFiles,
-        diffBranch: sessionBranch,
-        virtualBranch,
+        diffScope,
       },
       actions: {
         onRefresh: refreshDiff,
         onToggle: toggleDiff,
         onPreviewFile: onOpenFileModal,
-        onClearVirtualBranch,
+        onClearScope: onClearDiffScope,
+        onModeChange: setDiffMode,
         onResolveFileReference: handleResolveFileReference,
         onResolveFileReferenceCandidates: handleResolveFileReferenceCandidates,
       },
     }),
     [
       diffSummary,
-      sessionBranch,
-      virtualBranch,
+      diffScope,
       diffError,
       diffLoading,
       diffFiles,
@@ -142,7 +174,8 @@ export const useSessionDetailViewDataSectionProps = ({
       refreshDiff,
       toggleDiff,
       onOpenFileModal,
-      onClearVirtualBranch,
+      onClearDiffScope,
+      setDiffMode,
       handleResolveFileReference,
       handleResolveFileReferenceCandidates,
     ],
@@ -198,7 +231,7 @@ export const useSessionDetailViewDataSectionProps = ({
         commitOpen,
         commitLoadingDetails,
         copiedHash,
-        commitBranch: sessionBranch,
+        commitBranch: virtualBranch ?? sessionBranch,
         virtualBranch,
       },
       actions: {

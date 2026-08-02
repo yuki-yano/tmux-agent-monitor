@@ -1,5 +1,6 @@
 import type {
   AllowedKey,
+  DiffMode,
   NotificationSubscriptionRevokeJson,
   NotificationSubscriptionUpsertJson,
   RawItem,
@@ -33,7 +34,11 @@ export type ForceQuery = {
   branch?: string;
 };
 
-export type DiffFileQuery = ForceQuery & {
+export type DiffQuery = ForceQuery & {
+  mode: DiffMode;
+};
+
+export type DiffFileQuery = DiffQuery & {
   path: string;
   rev?: string;
 };
@@ -197,7 +202,7 @@ type SessionApiClient<TRequestInit, TResponse, TFile> = {
     $post: ApiRequest<{ param: PaneParam; json: ScreenRequestJson }, TRequestInit, TResponse>;
   };
   diff: {
-    $get: ApiRequest<{ param: PaneParam; query: ForceQuery }, TRequestInit, TResponse>;
+    $get: ApiRequest<{ param: PaneParam; query: DiffQuery }, TRequestInit, TResponse>;
     file: { $get: ApiRequest<{ param: PaneParam; query: DiffFileQuery }, TRequestInit, TResponse> };
   };
   commits: {

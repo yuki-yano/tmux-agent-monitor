@@ -4,6 +4,7 @@ import type {
   ClientCapabilities,
   ClientConfig,
   ClientFileNavigatorConfig,
+  DiffMode,
   HighlightCorrectionConfig,
   LaunchConfig,
   ScreenResponse,
@@ -19,6 +20,7 @@ import type {
   CommitFileQuery,
   CommitLogQuery,
   DiffFileQuery,
+  DiffQuery,
   ForceQuery,
   LaunchAgentJson,
   NoteIdParam,
@@ -413,12 +415,24 @@ export const buildForceQuery = (options?: {
     options?.branch,
   );
 
+export const buildDiffQuery = (options: {
+  mode: DiffMode;
+  force?: boolean;
+  worktreePath?: string;
+  branch?: string;
+}): DiffQuery => ({ ...buildForceQuery(options), mode: options.mode });
+
 export const buildDiffFileQuery = (
   path: string,
-  rev?: string | null,
-  options?: { force?: boolean; worktreePath?: string; branch?: string },
+  rev: string | null | undefined,
+  options: {
+    mode: DiffMode;
+    force?: boolean;
+    worktreePath?: string;
+    branch?: string;
+  },
 ): DiffFileQuery => {
-  const query: DiffFileQuery = { path };
+  const query: DiffFileQuery = { path, mode: options.mode };
   if (rev) {
     query.rev = rev;
   }

@@ -176,6 +176,8 @@ export type UserConfigReadable = z.infer<typeof configOverrideSchema>;
 
 export type DiffFileStatus = "A" | "M" | "D" | "R" | "C" | "U" | "?";
 
+export type DiffMode = "total" | "committed" | "uncommitted";
+
 export type DiffSummaryFile = {
   path: string;
   status: DiffFileStatus;
@@ -191,7 +193,7 @@ export type DiffSummary = {
   generatedAt: string;
   files: DiffSummaryFile[];
   truncated?: boolean;
-  reason?: "not_git" | "cwd_unknown" | "error";
+  reason?: "not_git" | "cwd_unknown" | "default_branch_unavailable" | "error";
 };
 
 export type CommitSummary = {

@@ -37,6 +37,34 @@ const parseNumstatParts = (parts: string[]) => {
   };
 };
 
+const parseNullDelimitedNumstat = (output: string) => {
+  const stats = new Map<string, NumstatCounts>();
+  const tokens = output.split("\0");
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index] ?? "";
+    const firstTab = token.indexOf("\t");
+    const secondTab = token.indexOf("\t", firstTab + 1);
+    if (firstTab < 0 || secondTab < 0) {
+      continue;
+    }
+    const counts = buildNumstatCounts(
+      token.slice(0, firstTab),
+      token.slice(firstTab + 1, secondTab),
+    );
+    const path = token.slice(secondTab + 1);
+    if (path) {
+      stats.set(path, counts);
+      continue;
+    }
+    const renamedTo = tokens[index + 2];
+    if (renamedTo) {
+      stats.set(renamedTo, counts);
+      index += 2;
+    }
+  }
+  return stats;
+};
+
 const findFirstContentLine = (output: string) =>
   output
     .split("\n")
@@ -44,6 +72,9 @@ const findFirstContentLine = (output: string) =>
     .find((value) => value.length > 0) ?? null;
 
 export const parseNumstat = (output: string) => {
+  if (output.includes("\0")) {
+    return parseNullDelimitedNumstat(output);
+  }
   const stats = new Map<string, { additions: number | null; deletions: number | null }>();
   const lines = output.split("\n").filter((line) => line.trim().length > 0);
   for (const line of lines) {

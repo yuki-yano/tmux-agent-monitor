@@ -215,6 +215,7 @@ const buildDefaultContextValue = () => {
       branches: {
         branches: [],
         repoRoot: null as string | null,
+        defaultBranch: null as string | null,
         currentBranch: null as string | null,
         branchesLoading: false,
         branchesError: null as string | null,
@@ -242,6 +243,8 @@ const buildDefaultContextValue = () => {
       diffFiles: {},
       diffOpen: {},
       diffLoadingFiles: {},
+      diffMode: "total" as const,
+      setDiffMode: vi.fn(),
       refreshDiff: vi.fn(),
       toggleDiff: vi.fn(),
       ensureDiffFile: vi.fn(),

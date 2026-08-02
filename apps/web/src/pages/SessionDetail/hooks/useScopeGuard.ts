@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
 import { useVisibilityPolling } from "@/lib/use-visibility-polling";
 
@@ -7,6 +7,7 @@ type UseScopeGuardParams = {
   paneId: string;
   worktreePath?: string | null;
   branch?: string | null;
+  variant?: string | null;
   connected: boolean;
   /**
    * Ref to the callback invoked when the connection transitions from
@@ -23,7 +24,7 @@ type UseScopeGuardParams = {
 };
 
 type UseScopeGuardResult = {
-  /** `${paneId}:${worktreePath ?? "__default__"}:${branch ?? "__no_branch__"}` */
+  /** Pane/worktree/branch key with an optional request variant suffix. */
   scopeKey: string;
   /** Ref whose `.current` is always the latest scopeKey. */
   activeScopeRef: MutableRefObject<string>;
@@ -41,18 +42,22 @@ export const useScopeGuard = ({
   paneId,
   worktreePath = null,
   branch = null,
+  variant = null,
   connected,
   onReconnectRef,
   pollTickRef,
   pollIntervalMs,
 }: UseScopeGuardParams): UseScopeGuardResult => {
-  const scopeKey = `${paneId}:${worktreePath ?? "__default__"}:${branch ?? "__no_branch__"}`;
+  const baseScopeKey = `${paneId}:${worktreePath ?? "__default__"}:${branch ?? "__no_branch__"}`;
+  const scopeKey = variant == null ? baseScopeKey : `${baseScopeKey}:${variant}`;
   const activeScopeRef = useRef(scopeKey);
   const prevConnectedRef = useRef<boolean | null>(null);
 
-  // Keep activeScopeRef in sync on every render so guards in async callbacks
-  // always see the latest scope.
-  activeScopeRef.current = scopeKey;
+  // Commit the latest scope before passive effects or browser events can start
+  // requests. Render stays pure if React replays or discards it.
+  useLayoutEffect(() => {
+    activeScopeRef.current = scopeKey;
+  }, [scopeKey]);
 
   // Re-fetch when the connection is restored after a disconnect.
   useEffect(() => {

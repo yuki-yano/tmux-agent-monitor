@@ -50,7 +50,48 @@ describe("useSessionDiffs", () => {
       expect(result.current.diffSummary).not.toBeNull();
     });
 
-    expect(requestDiffSummary).toHaveBeenCalledWith("pane-1", { force: true });
+    expect(requestDiffSummary).toHaveBeenCalledWith("pane-1", { force: true, mode: "total" });
+  });
+
+  it("switches worktree diff layers and keeps branch inspection committed", async () => {
+    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
+    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
+    const wrapper = createWrapper();
+    const { result, rerender } = renderHook(
+      ({ branch }: { branch: string | null }) =>
+        useSessionDiffs({
+          paneId: "pane-1",
+          connected: true,
+          branch,
+          requestDiffSummary,
+          requestDiffFile,
+        }),
+      { wrapper, initialProps: { branch: null as string | null } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.diffMode).toBe("total");
+    });
+
+    act(() => {
+      result.current.setDiffMode("uncommitted");
+    });
+    await waitFor(() => {
+      expect(requestDiffSummary).toHaveBeenLastCalledWith("pane-1", {
+        force: true,
+        mode: "uncommitted",
+      });
+    });
+
+    rerender({ branch: "feature/virtual" });
+    await waitFor(() => {
+      expect(result.current.diffMode).toBe("committed");
+      expect(requestDiffSummary).toHaveBeenLastCalledWith("pane-1", {
+        branch: "feature/virtual",
+        force: true,
+        mode: "committed",
+      });
+    });
   });
 
   it("loads diff file when toggled open", async () => {
@@ -79,6 +120,7 @@ describe("useSessionDiffs", () => {
     await waitFor(() => {
       expect(requestDiffFile).toHaveBeenCalledWith("pane-1", "src/index.ts", "HEAD", {
         force: true,
+        mode: "total",
       });
     });
   });
@@ -109,6 +151,7 @@ describe("useSessionDiffs", () => {
     await waitFor(() => {
       expect(requestDiffFile).toHaveBeenCalledWith("pane-1", "src/index.ts", "HEAD", {
         force: true,
+        mode: "total",
       });
     });
     expect(result.current.diffOpen["src/index.ts"]).toBeUndefined();
@@ -143,7 +186,10 @@ describe("useSessionDiffs", () => {
     await waitFor(() => {
       expect(requestDiffSummary).toHaveBeenCalledTimes(2);
     });
-    expect(requestDiffSummary).toHaveBeenLastCalledWith("pane-1", { force: true });
+    expect(requestDiffSummary).toHaveBeenLastCalledWith("pane-1", {
+      force: true,
+      mode: "total",
+    });
   });
 
   it("ignores stale diff summary responses from previous pane", async () => {
@@ -275,6 +321,7 @@ describe("useSessionDiffs", () => {
     });
     expect(requestDiffFile).toHaveBeenLastCalledWith("pane-1", "src/index.ts", "rev-pane-1", {
       force: true,
+      mode: "total",
     });
   });
 

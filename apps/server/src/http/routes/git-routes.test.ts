@@ -7,7 +7,7 @@ import {
   resolveBranchDiffScope,
 } from "../../domain/git/git-branch-diff";
 import { fetchCommitLog } from "../../domain/git/git-commits";
-import { fetchDiffSummary } from "../../domain/git/git-diff";
+import { fetchDiffFile, fetchDiffSummary } from "../../domain/git/git-diff";
 import { createGitRoutes } from "./git-routes";
 import type { RouteContext } from "./types";
 
@@ -103,10 +103,30 @@ describe("createGitRoutes", () => {
   };
 
   describe("GET /diff", () => {
+    it("requires an explicit diff mode", async () => {
+      const { app } = buildApp();
+
+      const res = await app.request("/sessions/%13/diff");
+
+      expect(res.status).toBe(400);
+      expect(fetchDiffSummary).not.toHaveBeenCalled();
+    });
+
+    it("rejects non-committed mode for a branch comparison", async () => {
+      const { app } = buildApp();
+
+      const res = await app.request("/sessions/%13/diff?mode=total&branch=feature/x");
+
+      expect(res.status).toBe(400);
+      expect(resolveBranchDiffScope).not.toHaveBeenCalled();
+    });
+
     it("returns 400 when branch and worktreePath are both provided", async () => {
       const { app } = buildApp();
 
-      const res = await app.request("/sessions/%13/diff?branch=feature/x&worktreePath=/other");
+      const res = await app.request(
+        "/sessions/%13/diff?mode=committed&branch=feature/x&worktreePath=/other",
+      );
 
       expect(res.status).toBe(400);
       const json = (await res.json()) as { error: { code: string; message: string } };
@@ -127,7 +147,7 @@ describe("createGitRoutes", () => {
       vi.mocked(fetchBranchDiffSummary).mockResolvedValueOnce(summary);
       const { app } = buildApp();
 
-      const res = await app.request("/sessions/%13/diff?branch=feature/x");
+      const res = await app.request("/sessions/%13/diff?mode=committed&branch=feature/x");
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as { summary: DiffSummary };
@@ -147,7 +167,7 @@ describe("createGitRoutes", () => {
       });
       const { app } = buildApp();
 
-      const res = await app.request("/sessions/%13/diff?branch=missing");
+      const res = await app.request("/sessions/%13/diff?mode=committed&branch=missing");
 
       expect(res.status).toBe(400);
       const json = (await res.json()) as { error: { code: string; message: string } };
@@ -156,17 +176,17 @@ describe("createGitRoutes", () => {
       expect(fetchBranchDiffSummary).not.toHaveBeenCalled();
     });
 
-    it("falls back to the default diff summary when branch is absent", async () => {
+    it("returns the requested worktree diff layer when branch is absent", async () => {
       const summary = buildDiffSummary();
       vi.mocked(fetchDiffSummary).mockResolvedValueOnce(summary);
       const { app } = buildApp();
 
-      const res = await app.request("/sessions/%13/diff");
+      const res = await app.request("/sessions/%13/diff?mode=total");
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as { summary: DiffSummary };
       expect(json.summary).toEqual(summary);
-      expect(fetchDiffSummary).toHaveBeenCalledWith("/repo", { force: false });
+      expect(fetchDiffSummary).toHaveBeenCalledWith("/repo", { force: false, mode: "total" });
       expect(resolveBranchDiffScope).not.toHaveBeenCalled();
     });
   });
@@ -176,7 +196,7 @@ describe("createGitRoutes", () => {
       const { app } = buildApp();
 
       const res = await app.request(
-        "/sessions/%13/diff/file?branch=feature/x&worktreePath=/other&path=a.txt",
+        "/sessions/%13/diff/file?mode=committed&branch=feature/x&worktreePath=/other&path=a.txt",
       );
 
       expect(res.status).toBe(400);
@@ -196,7 +216,9 @@ describe("createGitRoutes", () => {
       vi.mocked(fetchBranchDiffFile).mockResolvedValueOnce(file);
       const { app } = buildApp();
 
-      const res = await app.request("/sessions/%13/diff/file?branch=feature/x&path=a.txt");
+      const res = await app.request(
+        "/sessions/%13/diff/file?mode=committed&branch=feature/x&path=a.txt",
+      );
 
       expect(res.status).toBe(200);
       const json = (await res.json()) as { file: DiffFile };
@@ -217,10 +239,29 @@ describe("createGitRoutes", () => {
       vi.mocked(fetchBranchDiffSummary).mockResolvedValueOnce(buildDiffSummary());
       const { app } = buildApp();
 
-      const res = await app.request("/sessions/%13/diff/file?branch=feature/x&path=missing.txt");
+      const res = await app.request(
+        "/sessions/%13/diff/file?mode=committed&branch=feature/x&path=missing.txt",
+      );
 
       expect(res.status).toBe(404);
       expect(fetchBranchDiffFile).not.toHaveBeenCalled();
+    });
+
+    it("returns a file from the requested worktree diff layer", async () => {
+      const summary = buildDiffSummary();
+      const file = buildDiffFile();
+      vi.mocked(fetchDiffSummary).mockResolvedValueOnce(summary);
+      vi.mocked(fetchDiffFile).mockResolvedValueOnce(file);
+      const { app } = buildApp();
+
+      const res = await app.request("/sessions/%13/diff/file?mode=total&path=a.txt");
+
+      expect(res.status).toBe(200);
+      expect(fetchDiffSummary).toHaveBeenCalledWith("/repo", { force: false, mode: "total" });
+      expect(fetchDiffFile).toHaveBeenCalledWith("/repo", summary.files[0], "deadbeef", {
+        force: false,
+        mode: "total",
+      });
     });
   });
 

@@ -14,7 +14,7 @@ describe("parseGitStatus", () => {
   });
 
   it("parses rename entries", () => {
-    const output = ["R  old-name.ts", "new-name.ts", ""].join("\0");
+    const output = ["R  new-name.ts", "old-name.ts", ""].join("\0");
     const result = parseGitStatus(output);
     expect(result).toEqual([
       { path: "new-name.ts", status: "R", staged: true, renamedFrom: "old-name.ts" },
@@ -28,7 +28,7 @@ describe("parseGitStatus", () => {
   });
 
   it("parses copy and unstaged rename entries", () => {
-    const output = ["C  source.ts", "copied.ts", " R old.ts", "new.ts", ""].join("\0");
+    const output = ["C  copied.ts", "source.ts", " R new.ts", "old.ts", ""].join("\0");
     const result = parseGitStatus(output);
     expect(result).toEqual([
       { path: "copied.ts", status: "C", staged: true, renamedFrom: "source.ts" },

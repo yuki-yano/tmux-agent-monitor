@@ -1,6 +1,6 @@
-import type { DiffFile, DiffSummary } from "@vde-monitor/shared";
+import type { DiffFile, DiffMode, DiffSummary } from "@vde-monitor/shared";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
@@ -24,19 +24,19 @@ type UseSessionDiffsParams = {
   branch?: string | null;
   requestDiffSummary: (
     paneId: string,
-    options?: { force?: boolean; worktreePath?: string; branch?: string },
+    options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
   ) => Promise<DiffSummary>;
   requestDiffFile: (
     paneId: string,
     path: string,
-    rev?: string | null,
-    options?: { force?: boolean; worktreePath?: string; branch?: string },
+    rev: string | null | undefined,
+    options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
   ) => Promise<DiffFile>;
 };
 
 // ---------------------------------------------------------------------------
 // Module-level diff file cache (replaces TanStack Query cache)
-// Key: `${paneId}\x00${worktreePath|__default__}:${branch|__no_branch__}\x00${rev|unknown}\x00${path}`
+// Key: `${paneId}\x00${worktreePath|__default__}:${branch|__no_branch__}:${mode}\x00${rev|unknown}\x00${path}`
 // ---------------------------------------------------------------------------
 
 const diffFileCache = new Map<string, DiffFile>();
@@ -45,16 +45,18 @@ const buildDiffFileCacheKey = (
   paneId: string,
   worktreePath: string | null,
   branch: string | null,
+  mode: DiffMode,
   rev: string | null,
   path: string,
 ) =>
-  `${paneId}\x00${worktreePath ?? "__default__"}:${branch ?? "__no_branch__"}\x00${rev ?? "unknown"}\x00${path}`;
+  `${paneId}\x00${worktreePath ?? "__default__"}:${branch ?? "__no_branch__"}:${mode}\x00${rev ?? "unknown"}\x00${path}`;
 
 const buildDiffFileCacheKeyPrefix = (
   paneId: string,
   worktreePath: string | null,
   branch: string | null,
-) => `${paneId}\x00${worktreePath ?? "__default__"}:${branch ?? "__no_branch__"}\x00`;
+  mode: DiffMode,
+) => `${paneId}\x00${worktreePath ?? "__default__"}:${branch ?? "__no_branch__"}:${mode}\x00`;
 
 const buildInFlightDiffFileKey = (
   scopeKey: string,
@@ -67,26 +69,29 @@ const getDiffFileFromCache = (
   paneId: string,
   worktreePath: string | null,
   branch: string | null,
+  mode: DiffMode,
   rev: string | null,
   path: string,
 ): DiffFile | undefined =>
-  diffFileCache.get(buildDiffFileCacheKey(paneId, worktreePath, branch, rev, path));
+  diffFileCache.get(buildDiffFileCacheKey(paneId, worktreePath, branch, mode, rev, path));
 
 const setDiffFileInCache = (
   paneId: string,
   worktreePath: string | null,
   branch: string | null,
+  mode: DiffMode,
   rev: string | null,
   path: string,
   file: DiffFile,
-) => diffFileCache.set(buildDiffFileCacheKey(paneId, worktreePath, branch, rev, path), file);
+) => diffFileCache.set(buildDiffFileCacheKey(paneId, worktreePath, branch, mode, rev, path), file);
 
 const clearDiffFileCacheForPane = (
   paneId: string,
   worktreePath: string | null,
   branch: string | null,
+  mode: DiffMode,
 ) => {
-  const prefix = buildDiffFileCacheKeyPrefix(paneId, worktreePath, branch);
+  const prefix = buildDiffFileCacheKeyPrefix(paneId, worktreePath, branch, mode);
   for (const key of diffFileCache.keys()) {
     if (key.startsWith(prefix)) {
       diffFileCache.delete(key);
@@ -100,9 +105,10 @@ const pruneDiffFileCacheToRev = (
   paneId: string,
   worktreePath: string | null,
   branch: string | null,
+  mode: DiffMode,
   rev: string | null,
 ) => {
-  const prefix = buildDiffFileCacheKeyPrefix(paneId, worktreePath, branch);
+  const prefix = buildDiffFileCacheKeyPrefix(paneId, worktreePath, branch, mode);
   const keepPrefix = `${prefix}${rev ?? "unknown"}\x00`;
   for (const key of diffFileCache.keys()) {
     if (key.startsWith(prefix) && !key.startsWith(keepPrefix)) {
@@ -117,6 +123,7 @@ const fetchCurrentDiffFileWithCache = async (
   paneId: string,
   worktreePath: string | null,
   branch: string | null,
+  mode: DiffMode,
   rev: string | null,
   path: string,
   inFlightRequests: Map<string, Promise<DiffFile>>,
@@ -124,7 +131,7 @@ const fetchCurrentDiffFileWithCache = async (
   isCurrent: () => boolean,
   queryFn: () => Promise<DiffFile>,
 ): Promise<DiffFile | null> => {
-  const cached = getDiffFileFromCache(paneId, worktreePath, branch, rev, path);
+  const cached = getDiffFileFromCache(paneId, worktreePath, branch, mode, rev, path);
   if (cached) {
     return isCurrent() ? cached : null;
   }
@@ -138,7 +145,7 @@ const fetchCurrentDiffFileWithCache = async (
     if (!isCurrent()) {
       return null;
     }
-    setDiffFileInCache(paneId, worktreePath, branch, rev, path, file);
+    setDiffFileInCache(paneId, worktreePath, branch, mode, rev, path, file);
     return file;
   } finally {
     if (inFlightRequests.get(inFlightKey) === request) {
@@ -155,6 +162,8 @@ export const useSessionDiffs = ({
   requestDiffSummary,
   requestDiffFile,
 }: UseSessionDiffsParams) => {
+  const [worktreeDiffMode, setWorktreeDiffMode] = useState<DiffMode>("total");
+  const diffMode: DiffMode = branch == null ? worktreeDiffMode : "committed";
   const [diffSummary, setDiffSummary] = useAtom(diffSummaryAtom);
   const [diffError, setDiffError] = useAtom(diffErrorAtom);
   const [diffLoading, setDiffLoading] = useAtom(diffLoadingAtom);
@@ -166,13 +175,14 @@ export const useSessionDiffs = ({
   const diffSnapshotRef = useRef<string | null>(null);
   const diffSummaryRevRef = useRef<string | null>(null);
   const diffScopeGenerationRef = useRef(0);
-  const inFlightDiffFilesRef = useRef(new Map<string, Promise<DiffFile>>());
+  const [inFlightDiffFiles] = useState(() => new Map<string, Promise<DiffFile>>());
   const onReconnectRef = useRef<() => void>(() => {});
   const pollTickRef = useRef<() => void>(() => {});
   const { scopeKey: requestScopeKey, activeScopeRef } = useScopeGuard({
     paneId,
     worktreePath,
     branch,
+    variant: diffMode,
     connected,
     onReconnectRef,
     pollTickRef,
@@ -189,11 +199,11 @@ export const useSessionDiffs = ({
   const requestOptions = useMemo(
     () =>
       branch
-        ? ({ force: true, branch } as const)
+        ? ({ force: true, branch, mode: "committed" } as const)
         : worktreePath
-          ? ({ force: true, worktreePath } as const)
-          : ({ force: true } as const),
-    [branch, worktreePath],
+          ? ({ force: true, worktreePath, mode: diffMode } as const)
+          : ({ force: true, mode: diffMode } as const),
+    [branch, diffMode, worktreePath],
   );
 
   const applyDiffSummary = useCallback(
@@ -203,7 +213,7 @@ export const useSessionDiffs = ({
       if (snapshotChanged) {
         diffScopeGenerationRef.current += 1;
         setDiffLoadingFiles({});
-        clearDiffFileCacheForPane(paneId, worktreePath, branch);
+        clearDiffFileCacheForPane(paneId, worktreePath, branch, diffMode);
       }
       diffSummaryRevRef.current = summary.rev;
       diffSnapshotRef.current = targetSnapshot;
@@ -213,7 +223,7 @@ export const useSessionDiffs = ({
         diffScopeGenerationRef.current === targetGeneration &&
         diffSummaryRevRef.current === summary.rev &&
         diffSnapshotRef.current === targetSnapshot;
-      pruneDiffFileCacheToRev(paneId, worktreePath, branch, summary.rev);
+      pruneDiffFileCacheToRev(paneId, worktreePath, branch, diffMode, summary.rev);
       setDiffSummary(summary);
       const fileSet = new Set(summary.files.map((file) => file.path));
       setDiffOpen((prev) => {
@@ -232,7 +242,14 @@ export const useSessionDiffs = ({
         ([path, value]) => value && fileSet.has(path),
       );
       const cachedFiles = openTargets.reduce<Record<string, DiffFile>>((acc, [path]) => {
-        const cached = getDiffFileFromCache(paneId, worktreePath, branch, summary.rev, path);
+        const cached = getDiffFileFromCache(
+          paneId,
+          worktreePath,
+          branch,
+          diffMode,
+          summary.rev,
+          path,
+        );
         if (cached) {
           acc[path] = cached;
         }
@@ -251,9 +268,10 @@ export const useSessionDiffs = ({
                 paneId,
                 worktreePath,
                 branch,
+                diffMode,
                 summary.rev,
                 path,
-                inFlightDiffFilesRef.current,
+                inFlightDiffFiles,
                 buildInFlightDiffFileKey(targetScopeKey, targetGeneration, summary.rev, path),
                 isCurrentRevision,
                 () => requestDiffFile(paneId, path, summary.rev, requestOptions),
@@ -279,6 +297,8 @@ export const useSessionDiffs = ({
     [
       activeScopeRef,
       branch,
+      diffMode,
+      inFlightDiffFiles,
       paneId,
       requestDiffFile,
       requestOptions,
@@ -363,17 +383,27 @@ export const useSessionDiffs = ({
     void pollDiffSummary();
   }, [pollDiffSummary]);
 
-  // Keep scope-guard callback refs up to date before effects run.
-  onReconnectRef.current = () => {
-    void loadDiffSummary();
-  };
-  pollTickRef.current = pollDiffSummaryTick;
+  // Keep scope-guard callbacks current before its passive reconnect/polling
+  // effects can run, without mutating refs during render.
+  useLayoutEffect(() => {
+    onReconnectRef.current = () => {
+      void loadDiffSummary();
+    };
+    pollTickRef.current = pollDiffSummaryTick;
+  }, [loadDiffSummary, onReconnectRef, pollDiffSummaryTick, pollTickRef]);
 
   const loadDiffFile = useCallback(
     async (path: string) => {
       if (!paneId || !diffSummary?.rev || diffSnapshotRef.current == null) return;
       if (diffLoadingFiles[path]) return;
-      const cached = getDiffFileFromCache(paneId, worktreePath, branch, diffSummary.rev, path);
+      const cached = getDiffFileFromCache(
+        paneId,
+        worktreePath,
+        branch,
+        diffMode,
+        diffSummary.rev,
+        path,
+      );
       if (cached) {
         setDiffFiles((prev) => ({ ...prev, [path]: cached }));
         return;
@@ -395,9 +425,10 @@ export const useSessionDiffs = ({
           paneId,
           worktreePath,
           branch,
+          diffMode,
           targetRev,
           path,
-          inFlightDiffFilesRef.current,
+          inFlightDiffFiles,
           buildInFlightDiffFileKey(targetScopeKey, targetGeneration, targetRev, path),
           isCurrentRevision,
           () => requestDiffFile(paneId, path, targetRev, requestOptions),
@@ -420,8 +451,10 @@ export const useSessionDiffs = ({
     [
       activeScopeRef,
       branch,
+      diffMode,
       diffLoadingFiles,
       diffSummary?.rev,
+      inFlightDiffFiles,
       paneId,
       requestScopeKey,
       requestDiffFile,
@@ -460,10 +493,11 @@ export const useSessionDiffs = ({
     setDiffLoadingFiles({});
     setDiffError(null);
     return () => {
-      clearDiffFileCacheForPane(paneId, worktreePath, branch);
+      clearDiffFileCacheForPane(paneId, worktreePath, branch, diffMode);
     };
   }, [
     branch,
+    diffMode,
     paneId,
     setDiffError,
     setDiffFiles,
@@ -485,6 +519,8 @@ export const useSessionDiffs = ({
     diffOpen,
     diffLoadingFiles,
     refreshDiff: loadDiffSummary,
+    diffMode,
+    setDiffMode: setWorktreeDiffMode,
     toggleDiff,
     ensureDiffFile: loadDiffFile,
   };

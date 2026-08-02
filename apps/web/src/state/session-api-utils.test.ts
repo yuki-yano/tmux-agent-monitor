@@ -7,6 +7,7 @@ import {
   buildCommitFileQuery,
   buildCommitLogQuery,
   buildDiffFileQuery,
+  buildDiffQuery,
   buildForceQuery,
   buildLaunchAgentJson,
   buildPaneHashParam,
@@ -280,12 +281,23 @@ describe("session-api-utils", () => {
 
     expect(buildForceQuery()).toEqual({});
     expect(buildForceQuery({ force: true })).toEqual({ force: "1" });
+    expect(
+      buildDiffQuery({
+        mode: "total",
+        force: true,
+        worktreePath: "/repo/wt",
+      }),
+    ).toEqual({ force: "1", worktreePath: "/repo/wt", mode: "total" });
 
-    expect(buildDiffFileQuery("src/a.ts")).toEqual({ path: "src/a.ts" });
-    expect(buildDiffFileQuery("src/a.ts", "HEAD~1", { force: true })).toEqual({
+    expect(buildDiffFileQuery("src/a.ts", undefined, { mode: "total" })).toEqual({
+      path: "src/a.ts",
+      mode: "total",
+    });
+    expect(buildDiffFileQuery("src/a.ts", "HEAD~1", { force: true, mode: "committed" })).toEqual({
       path: "src/a.ts",
       rev: "HEAD~1",
       force: "1",
+      mode: "committed",
     });
 
     expect(buildCommitLogQuery()).toEqual({});

@@ -136,10 +136,14 @@ describe("useSessionApi", () => {
       }),
     );
 
-    await expect(result.current.branches.requestDiffSummary("pane-1")).rejects.toThrow("boom");
+    await expect(
+      result.current.branches.requestDiffSummary("pane-1", { mode: "total" }),
+    ).rejects.toThrow("boom");
     expect(onConnectionIssue).toHaveBeenCalledWith("boom");
 
-    await expect(result.current.branches.requestDiffSummary("pane-1")).resolves.toEqual(summary);
+    await expect(
+      result.current.branches.requestDiffSummary("pane-1", { mode: "total" }),
+    ).resolves.toEqual(summary);
     expect(onConnectionIssue).toHaveBeenCalledWith(null);
   });
 
@@ -376,9 +380,9 @@ describe("useSessionApi", () => {
       }),
     );
 
-    await expect(result.current.branches.requestDiffSummary("pane-1")).rejects.toThrow(
-      `${API_ERROR_MESSAGES.diffSummary} (410)`,
-    );
+    await expect(
+      result.current.branches.requestDiffSummary("pane-1", { mode: "total" }),
+    ).rejects.toThrow(`${API_ERROR_MESSAGES.diffSummary} (410)`);
     expect(onSessionRemoved).toHaveBeenCalledWith("pane-1");
   });
 

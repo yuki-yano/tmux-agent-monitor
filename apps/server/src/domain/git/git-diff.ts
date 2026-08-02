@@ -1,9 +1,18 @@
 import crypto from "node:crypto";
 import path from "node:path";
 
-import type { DiffFile, DiffFileStatus, DiffSummary, DiffSummaryFile } from "@vde-monitor/shared";
+import type {
+  DiffFile,
+  DiffFileStatus,
+  DiffMode,
+  DiffSummary,
+  DiffSummaryFile,
+} from "@vde-monitor/shared";
 
 import { setMapEntryWithLimit } from "../../cache";
+import { nowIso } from "../../utils/time";
+import { parseBranchNameStatus } from "./git-branch-diff";
+import { resolveDefaultBranch } from "./git-branches";
 import { GIT_CACHE_TTL_MS, GIT_PATCH_MAX_BYTES, truncateTextByLength } from "./git-common";
 import {
   type NumstatCounts,
@@ -12,21 +21,24 @@ import {
   parseNumstatLine,
   pickStatus,
 } from "./git-parsers";
-import { resolveGitRepoContext, shouldReuseGitCache } from "./git-query-context";
+import { resolveGitHead, resolveGitRepoContext, shouldReuseGitCache } from "./git-query-context";
 import { runGit } from "./git-utils";
-import { nowIso } from "../../utils/time";
 
 const SUMMARY_CACHE_MAX_ENTRIES = 200;
 const FILE_CACHE_MAX_ENTRIES = 500;
 
-const summaryCache = new Map<string, { at: number; summary: DiffSummary; statusOutput: string }>();
+const summaryCache = new Map<string, { at: number; summary: DiffSummary }>();
 const fileCache = new Map<string, { at: number; rev: string; file: DiffFile }>();
 
-const createRevision = (statusOutput: string) =>
-  crypto.createHash("sha1").update(statusOutput).digest("hex");
+const createRevision = (...parts: string[]) =>
+  crypto.createHash("sha1").update(parts.join("\0")).digest("hex");
 
 export const clearDiffCachesForRepo = (repoRoot: string) => {
-  summaryCache.delete(repoRoot);
+  for (const key of summaryCache.keys()) {
+    if (key.startsWith(`${repoRoot}:`)) {
+      summaryCache.delete(key);
+    }
+  }
   for (const key of fileCache.keys()) {
     if (key.startsWith(`${repoRoot}:`)) {
       fileCache.delete(key);
@@ -76,7 +88,7 @@ const resolvePathInfo = (
   if (!nextPath) {
     return { path: token.rawPath, nextIndex: index };
   }
-  return { path: nextPath, renamedFrom: token.rawPath, nextIndex: index + 1 };
+  return { path: token.rawPath, renamedFrom: nextPath, nextIndex: index + 1 };
 };
 
 const resolveFileStatus = (token: ParsedStatusToken): DiffFileStatus => {
@@ -142,8 +154,8 @@ const buildUnknownSummary = (reason: "cwd_unknown" | "not_git"): DiffSummary => 
   reason,
 });
 
-const getCachedSummary = (repoRoot: string, force: boolean | undefined, nowMs: number) => {
-  const cached = summaryCache.get(repoRoot);
+const getCachedSummary = (cacheKey: string, force: boolean | undefined, nowMs: number) => {
+  const cached = summaryCache.get(cacheKey);
   if (!cached) {
     return null;
   }
@@ -158,6 +170,36 @@ const getCachedSummary = (repoRoot: string, force: boolean | undefined, nowMs: n
     return null;
   }
   return cached.summary;
+};
+
+type ComparedDiffTarget = {
+  baseBranch: string;
+  mergeBase: string;
+  head: string;
+};
+
+type ComparedDiffTargetResult =
+  | { ok: true; target: ComparedDiffTarget }
+  | { ok: false; reason: "default_branch_unavailable" | "error" };
+
+const resolveComparedDiffTarget = async (repoRoot: string): Promise<ComparedDiffTargetResult> => {
+  const baseBranch = await resolveDefaultBranch(repoRoot);
+  if (baseBranch == null) {
+    return { ok: false, reason: "default_branch_unavailable" };
+  }
+  try {
+    const [mergeBaseOutput, head] = await Promise.all([
+      runGit(repoRoot, ["merge-base", baseBranch, "HEAD"], { allowStdoutOnError: false }),
+      resolveGitHead(repoRoot),
+    ]);
+    const mergeBase = mergeBaseOutput.trim();
+    if (!mergeBase || head == null) {
+      return { ok: false, reason: "error" };
+    }
+    return { ok: true, target: { baseBranch, mergeBase, head } };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
 };
 
 const fetchUntrackedNumstat = async (
@@ -253,19 +295,29 @@ const fetchPatchForUntrackedFile = async (repoRoot: string, safePath: string) =>
   return { patch, numstat: parseNumstatLine(numstatOutput) };
 };
 
-const fetchPatchForTrackedFile = async (repoRoot: string, filePath: string) => {
+const fetchPatchForTrackedFile = async (
+  repoRoot: string,
+  file: DiffSummaryFile,
+  diffSpecifier: string,
+) => {
+  const pathArgs = file.renamedFrom ? [file.renamedFrom, file.path] : [file.path];
   const [patch, numstatOutput] = await Promise.all([
-    runGit(repoRoot, ["diff", "HEAD", "--", filePath]),
-    runGit(repoRoot, ["diff", "HEAD", "--numstat", "--", filePath]),
+    runGit(repoRoot, ["diff", "--find-renames", diffSpecifier, "--", ...pathArgs]),
+    runGit(repoRoot, ["diff", "--find-renames", diffSpecifier, "--numstat", "--", ...pathArgs]),
   ]);
   return { patch, numstat: parseNumstatLine(numstatOutput) };
 };
 
-const fetchPatchData = async (repoRoot: string, file: DiffSummaryFile, safePath: string) => {
+const fetchPatchData = async (
+  repoRoot: string,
+  file: DiffSummaryFile,
+  safePath: string,
+  diffSpecifier: string,
+) => {
   if (file.status === "?") {
     return fetchPatchForUntrackedFile(repoRoot, safePath);
   }
-  return fetchPatchForTrackedFile(repoRoot, file.path);
+  return fetchPatchForTrackedFile(repoRoot, file, diffSpecifier);
 };
 
 const buildDiffFileFromPatch = (
@@ -289,9 +341,72 @@ const buildDiffFileFromPatch = (
   };
 };
 
+const fetchUncommittedDiffSummary = async (
+  repoRoot: string,
+  nowMs: number,
+): Promise<DiffSummary> => {
+  const [statusOutput, numstatOutput] = await Promise.all([
+    runGit(repoRoot, ["status", "--porcelain", "-z", "--untracked-files=all"]),
+    runGit(repoRoot, ["diff", "HEAD", "--numstat", "-z", "--"]),
+  ]);
+  const files = parseGitStatus(statusOutput);
+  const trackedStats = parseNumstat(numstatOutput);
+  const untrackedStats = await collectUntrackedStats(repoRoot, files);
+  const withStats = attachFileStats(files, trackedStats, untrackedStats);
+  const summary = buildDiffSummary(
+    repoRoot,
+    createRevision("uncommitted", statusOutput, numstatOutput),
+    withStats,
+  );
+  setMapEntryWithLimit(
+    summaryCache,
+    `${repoRoot}:uncommitted`,
+    { at: nowMs, summary },
+    SUMMARY_CACHE_MAX_ENTRIES,
+  );
+  return summary;
+};
+
+const fetchComparedDiffSummary = async (
+  repoRoot: string,
+  mode: "total" | "committed",
+  target: ComparedDiffTarget,
+  nowMs: number,
+): Promise<DiffSummary> => {
+  const diffSpecifier = mode === "committed" ? `${target.baseBranch}...HEAD` : target.mergeBase;
+  const statusPromise =
+    mode === "total"
+      ? runGit(repoRoot, ["status", "--porcelain", "-z", "--untracked-files=all"])
+      : Promise.resolve("");
+  const [statusOutput, nameStatusOutput, numstatOutput] = await Promise.all([
+    statusPromise,
+    runGit(repoRoot, ["diff", "--name-status", "-z", "--find-renames", diffSpecifier]),
+    runGit(repoRoot, ["diff", diffSpecifier, "--numstat", "-z", "--"]),
+  ]);
+  const trackedFiles = parseBranchNameStatus(nameStatusOutput);
+  const untrackedFiles =
+    mode === "total" ? parseGitStatus(statusOutput).filter((file) => file.status === "?") : [];
+  const files = [...trackedFiles, ...untrackedFiles];
+  const trackedStats = parseNumstat(numstatOutput);
+  const untrackedStats = await collectUntrackedStats(repoRoot, untrackedFiles);
+  const withStats = attachFileStats(files, trackedStats, untrackedStats);
+  const summary = buildDiffSummary(
+    repoRoot,
+    createRevision(mode, target.mergeBase, target.head, statusOutput, numstatOutput),
+    withStats,
+  );
+  setMapEntryWithLimit(
+    summaryCache,
+    `${repoRoot}:${mode}`,
+    { at: nowMs, summary },
+    SUMMARY_CACHE_MAX_ENTRIES,
+  );
+  return summary;
+};
+
 export const fetchDiffSummary = async (
   cwd: string | null,
-  options?: { force?: boolean },
+  options: { mode: DiffMode; force?: boolean },
 ): Promise<DiffSummary> => {
   const context = await resolveGitRepoContext(cwd);
   if (context.reason) {
@@ -299,27 +414,19 @@ export const fetchDiffSummary = async (
   }
   const repoRoot = context.repoRoot;
   const nowMs = Date.now();
-  const cached = getCachedSummary(repoRoot, options?.force, nowMs);
+  const cached = getCachedSummary(`${repoRoot}:${options.mode}`, options.force, nowMs);
   if (cached) {
     return cached;
   }
   try {
-    const [statusOutput, numstatOutput] = await Promise.all([
-      runGit(repoRoot, ["status", "--porcelain", "-z"]),
-      runGit(repoRoot, ["diff", "HEAD", "--numstat", "--"]),
-    ]);
-    const files = parseGitStatus(statusOutput);
-    const trackedStats = parseNumstat(numstatOutput);
-    const untrackedStats = await collectUntrackedStats(repoRoot, files);
-    const withStats = attachFileStats(files, trackedStats, untrackedStats);
-    const summary = buildDiffSummary(repoRoot, createRevision(statusOutput), withStats);
-    setMapEntryWithLimit(
-      summaryCache,
-      repoRoot,
-      { at: nowMs, summary, statusOutput },
-      SUMMARY_CACHE_MAX_ENTRIES,
-    );
-    return summary;
+    if (options.mode === "uncommitted") {
+      return await fetchUncommittedDiffSummary(repoRoot, nowMs);
+    }
+    const targetResult = await resolveComparedDiffTarget(repoRoot);
+    if (!targetResult.ok) {
+      return buildDiffSummary(repoRoot, null, [], targetResult.reason);
+    }
+    return await fetchComparedDiffSummary(repoRoot, options.mode, targetResult.target, nowMs);
   } catch {
     return buildDiffSummary(repoRoot, null, [], "error");
   }
@@ -329,9 +436,9 @@ export const fetchDiffFile = async (
   repoRoot: string,
   file: DiffSummaryFile,
   rev: string,
-  options?: { force?: boolean },
+  options: { mode: DiffMode; force?: boolean },
 ): Promise<DiffFile> => {
-  const cacheKey = `${repoRoot}:${file.path}:${rev}`;
+  const cacheKey = `${repoRoot}:${options.mode}:${file.path}:${rev}`;
   const nowMs = Date.now();
   const cached = getCachedDiffFile(cacheKey, options?.force, nowMs);
   if (cached) {
@@ -344,7 +451,18 @@ export const fetchDiffFile = async (
   let patch = "";
   let numstat: NumstatCounts | null = null;
   try {
-    const patchData = await fetchPatchData(repoRoot, file, safePath);
+    let diffSpecifier = "HEAD";
+    if (options.mode !== "uncommitted") {
+      const targetResult = await resolveComparedDiffTarget(repoRoot);
+      if (!targetResult.ok) {
+        return buildEmptyDiffFile(file, rev);
+      }
+      diffSpecifier =
+        options.mode === "committed"
+          ? `${targetResult.target.baseBranch}...HEAD`
+          : targetResult.target.mergeBase;
+    }
+    const patchData = await fetchPatchData(repoRoot, file, safePath, diffSpecifier);
     patch = patchData.patch;
     numstat = patchData.numstat;
   } catch {

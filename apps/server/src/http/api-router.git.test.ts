@@ -22,7 +22,7 @@ describe("createApiRouter", () => {
 
   it("returns 404 when pane is missing on diff endpoint", async () => {
     const { api } = createTestContext();
-    const res = await api.request("/sessions/missing/diff", {
+    const res = await api.request("/sessions/missing/diff?mode=total", {
       headers: authHeaders,
     });
     expect(res.status).toBe(404);
@@ -39,7 +39,7 @@ describe("createApiRouter", () => {
       reason: "not_git",
     });
     const { api } = createTestContext();
-    const res = await api.request("/sessions/pane-1/diff/file?path=README.md", {
+    const res = await api.request("/sessions/pane-1/diff/file?mode=uncommitted&path=README.md", {
       headers: authHeaders,
     });
     expect(res.status).toBe(400);

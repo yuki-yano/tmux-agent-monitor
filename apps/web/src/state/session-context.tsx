@@ -8,6 +8,7 @@ import type {
   CommitFileDiff,
   CommitLog,
   DiffFile,
+  DiffMode,
   DiffSummary,
   HighlightCorrectionConfig,
   ImageAttachment,
@@ -168,13 +169,13 @@ export type SessionBranchesApiContextValue = {
   ) => Promise<void>;
   requestDiffSummary: (
     paneId: string,
-    options?: { force?: boolean; worktreePath?: string; branch?: string },
+    options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
   ) => Promise<DiffSummary>;
   requestDiffFile: (
     paneId: string,
     path: string,
-    rev?: string | null,
-    options?: { force?: boolean; worktreePath?: string; branch?: string },
+    rev: string | null | undefined,
+    options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
   ) => Promise<DiffFile>;
   requestCommitLog: (
     paneId: string,

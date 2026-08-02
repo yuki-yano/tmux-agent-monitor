@@ -21,13 +21,19 @@ describe("DiffSection", () => {
 
   const buildState = (overrides: Partial<DiffSectionState> = {}): DiffSectionState => ({
     diffSummary: null,
-    diffBranch: null,
     diffError: null,
     diffLoading: false,
     diffFiles: {},
     diffOpen: {},
     diffLoadingFiles: {},
-    virtualBranch: null,
+    diffScope: {
+      kind: "workingTree",
+      mode: "total",
+      baseBranch: "main",
+      branch: null,
+      path: null,
+      selected: false,
+    },
     ...overrides,
   });
 
@@ -35,7 +41,8 @@ describe("DiffSection", () => {
     onRefresh: vi.fn(),
     onToggle: vi.fn(),
     onPreviewFile: vi.fn(),
-    onClearVirtualBranch: vi.fn(),
+    onClearScope: vi.fn(),
+    onModeChange: vi.fn(),
     ...overrides,
   });
 
@@ -116,7 +123,12 @@ describe("DiffSection", () => {
   it("does not offer a working-tree preview while inspecting a virtual branch", () => {
     const state = buildState({
       diffSummary: createDiffSummary(),
-      virtualBranch: "feature/virtual",
+      diffScope: {
+        kind: "branchComparison",
+        mode: "committed",
+        baseBranch: "main",
+        branch: "feature/virtual",
+      },
     });
     const actions = buildActions();
     const wrapper = createWrapper();
@@ -128,21 +140,35 @@ describe("DiffSection", () => {
   it("shows branch name next to total changes", () => {
     const state = buildState({
       diffSummary: createDiffSummary(),
-      diffBranch: "feature/changes-tab",
+      diffScope: {
+        kind: "workingTree",
+        mode: "uncommitted",
+        baseBranch: "main",
+        branch: "feature/changes-tab",
+        path: null,
+        selected: false,
+      },
     });
     const actions = buildActions();
     const wrapper = createWrapper();
     render(<DiffSection state={state} actions={actions} />, { wrapper });
 
-    const branch = screen.getByTestId("diff-branch-text");
+    const branch = screen.getByTestId("diff-scope-text");
     expect(branch.textContent).toContain("feature/changes-tab");
-    expect(branch.getAttribute("title")).toBe("feature/changes-tab");
+    expect(branch.getAttribute("title")).toBe("feature/changes-tab → working tree");
   });
 
   it("pins refresh button to top-right in header", () => {
     const state = buildState({
       diffSummary: createDiffSummary(),
-      diffBranch: "feature/a-very-long-branch-name-to-verify-header-layout",
+      diffScope: {
+        kind: "workingTree",
+        mode: "total",
+        baseBranch: "main",
+        branch: "feature/a-very-long-branch-name-to-verify-header-layout",
+        path: null,
+        selected: false,
+      },
     });
     const actions = buildActions();
     const wrapper = createWrapper();
@@ -157,13 +183,20 @@ describe("DiffSection", () => {
   it("uses shared truncation component for long branch labels", () => {
     const state = buildState({
       diffSummary: createDiffSummary(),
-      diffBranch: "feature/very/long/branch/name/for/start-truncation",
+      diffScope: {
+        kind: "workingTree",
+        mode: "total",
+        baseBranch: "main",
+        branch: "feature/very/long/branch/name/for/start-truncation",
+        path: null,
+        selected: false,
+      },
     });
     const actions = buildActions();
     const wrapper = createWrapper();
     render(<DiffSection state={state} actions={actions} />, { wrapper });
 
-    const branch = screen.getByTestId("diff-branch-text");
+    const branch = screen.getByTestId("diff-scope-text");
     const summaryLine = screen.getByTestId("diff-summary-line");
     expect(branch.className).toContain("overflow-hidden");
     expect(branch.className).toContain("flex-1");
@@ -203,7 +236,7 @@ describe("DiffSection", () => {
     const wrapper = createWrapper();
     render(<DiffSection state={state} actions={actions} />, { wrapper });
 
-    expect(screen.getByText("Working directory is clean")).toBeTruthy();
+    expect(screen.getByText("No changes from main through the working tree")).toBeTruthy();
     expect(screen.queryByText("A 0")).toBeNull();
     expect(screen.queryByText("M 0")).toBeNull();
     expect(screen.queryByText("D 0")).toBeNull();
@@ -275,21 +308,161 @@ describe("DiffSection", () => {
     expect(screen.getByText("+line-300")).toBeTruthy();
   });
 
-  it("shows virtual branch badge with clear button when a virtual branch is active", () => {
-    const onClearVirtualBranch = vi.fn();
+  it("shows the branch comparison range and returns to the working tree", () => {
+    const onClearScope = vi.fn();
     const state = buildState({
       diffSummary: createDiffSummary(),
-      virtualBranch: "feature/virtual",
+      diffScope: {
+        kind: "branchComparison",
+        mode: "committed",
+        baseBranch: "main",
+        branch: "feature/virtual",
+      },
     });
-    const actions = buildActions({ onClearVirtualBranch });
+    const actions = buildActions({ onClearScope });
     const wrapper = createWrapper();
     render(<DiffSection state={state} actions={actions} />, { wrapper });
 
-    const notice = screen.getByTestId("diff-virtual-branch-notice");
-    expect(notice.textContent).toContain("feature/virtual");
+    const notice = screen.getByTestId("diff-scope-notice");
+    expect(notice.textContent).toContain("Branch changes");
+    expect(notice.textContent).toContain("main...feature/virtual");
+    expect(screen.getByTestId("diff-scope-text").textContent).toContain("main...feature/virtual");
+    expect(screen.queryByRole("tab", { name: "Total" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear virtual branch" }));
-    expect(onClearVirtualBranch).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Return to current working tree" }));
+    expect(onClearScope).toHaveBeenCalled();
+  });
+
+  it("shows the selected worktree path and returns to the session worktree", () => {
+    const onClearScope = vi.fn();
+    const state = buildState({
+      diffSummary: createDiffSummary(),
+      diffScope: {
+        kind: "workingTree",
+        mode: "total",
+        baseBranch: "main",
+        branch: "feature/worktree",
+        path: "/Users/test/repo-worktrees/feature-worktree",
+        selected: true,
+      },
+    });
+    const actions = buildActions({ onClearScope });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={actions} />, { wrapper });
+
+    const notice = screen.getByTestId("diff-scope-notice");
+    expect(notice.textContent).toContain("Total changes");
+    expect(notice.textContent).toContain("feature/worktree");
+    expect(notice.textContent).toContain("~/repo-worktrees/feature-worktree");
+
+    fireEvent.click(screen.getByRole("button", { name: "Return to session worktree" }));
+    expect(onClearScope).toHaveBeenCalled();
+  });
+
+  it("describes an empty branch comparison as committed branch state", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary({ files: [] }),
+      diffScope: {
+        kind: "branchComparison",
+        mode: "committed",
+        baseBranch: "main",
+        branch: "feature/virtual",
+      },
+    });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={buildActions()} />, { wrapper });
+
+    expect(
+      screen.getByText("No committed changes on feature/virtual since it diverged from main"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Working tree is clean")).toBeNull();
+  });
+
+  it("switches between total, committed, and uncommitted worktree layers", () => {
+    const onModeChange = vi.fn();
+    const state = buildState({ diffSummary: createDiffSummary() });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={buildActions({ onModeChange })} />, { wrapper });
+
+    expect(screen.getByRole("tab", { name: "Total" }).getAttribute("data-state")).toBe("active");
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Committed" }), { button: 0 });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Uncommitted" }), { button: 0 });
+
+    expect(onModeChange).toHaveBeenNthCalledWith(1, "committed");
+    expect(onModeChange).toHaveBeenNthCalledWith(2, "uncommitted");
+  });
+
+  it("keeps uncommitted available when the default branch cannot be resolved", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary({ reason: "default_branch_unavailable", files: [] }),
+    });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={buildActions()} />, { wrapper });
+
+    expect(
+      screen.getByText(
+        "A default branch is required for Total and Committed changes. Uncommitted changes are still available.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Uncommitted" })).toBeTruthy();
+    expect(screen.queryByText("No changes from main through the working tree")).toBeNull();
+  });
+
+  it("describes an empty uncommitted layer as a clean working tree", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary({ files: [] }),
+      diffScope: {
+        kind: "workingTree",
+        mode: "uncommitted",
+        baseBranch: "main",
+        branch: null,
+        path: null,
+        selected: false,
+      },
+    });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={buildActions()} />, { wrapper });
+
+    expect(screen.getByText("Working tree is clean")).toBeTruthy();
+    expect(screen.getByTestId("diff-scope-text").getAttribute("title")).toBe("HEAD → working tree");
+  });
+
+  it("describes the default branch committed layer without self-divergence", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary({ files: [] }),
+      diffScope: {
+        kind: "workingTree",
+        mode: "committed",
+        baseBranch: "main",
+        branch: "main",
+        path: null,
+        selected: false,
+      },
+    });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={buildActions()} />, { wrapper });
+
+    expect(screen.getByText("No committed changes beyond main")).toBeTruthy();
+  });
+
+  it("disables working-tree preview for the committed worktree layer", () => {
+    const state = buildState({
+      diffSummary: createDiffSummary(),
+      diffScope: {
+        kind: "workingTree",
+        mode: "committed",
+        baseBranch: "main",
+        branch: "feature/worktree",
+        path: "/repo/worktree",
+        selected: true,
+      },
+    });
+    const wrapper = createWrapper();
+    render(<DiffSection state={state} actions={buildActions()} />, { wrapper });
+
+    expect(screen.queryByRole("button", { name: "Preview src/index.ts" })).toBeNull();
+    expect(screen.getByTestId("diff-scope-notice").textContent).toContain("Committed changes");
   });
 
   it("renders repository reason callout", () => {

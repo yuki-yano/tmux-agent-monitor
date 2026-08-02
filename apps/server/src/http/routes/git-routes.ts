@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import type { SessionDetail } from "@vde-monitor/shared";
+import type { DiffMode, SessionDetail } from "@vde-monitor/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 
@@ -23,12 +23,13 @@ const forceQuerySchema = z.object({
   worktreePath: z.string().optional(),
   branch: z.string().optional(),
 });
-const diffFileQuerySchema = z.object({
+const diffModeSchema = z.enum(["total", "committed", "uncommitted"]);
+const diffQuerySchema = forceQuerySchema.extend({
+  mode: diffModeSchema,
+});
+const diffFileQuerySchema = diffQuerySchema.extend({
   path: z.string(),
   rev: z.string().optional(),
-  force: z.string().optional(),
-  worktreePath: z.string().optional(),
-  branch: z.string().optional(),
 });
 const commitLogQuerySchema = z.object({
   limit: z.string().optional(),
@@ -95,8 +96,9 @@ const loadReadyDiffSummary = async (
   c: RouteContext,
   cwd: string | null,
   force: boolean,
+  mode: DiffMode,
 ): Promise<Response | { summary: DiffSummaryResult; repoRoot: string; rev: string }> => {
-  const summary = await fetchDiffSummary(cwd, { force });
+  const summary = await fetchDiffSummary(cwd, { force, mode });
   if (!summary.repoRoot || summary.reason || !summary.rev) {
     return c.json({ error: buildError("INVALID_PAYLOAD", "diff summary unavailable") }, 400);
   }
@@ -123,7 +125,7 @@ const loadReadyCommitLog = async (
 
 export const createGitRoutes = ({ resolvePane }: GitRouteDeps) =>
   new Hono()
-    .get("/sessions/:paneId/diff", zValidator("query", forceQuerySchema), async (c) => {
+    .get("/sessions/:paneId/diff", zValidator("query", diffQuerySchema), async (c) => {
       const pane = resolvePane(c);
       if (pane instanceof Response) {
         return pane;
@@ -131,6 +133,12 @@ export const createGitRoutes = ({ resolvePane }: GitRouteDeps) =>
       const query = c.req.valid("query");
       const force = isForceRequested(query.force);
       if (query.branch) {
+        if (query.mode !== "committed") {
+          return c.json(
+            { error: buildError("INVALID_PAYLOAD", "branch diff mode must be committed") },
+            400,
+          );
+        }
         const scope = await resolveBranchScopeOrError(
           c,
           pane.detail,
@@ -147,7 +155,7 @@ export const createGitRoutes = ({ resolvePane }: GitRouteDeps) =>
       if (cwd instanceof Response) {
         return cwd;
       }
-      const summary = await fetchDiffSummary(cwd, { force });
+      const summary = await fetchDiffSummary(cwd, { force, mode: query.mode });
       return c.json({ summary });
     })
     .get("/sessions/:paneId/diff/file", zValidator("query", diffFileQuerySchema), async (c) => {
@@ -159,6 +167,12 @@ export const createGitRoutes = ({ resolvePane }: GitRouteDeps) =>
       const pathParam = query.path;
       const force = isForceRequested(query.force);
       if (query.branch) {
+        if (query.mode !== "committed") {
+          return c.json(
+            { error: buildError("INVALID_PAYLOAD", "branch diff mode must be committed") },
+            400,
+          );
+        }
         const scope = await resolveBranchScopeOrError(
           c,
           pane.detail,
@@ -183,7 +197,7 @@ export const createGitRoutes = ({ resolvePane }: GitRouteDeps) =>
       if (cwd instanceof Response) {
         return cwd;
       }
-      const readySummary = await loadReadyDiffSummary(c, cwd, force);
+      const readySummary = await loadReadyDiffSummary(c, cwd, force, query.mode);
       if (readySummary instanceof Response) {
         return readySummary;
       }
@@ -191,7 +205,10 @@ export const createGitRoutes = ({ resolvePane }: GitRouteDeps) =>
       if (!target) {
         return c.json({ error: buildError("NOT_FOUND", "file not found") }, 404);
       }
-      const file = await fetchDiffFile(readySummary.repoRoot, target, readySummary.rev, { force });
+      const file = await fetchDiffFile(readySummary.repoRoot, target, readySummary.rev, {
+        force,
+        mode: query.mode,
+      });
       return c.json({ file });
     })
     .get("/sessions/:paneId/commits", zValidator("query", commitLogQuerySchema), async (c) => {

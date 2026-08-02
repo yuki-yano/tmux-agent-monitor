@@ -36,6 +36,16 @@ describe("parseNumstat", () => {
     const result = parseNumstat(output);
     expect(result.get("assets/logo.png")).toEqual({ additions: null, deletions: null });
   });
+
+  it("uses the destination path for null-delimited rename entries", () => {
+    const output = ["4\t2\t", "old-dir/old.ts", "new-dir/new.ts", "1\t0\tplain.ts", ""].join("\0");
+
+    const result = parseNumstat(output);
+
+    expect(result.get("new-dir/new.ts")).toEqual({ additions: 4, deletions: 2 });
+    expect(result.get("plain.ts")).toEqual({ additions: 1, deletions: 0 });
+    expect(result.has("old-dir/old.ts")).toBe(false);
+  });
 });
 
 describe("pickStatus", () => {

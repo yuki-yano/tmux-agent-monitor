@@ -146,7 +146,7 @@ const resolveDiffStatsByWorktreePath = async (entries: WorktreeListEntryBase[]) 
   const resolved = await Promise.all(
     entries.map(async (entry) => {
       try {
-        const summary = await fetchDiffSummary(entry.path);
+        const summary = await fetchDiffSummary(entry.path, { mode: "uncommitted" });
         return [entry.path, resolveDiffStats(summary)] as const;
       } catch {
         return [entry.path, buildEmptyDiffStats()] as const;

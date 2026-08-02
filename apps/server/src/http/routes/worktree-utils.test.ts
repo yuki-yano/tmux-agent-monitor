@@ -125,8 +125,10 @@ describe("worktree-utils", () => {
     ]);
     expect(payload.baseBranch).toBe("main");
     expect(fetchDiffSummary).toHaveBeenCalledTimes(2);
-    expect(fetchDiffSummary).toHaveBeenNthCalledWith(1, "/repo/worktree-a");
-    expect(fetchDiffSummary).toHaveBeenNthCalledWith(2, "/repo");
+    expect(fetchDiffSummary).toHaveBeenNthCalledWith(1, "/repo/worktree-a", {
+      mode: "uncommitted",
+    });
+    expect(fetchDiffSummary).toHaveBeenNthCalledWith(2, "/repo", { mode: "uncommitted" });
     expect(runGit).toHaveBeenCalledTimes(1);
     expect(runGit).toHaveBeenCalledWith(
       "/repo/worktree-a",
