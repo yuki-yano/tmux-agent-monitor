@@ -258,6 +258,74 @@ describe("file content resolver", () => {
 
   it.each([
     {
+      normalizedPath: "src/styles.css",
+      content: ":root { color-scheme: dark; }\n",
+      languageHint: "css",
+    },
+    {
+      normalizedPath: "migrations/0001_create_users.sql",
+      content: "CREATE TABLE users (id INTEGER PRIMARY KEY);\n",
+      languageHint: "sql",
+    },
+    {
+      normalizedPath: "Makefile",
+      content: "build:\n\tpnpm build\n",
+      languageHint: "make",
+    },
+    {
+      normalizedPath: "build/rules.mk",
+      content: "test:\n\tpnpm test\n",
+      languageHint: "make",
+    },
+    {
+      normalizedPath: "scripts/release.py",
+      content: 'print("release")\n',
+      languageHint: "python",
+    },
+    {
+      normalizedPath: "src/types.pyi",
+      content: "def release() -> None: ...\n",
+      languageHint: "python",
+    },
+    {
+      normalizedPath: "Formula/vde-monitor.rb",
+      content: "class VdeMonitor < Formula\nend\n",
+      languageHint: "ruby",
+    },
+    {
+      normalizedPath: "Gemfile",
+      content: 'source "https://rubygems.org"\n',
+      languageHint: "ruby",
+    },
+  ])("returns $languageHint language hint for $normalizedPath", async (fixture) => {
+    const repoRoot = await mkdtemp(
+      path.join(os.tmpdir(), `vde-monitor-file-content-${fixture.languageHint}-`),
+    );
+    try {
+      const directory = path.dirname(path.join(repoRoot, fixture.normalizedPath));
+      await mkdir(directory, { recursive: true });
+      await writeFile(path.join(repoRoot, fixture.normalizedPath), fixture.content);
+
+      const result = await resolveFileContent({
+        repoRoot,
+        normalizedPath: fixture.normalizedPath,
+        maxBytes: 1024,
+      });
+
+      expect(result).toMatchObject({
+        path: fixture.normalizedPath,
+        isBinary: false,
+        truncated: false,
+        languageHint: fixture.languageHint,
+        content: fixture.content,
+      });
+    } finally {
+      await rm(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    {
       extension: "lua",
       content: "local value = 1\n",
       languageHint: "lua",

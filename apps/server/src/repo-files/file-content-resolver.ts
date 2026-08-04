@@ -121,6 +121,21 @@ const resolveLanguageHint = (targetPath: string): RepoFileLanguageHint => {
   if (baseName === "dockerfile") {
     return "dockerfile";
   }
+  if (baseName === "makefile" || baseName === "gnumakefile" || baseName === "bsdmakefile") {
+    return "make";
+  }
+  if (
+    baseName === "gemfile" ||
+    baseName === "rakefile" ||
+    baseName === "brewfile" ||
+    baseName === "podfile" ||
+    baseName === "fastfile" ||
+    baseName === "appfile" ||
+    baseName === "matchfile" ||
+    baseName === "vagrantfile"
+  ) {
+    return "ruby";
+  }
   const extension = path.posix.extname(normalized);
   if (extension === ".ts") {
     return "typescript";
@@ -163,6 +178,21 @@ const resolveLanguageHint = (targetPath: string): RepoFileLanguageHint => {
   }
   if (extension === ".nix") {
     return "nix";
+  }
+  if (extension === ".css") {
+    return "css";
+  }
+  if (extension === ".sql") {
+    return "sql";
+  }
+  if (extension === ".mk" || extension === ".mak") {
+    return "make";
+  }
+  if (extension === ".py" || extension === ".pyi" || extension === ".pyw") {
+    return "python";
+  }
+  if (extension === ".rb" || extension === ".gemspec") {
+    return "ruby";
   }
   if (extension === ".lua") {
     return "lua";

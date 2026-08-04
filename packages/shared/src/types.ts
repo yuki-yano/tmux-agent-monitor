@@ -301,6 +301,11 @@ export type RepoFileLanguageHint =
   | "rust"
   | "swift"
   | "nix"
+  | "css"
+  | "sql"
+  | "make"
+  | "python"
+  | "ruby"
   | "lua"
   | "toml"
   | "text";

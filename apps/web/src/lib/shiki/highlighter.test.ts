@@ -143,6 +143,32 @@ describe("highlightCode", () => {
   });
 
   it.each([
+    ["css", "css", ":root { color-scheme: dark; }"],
+    ["sql", "sql", "SELECT id FROM users;"],
+    ["makefile", "make", "build:\\n\\tpnpm build"],
+    ["py", "python", 'print("release")'],
+    ["rb", "ruby", "class VdeMonitor < Formula; end"],
+  ])("maps the %s alias and loads %s highlighting", async (alias, language, code) => {
+    codeToHtmlMock.mockReturnValue(`<pre>${language}</pre>`);
+
+    const result = await highlightCode({
+      code,
+      lang: alias,
+      theme: "mocha",
+    });
+
+    expect(result.language).toBe(language);
+    expect(createHighlighterMock).toHaveBeenCalledWith({
+      themes: ["catppuccin-latte", "catppuccin-mocha"],
+      langs: expect.arrayContaining([language]),
+    });
+    expect(codeToHtmlMock).toHaveBeenCalledWith(code, {
+      lang: language,
+      theme: "catppuccin-mocha",
+    });
+  });
+
+  it.each([
     ["lua", "local value = 1"],
     ["toml", 'name = "vde-monitor"'],
   ])("loads %s highlighting", async (lang, code) => {
