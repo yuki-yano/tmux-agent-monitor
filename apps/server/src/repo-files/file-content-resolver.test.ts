@@ -231,6 +231,31 @@ describe("file content resolver", () => {
     }
   });
 
+  it("returns nix language hint for Nix files", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "vde-monitor-file-content-nix-"));
+    try {
+      await writeFile(
+        path.join(repoRoot, "flake.nix"),
+        '{\n  description = "vde-monitor";\n  outputs = { self }: {};\n}\n',
+      );
+
+      const result = await resolveFileContent({
+        repoRoot,
+        normalizedPath: "flake.nix",
+        maxBytes: 1024,
+      });
+
+      expect(result).toMatchObject({
+        path: "flake.nix",
+        isBinary: false,
+        truncated: false,
+        languageHint: "nix",
+      });
+    } finally {
+      await rm(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     {
       extension: "lua",

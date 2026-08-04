@@ -121,6 +121,27 @@ describe("highlightCode", () => {
     });
   });
 
+  it("loads Nix highlighting", async () => {
+    codeToHtmlMock.mockReturnValue("<pre>nix</pre>");
+
+    const code = "{ pkgs, ... }: { environment.systemPackages = [ pkgs.git ]; }";
+    const result = await highlightCode({
+      code,
+      lang: "nix",
+      theme: "latte",
+    });
+
+    expect(result.language).toBe("nix");
+    expect(createHighlighterMock).toHaveBeenCalledWith({
+      themes: ["catppuccin-latte", "catppuccin-mocha"],
+      langs: expect.arrayContaining(["nix"]),
+    });
+    expect(codeToHtmlMock).toHaveBeenCalledWith(code, {
+      lang: "nix",
+      theme: "catppuccin-latte",
+    });
+  });
+
   it.each([
     ["lua", "local value = 1"],
     ["toml", 'name = "vde-monitor"'],

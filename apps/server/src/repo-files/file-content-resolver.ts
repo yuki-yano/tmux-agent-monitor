@@ -161,6 +161,9 @@ const resolveLanguageHint = (targetPath: string): RepoFileLanguageHint => {
   if (extension === ".swift") {
     return "swift";
   }
+  if (extension === ".nix") {
+    return "nix";
+  }
   if (extension === ".lua") {
     return "lua";
   }

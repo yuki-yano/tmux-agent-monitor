@@ -300,6 +300,7 @@ export type RepoFileLanguageHint =
   | "go"
   | "rust"
   | "swift"
+  | "nix"
   | "lua"
   | "toml"
   | "text";
