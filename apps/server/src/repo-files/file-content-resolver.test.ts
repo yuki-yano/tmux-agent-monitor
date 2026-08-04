@@ -205,6 +205,32 @@ describe("file content resolver", () => {
     }
   });
 
+  it("returns swift language hint for Swift files", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "vde-monitor-file-content-swift-"));
+    try {
+      await mkdir(path.join(repoRoot, "Sources"), { recursive: true });
+      await writeFile(
+        path.join(repoRoot, "Sources", "App.swift"),
+        "import SwiftUI\n\n@main struct App: SwiftUI.App {\n  var body: some Scene { WindowGroup {} }\n}\n",
+      );
+
+      const result = await resolveFileContent({
+        repoRoot,
+        normalizedPath: "Sources/App.swift",
+        maxBytes: 1024,
+      });
+
+      expect(result).toMatchObject({
+        path: "Sources/App.swift",
+        isBinary: false,
+        truncated: false,
+        languageHint: "swift",
+      });
+    } finally {
+      await rm(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     {
       extension: "lua",

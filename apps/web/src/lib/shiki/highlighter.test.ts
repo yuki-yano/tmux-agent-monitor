@@ -100,6 +100,27 @@ describe("highlightCode", () => {
     });
   });
 
+  it("loads Swift highlighting", async () => {
+    codeToHtmlMock.mockReturnValue("<pre>swift</pre>");
+
+    const code = "struct App: SwiftUI.App {}";
+    const result = await highlightCode({
+      code,
+      lang: "swift",
+      theme: "mocha",
+    });
+
+    expect(result.language).toBe("swift");
+    expect(createHighlighterMock).toHaveBeenCalledWith({
+      themes: ["catppuccin-latte", "catppuccin-mocha"],
+      langs: expect.arrayContaining(["swift"]),
+    });
+    expect(codeToHtmlMock).toHaveBeenCalledWith(code, {
+      lang: "swift",
+      theme: "catppuccin-mocha",
+    });
+  });
+
   it.each([
     ["lua", "local value = 1"],
     ["toml", 'name = "vde-monitor"'],
