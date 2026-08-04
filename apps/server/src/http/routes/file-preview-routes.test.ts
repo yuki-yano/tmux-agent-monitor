@@ -100,12 +100,33 @@ describe("createFilePreviewRoutes", () => {
     expect(Buffer.from(await response.arrayBuffer())).toEqual(fixture.image);
   });
 
-  it("rejects oversized HTML and CSS transformation inputs without limiting image streams", async () => {
+  it("transforms self-contained HTML larger than the former 4 MiB limit", async () => {
+    const fixture = await createPreviewFixture();
+    const largeHtml = path.join(fixture.root, "large.html");
+    const embeddedImage = "a".repeat(5 * 1024 * 1024);
+    await fs.writeFile(largeHtml, `<img src="data:image/png;base64,${embeddedImage}">`);
+    const tickets = new PreviewTicketService();
+    const grant = tickets.issue([{ rootId: "repo", canonicalPath: fixture.root }], {
+      rootId: "repo",
+      relativePath: "large.html",
+    });
+    const routes = createFilePreviewRoutes({ previewTicketService: tickets });
+
+    const response = await routes.request(`/${grant.ticket}/r/repo/large.html`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect((await response.text()).length).toBeGreaterThan(5 * 1024 * 1024);
+  });
+
+  it("rejects HTML and CSS above the transform limit without limiting image streams", async () => {
     const fixture = await createPreviewFixture();
     const oversizedHtml = path.join(fixture.root, "oversized.html");
     const oversizedCss = path.join(fixture.root, "styles", "oversized.css");
-    await fs.writeFile(oversizedHtml, Buffer.alloc(4 * 1024 * 1024 + 1, 0x20));
-    await fs.writeFile(oversizedCss, Buffer.alloc(4 * 1024 * 1024 + 1, 0x20));
+    await fs.writeFile(oversizedHtml, " ");
+    await fs.truncate(oversizedHtml, 256 * 1024 * 1024 + 1);
+    await fs.writeFile(oversizedCss, " ");
+    await fs.truncate(oversizedCss, 256 * 1024 * 1024 + 1);
     const tickets = new PreviewTicketService();
     const routes = createFilePreviewRoutes({ previewTicketService: tickets });
 

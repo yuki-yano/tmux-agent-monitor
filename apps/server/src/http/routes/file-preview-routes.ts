@@ -15,7 +15,8 @@ import {
   transformPreviewHtml,
 } from "../../file-preview";
 
-const MAX_TRANSFORM_SOURCE_BYTES = 4 * 1024 * 1024;
+const MAX_TRANSFORM_SOURCE_BYTES = 256 * 1024 * 1024;
+const TRANSFORM_READ_CHUNK_BYTES = 64 * 1024;
 
 const notFound = () => new Response("Not Found", { status: 404 });
 
@@ -26,19 +27,23 @@ const isActiveDocumentMimeType = (mimeType: string) =>
   mimeType.startsWith("text/xml");
 
 const readTransformSource = async (fileHandle: FileHandle) => {
-  const buffer = Buffer.allocUnsafe(MAX_TRANSFORM_SOURCE_BYTES + 1);
+  const chunks: Buffer[] = [];
   let offset = 0;
-  while (offset < buffer.byteLength) {
-    const { bytesRead } = await fileHandle.read(buffer, offset, buffer.byteLength - offset, offset);
+  while (offset <= MAX_TRANSFORM_SOURCE_BYTES) {
+    const buffer = Buffer.allocUnsafe(
+      Math.min(TRANSFORM_READ_CHUNK_BYTES, MAX_TRANSFORM_SOURCE_BYTES + 1 - offset),
+    );
+    const { bytesRead } = await fileHandle.read(buffer, 0, buffer.byteLength, offset);
     if (bytesRead === 0) {
       break;
     }
+    chunks.push(buffer.subarray(0, bytesRead));
     offset += bytesRead;
   }
   if (offset > MAX_TRANSFORM_SOURCE_BYTES) {
     throw new Error("preview transform source is too large");
   }
-  return buffer.subarray(0, offset).toString("utf8");
+  return Buffer.concat(chunks, offset).toString("utf8");
 };
 
 const createHeaders = (
