@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { rotateToken } from "./config";
 import { PreviewTicketService } from "./file-preview";
 import { createApiRouter } from "./http/api-router";
+import { isValidAuthToken, setSessionAuthCookie } from "./http/helpers";
 import { createFilePreviewRoutes } from "./http/routes/file-preview-routes";
 import type { createSessionMonitor } from "./monitor";
 import type {
@@ -56,6 +57,22 @@ export const createApp = ({
     screenScheduler,
     streamConnections,
     previewTicketService,
+  });
+  app.get("/auth/session", (c) => {
+    c.header("Cache-Control", "no-store");
+    c.header("Referrer-Policy", "no-referrer");
+    const token = c.req.query("token")?.trim() ?? "";
+    if (!token || !isValidAuthToken(config, token)) {
+      return c.text("Unauthorized", 401);
+    }
+    setSessionAuthCookie(c, token);
+    const apiBaseUrl = c.req.query("api")?.trim();
+    const redirectParams = new URLSearchParams();
+    if (apiBaseUrl) {
+      redirectParams.set("api", apiBaseUrl);
+    }
+    const redirectTarget = redirectParams.size > 0 ? `/?${redirectParams.toString()}` : "/";
+    return c.redirect(redirectTarget, 302);
   });
   app.route("/api", api);
   app.route(

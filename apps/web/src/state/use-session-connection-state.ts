@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer, useRef } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 
@@ -27,7 +27,6 @@ type SessionConnectionAction =
       token: string | null;
       authError: boolean;
       rateLimited: boolean;
-      pollBackoffMs?: number;
     }
   | { type: "refreshSuccess"; token: string | null }
   | { type: "sessionsSnapshotReceived"; token: string | null }
@@ -67,7 +66,12 @@ const sessionConnectionReducer = (
         ...state,
         authBlocked: action.authError ? true : state.authBlocked,
         connected: action.rateLimited,
-        pollBackoffMs: action.pollBackoffMs ?? state.pollBackoffMs,
+        pollBackoffMs: action.rateLimited
+          ? Math.min(
+              state.pollBackoffMs + RATE_LIMIT_BACKOFF_STEP_MS,
+              MAX_RATE_LIMIT_STEPS * RATE_LIMIT_BACKOFF_STEP_MS,
+            )
+          : state.pollBackoffMs,
       };
     case "refreshSuccess":
       return {
@@ -100,12 +104,6 @@ const sessionConnectionReducer = (
 export const useSessionConnectionState = (token: string | null) => {
   const [state, dispatch] = useReducer(sessionConnectionReducer, token, buildConnectionState);
   const visibleState = normalizeConnectionState(state, token);
-  const activeTokenRef = useRef(token);
-  const backoffStepRef = useRef(0);
-  if (activeTokenRef.current !== token) {
-    activeTokenRef.current = token;
-    backoffStepRef.current = 0;
-  }
   const hasToken = Boolean(token);
   const {
     connectionIssue,
@@ -117,26 +115,13 @@ export const useSessionConnectionState = (token: string | null) => {
   } = visibleState;
 
   const applyRateLimitBackoff = useCallback(() => {
-    const nextStep = Math.min(backoffStepRef.current + 1, MAX_RATE_LIMIT_STEPS);
-    if (nextStep === backoffStepRef.current) {
-      return;
-    }
-    backoffStepRef.current = nextStep;
     dispatch({
       type: "refreshFailure",
       token,
       authError: false,
       rateLimited: true,
-      pollBackoffMs: nextStep * RATE_LIMIT_BACKOFF_STEP_MS,
     });
   }, [token]);
-
-  const resetRateLimitBackoff = useCallback(() => {
-    if (backoffStepRef.current === 0) {
-      return;
-    }
-    backoffStepRef.current = 0;
-  }, []);
 
   const connectionStatus = useMemo<ConnectionStatus>(() => {
     if (!hasToken || authBlocked) {
@@ -163,10 +148,9 @@ export const useSessionConnectionState = (token: string | null) => {
         }
         return;
       }
-      resetRateLimitBackoff();
       dispatch({ type: "refreshSuccess", token });
     },
-    [applyRateLimitBackoff, resetRateLimitBackoff, token],
+    [applyRateLimitBackoff, token],
   );
 
   const reconnect = useCallback(

@@ -80,6 +80,8 @@ export const useRepositoryActivityData = ({
   );
 
   useEffect(() => {
+    // This is lifecycle data loading, not live child state forwarded to a parent callback.
+    // react-doctor-disable-next-line no-pass-live-state-to-parent
     void load({ requestedRange: range });
   }, [load, range]);
 

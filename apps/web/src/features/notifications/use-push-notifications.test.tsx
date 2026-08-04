@@ -144,7 +144,7 @@ describe("usePushNotifications", () => {
     expect(result.current.isPaneEnabled).toBe(false);
     expect(result.current.status).toBe("error");
     expect(result.current.errorMessage).toContain("scope sync failed");
-    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids")).toBe("[]");
+    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids:v1")).toBe("[]");
   });
 
   it("serializes consecutive scope toggles and persists the latest successful scope", async () => {
@@ -184,7 +184,7 @@ describe("usePushNotifications", () => {
 
     expect(readPostedPaneIds(fetchMock)).toEqual([[], ["%1"], []]);
     expect(result.current.isPaneEnabled).toBe(false);
-    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids")).toBe("[]");
+    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids:v1")).toBe("[]");
   });
 
   it("keeps the latest scope when an earlier queued update fails", async () => {
@@ -222,7 +222,7 @@ describe("usePushNotifications", () => {
     expect(result.current.isPaneEnabled).toBe(false);
     expect(result.current.status).toBe("subscribed");
     expect(result.current.errorMessage).toBeNull();
-    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids")).toBe("[]");
+    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids:v1")).toBe("[]");
   });
 
   it("rolls back to the last confirmed scope when the latest queued update fails", async () => {
@@ -260,7 +260,7 @@ describe("usePushNotifications", () => {
     expect(result.current.isPaneEnabled).toBe(true);
     expect(result.current.status).toBe("error");
     expect(result.current.errorMessage).toContain("latest failed");
-    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids")).toBe('["%1"]');
+    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids:v1")).toBe('["%1"]');
   });
 
   it("starts a new context queue without waiting for an obsolete token request", async () => {
@@ -439,12 +439,12 @@ describe("usePushNotifications", () => {
       toggle = result.current.togglePaneEnabled();
     });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
-    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids")).toBe('["%1"]');
+    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids:v1")).toBe('["%1"]');
 
     unmount();
     scopeResponse.resolve(Response.json({ subscriptionId: "subscription-1" }));
     await toggle!;
 
-    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids")).toBe('["%1"]');
+    expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids:v1")).toBe('["%1"]');
   });
 });

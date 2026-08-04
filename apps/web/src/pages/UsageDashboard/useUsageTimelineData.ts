@@ -63,6 +63,8 @@ export const useUsageTimelineData = ({
         setTimelineError(resolveErrorMessage(error, API_ERROR_MESSAGES.usageGlobalTimeline));
       } finally {
         if (!silent && requestId === timelineRequestIdRef.current) {
+          // The loading flag is intentionally reset on the finally path for both outcomes.
+          // react-doctor-disable-next-line no-loading-flag-reset-outside-finally
           setTimelineLoading(false);
         }
       }
@@ -72,6 +74,8 @@ export const useUsageTimelineData = ({
 
   // Reload whenever the user switches range.
   useEffect(() => {
+    // This is lifecycle data loading, not live child state forwarded to a parent callback.
+    // react-doctor-disable-next-line no-pass-live-state-to-parent
     void loadTimeline({ range: timelineRange });
   }, [loadTimeline, timelineRange]);
 

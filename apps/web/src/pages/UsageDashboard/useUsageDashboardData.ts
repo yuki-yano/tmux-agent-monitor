@@ -134,6 +134,8 @@ export const useUsageDashboardData = ({
         setDashboardError(resolveErrorMessage(error, API_ERROR_MESSAGES.usageDashboard));
       } finally {
         if (!silent && requestId === dashboardRequestIdRef.current) {
+          // The loading flag is intentionally reset on the finally path for both outcomes.
+          // react-doctor-disable-next-line no-loading-flag-reset-outside-finally
           setDashboardLoading(false);
         }
       }

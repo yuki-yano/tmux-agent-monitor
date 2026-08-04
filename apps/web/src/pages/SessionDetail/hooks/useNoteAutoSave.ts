@@ -26,7 +26,7 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
   const editingNoteIdRef = useRef<string | null>(null);
   const editingBodyRef = useRef("");
   const lastSavedBodyRef = useRef("");
-  const listedEditingNoteIdRef = useRef<string | null>(null);
+  const [listedEditingNoteId, setListedEditingNoteId] = useState<string | null>(null);
   const saveQueueRef = useLazyRef<Promise<boolean>>(() => Promise.resolve(true));
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
     setEditingNoteId(null);
     setEditingBody("");
     lastSavedBodyRef.current = "";
-    listedEditingNoteIdRef.current = null;
+    setListedEditingNoteId(null);
   }, []);
 
   const runAutoSave = useCallback(
@@ -70,18 +70,12 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
     void runAutoSave(noteId, body);
   }, AUTO_SAVE_DEBOUNCE_MS);
 
-  if (editingNoteId && editingNoteExists) {
-    listedEditingNoteIdRef.current = editingNoteId;
-  }
-
-  if (editingNoteId && !editingNoteExists && listedEditingNoteIdRef.current === editingNoteId) {
+  if (editingNoteId && editingNoteExists && listedEditingNoteId !== editingNoteId) {
+    setListedEditingNoteId(editingNoteId);
+  } else if (editingNoteId && !editingNoteExists && listedEditingNoteId === editingNoteId) {
     setEditingNoteId(null);
     setEditingBody("");
-    editingNoteIdRef.current = null;
-    editingBodyRef.current = "";
-    lastSavedBodyRef.current = "";
-    listedEditingNoteIdRef.current = null;
-    debouncedSave.cancel();
+    setListedEditingNoteId(null);
   }
 
   useEffect(() => {
@@ -190,7 +184,7 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
     setEditingNoteId(note.id);
     setEditingBody(note.body);
     lastSavedBodyRef.current = note.body;
-    listedEditingNoteIdRef.current = null;
+    setListedEditingNoteId(null);
   }, []);
 
   return {

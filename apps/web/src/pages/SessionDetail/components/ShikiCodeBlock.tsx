@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Button, Callout, Spinner } from "@/components/ui";
@@ -143,6 +144,10 @@ export const ShikiCodeBlock = ({
       : html;
     return applyHighlightToHtml(normalized);
   }, [applyHighlightToHtml, emptyLineMarker, html, showLineNumbers]);
+  const sanitizedHighlightedHtml = useMemo(
+    () => (highlightedHtml ? DOMPurify.sanitize(highlightedHtml) : null),
+    [highlightedHtml],
+  );
 
   useLayoutEffect(() => {
     if (highlightLine == null || highlightLine <= 0) {
@@ -162,7 +167,7 @@ export const ShikiCodeBlock = ({
       left: 0,
       behavior: "auto",
     });
-  }, [error, highlightLine, highlightedHtml]);
+  }, [error, highlightLine, sanitizedHighlightedHtml]);
 
   const fallbackLinesContent = useMemo(() => {
     const lineCounts = new Map<string, number>();
@@ -192,10 +197,10 @@ export const ShikiCodeBlock = ({
         </Callout>
       ) : null}
       <div ref={scrollerRef} onScroll={handleScroll} className={containerClassName}>
-        {highlightedHtml && !error ? (
+        {sanitizedHighlightedHtml && !error ? (
           <div
             className={cn(shikiClassName, showLineNumbers ? "vde-shiki-with-line-numbers" : "")}
-            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+            dangerouslySetInnerHTML={{ __html: sanitizedHighlightedHtml }}
           />
         ) : error ? (
           <pre

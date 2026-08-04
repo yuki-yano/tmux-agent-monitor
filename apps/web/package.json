@@ -22,6 +22,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "dompurify": "^3.4.13",
     "hono": "catalog:",
     "jotai": "^2.20.1",
     "lucide-react": "^1.24.0",

@@ -235,6 +235,43 @@ const RawModeIndicator = ({
   );
 };
 
+const buildVisibleFileChangeCategoriesKey = (
+  categories: ReturnType<typeof buildVisibleFileChangeCategories>,
+) => categories.map((item) => `${item.key}:${item.value}`).join("|");
+
+const useFileReferenceHandlers = (onResolveFileReference: (rawToken: string) => Promise<void>) => {
+  const handleResolveFileReference = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      const rawToken = resolveRawTokenFromEventTarget(event.target);
+      if (!rawToken) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      void onResolveFileReference(rawToken);
+    },
+    [onResolveFileReference],
+  );
+
+  const handleResolveFileReferenceKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      const rawToken = resolveRawTokenFromEventTarget(event.target);
+      if (!rawToken) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      void onResolveFileReference(rawToken);
+    },
+    [onResolveFileReference],
+  );
+
+  return { handleResolveFileReference, handleResolveFileReferenceKeyDown };
+};
+
 export const ScreenPanel = memo(({ state, actions, controls }: ScreenPanelProps) => {
   const {
     mode,
@@ -307,9 +344,9 @@ export const ScreenPanel = memo(({ state, actions, controls }: ScreenPanelProps)
     () => sortWorktreeEntriesByRepoRoot(worktreeEntries, worktreeRepoRoot),
     [worktreeEntries, worktreeRepoRoot],
   );
-  const visibleFileChangeCategoriesKey = visibleFileChangeCategories
-    .map((item) => `${item.key}:${item.value}`)
-    .join("|");
+  const visibleFileChangeCategoriesKey = buildVisibleFileChangeCategoriesKey(
+    visibleFileChangeCategories,
+  );
   const {
     displayGitBranchLabel,
     promptGitContextRowRef,
@@ -376,34 +413,8 @@ export const ScreenPanel = memo(({ state, actions, controls }: ScreenPanelProps)
     onRangeChanged: handleRangeChanged,
   });
 
-  const handleResolveFileReference = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
-      const rawToken = resolveRawTokenFromEventTarget(event.target);
-      if (!rawToken) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      void onResolveFileReference(rawToken);
-    },
-    [onResolveFileReference],
-  );
-
-  const handleResolveFileReferenceKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-      const rawToken = resolveRawTokenFromEventTarget(event.target);
-      if (!rawToken) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      void onResolveFileReference(rawToken);
-    },
-    [onResolveFileReference],
-  );
+  const { handleResolveFileReference, handleResolveFileReferenceKeyDown } =
+    useFileReferenceHandlers(onResolveFileReference);
 
   return (
     <Card

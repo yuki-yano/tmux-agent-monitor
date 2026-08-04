@@ -14,6 +14,7 @@ import {
   createTestContext,
   createTestStreamDeps,
 } from "./http/api-router.test-helpers";
+import { SESSION_AUTH_COOKIE_NAME } from "./http/helpers";
 
 vi.mock("./config", () => ({
   rotateToken: vi.fn(() => ({ token: "rotated-token" })),
@@ -34,6 +35,43 @@ const createAppUnderTest = () => {
   });
   return { app, previewTicketService, ...context, ...streamDeps };
 };
+
+describe("createApp /auth/session", () => {
+  it("sets the session cookie and redirects without the token", async () => {
+    const { app } = createAppUnderTest();
+
+    const response = await app.request(
+      "/auth/session?token=token&api=http%3A%2F%2Flocalhost%3A11081%2Fapi",
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/?api=http%3A%2F%2Flocalhost%3A11081%2Fapi");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(response.headers.get("set-cookie")).toContain(`${SESSION_AUTH_COOKIE_NAME}=token`);
+  });
+
+  it("rejects an invalid access URL token", async () => {
+    const { app } = createAppUnderTest();
+
+    const response = await app.request("/auth/session?token=wrong-token");
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("exchanges a token through the mounted API route", async () => {
+    const { app } = createAppUnderTest();
+
+    const response = await app.request("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: "token" }),
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("set-cookie")).toContain(`${SESSION_AUTH_COOKIE_NAME}=token`);
+  });
+});
 
 describe("createApp /api/admin/token/rotate", () => {
   beforeEach(() => {

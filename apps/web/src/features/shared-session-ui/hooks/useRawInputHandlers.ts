@@ -5,6 +5,7 @@ import {
   type KeyboardEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
 } from "react";
 
@@ -112,7 +113,9 @@ export const useRawInputHandlers = ({
   const suppressNextBeforeInputRef = useRef(false);
   const allowDangerRef = useRef(false);
 
-  allowDangerRef.current = allowDangerKeys;
+  useLayoutEffect(() => {
+    allowDangerRef.current = allowDangerKeys;
+  }, [allowDangerKeys]);
 
   useEffect(() => {
     // react-doctor-disable-next-line no-event-handler

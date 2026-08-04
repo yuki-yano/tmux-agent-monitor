@@ -70,7 +70,7 @@ npx vde-monitor@latest --tailscale
 起動時に次のような URL が表示されます:
 
 ```text
-vde-monitor: http://localhost:11080/#token=...
+vde-monitor: http://localhost:11080/auth/session?token=...
 ```
 
 この URL をブラウザで開いてください。  
@@ -145,7 +145,7 @@ vde-monitor: http://localhost:11080/#token=...
    - `y` / `yes`: `tailscale serve --bg <printed-web-port>` を自動実行
    - 既定の `N`: 自動実行せず、手動復旧コマンドを表示
 3. 既存の `tailscale serve` 設定がある場合は上書きせず、案内のみ表示
-4. `https://<device>.<tailnet>.ts.net/#token=...` を開く（`http://100.x.x.x/...` ではなく）
+4. `https://<device>.<tailnet>.ts.net/auth/session?token=...` を開く（`http://100.x.x.x/...` ではなく）
 5. `tailscale serve status` で状態を確認
 
 iOS の補足:
@@ -440,7 +440,7 @@ pnpm run build:watch
   - cmux-only access では vde-monitor を cmux 内から起動し、Password mode では
     `CMUX_SOCKET_PASSWORD` を設定
 - URL は開けるが API が失敗する:
-  - URL hash の token（`#token=...`）を確認
+  - CLI が表示したアクセス URL を開き直して、新しい認証セッションを確立
   - `npx vde-monitor@latest token rotate` で token を再発行
 - モバイル端末から接続できない:
   - ネットワーク経路（SSH forward / Tailscale / LAN）を再確認

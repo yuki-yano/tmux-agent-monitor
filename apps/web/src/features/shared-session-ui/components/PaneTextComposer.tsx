@@ -498,6 +498,64 @@ const ComposerKeyPanel = ({
   );
 };
 
+const useRevealPromptCompletion = ({
+  visible,
+  loading,
+  optionCount,
+  textInputRef,
+  composerRef,
+}: {
+  visible: boolean;
+  loading: boolean;
+  optionCount: number;
+  textInputRef: RefObject<HTMLTextAreaElement | null>;
+  composerRef: RefObject<HTMLDivElement | null>;
+}) => {
+  useEffect(() => {
+    if (!visible || window.innerWidth >= 768) {
+      return;
+    }
+    let frame = 0;
+    const revealCompletion = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const textarea = textInputRef.current;
+        const listbox = composerRef.current?.querySelector<HTMLElement>(
+          `#${PROMPT_COMPLETION_LIST_ID}`,
+        );
+        if (!textarea || !listbox) {
+          return;
+        }
+        const visualViewport = window.visualViewport;
+        const viewportTop = visualViewport?.offsetTop ?? 0;
+        const viewportBottom = viewportTop + (visualViewport?.height ?? window.innerHeight);
+        const delta = resolvePromptCompletionScrollDelta({
+          inputRect: textarea.getBoundingClientRect(),
+          listRect: listbox.getBoundingClientRect(),
+          viewportTop,
+          viewportBottom,
+        });
+        if (Math.abs(delta) < 1) {
+          return;
+        }
+        window.scrollBy({
+          top: delta,
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+        });
+      });
+    };
+
+    revealCompletion();
+    window.visualViewport?.addEventListener("resize", revealCompletion);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.visualViewport?.removeEventListener("resize", revealCompletion);
+    };
+  }, [composerRef, loading, optionCount, textInputRef, visible]);
+};
+
 export const PaneTextComposer = ({ state, actions }: PaneTextComposerProps) => {
   const {
     interactive,
@@ -690,54 +748,13 @@ export const PaneTextComposer = ({ state, actions }: PaneTextComposerProps) => {
       ? completionConfig.agent
       : null;
 
-  useEffect(() => {
-    if (!promptCompletion.visible || window.innerWidth >= 768) {
-      return;
-    }
-    let frame = 0;
-    const revealCompletion = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const textarea = textInputRef.current;
-        const listbox = composerRef.current?.querySelector<HTMLElement>(
-          `#${PROMPT_COMPLETION_LIST_ID}`,
-        );
-        if (!textarea || !listbox) {
-          return;
-        }
-        const visualViewport = window.visualViewport;
-        const viewportTop = visualViewport?.offsetTop ?? 0;
-        const viewportBottom = viewportTop + (visualViewport?.height ?? window.innerHeight);
-        const delta = resolvePromptCompletionScrollDelta({
-          inputRect: textarea.getBoundingClientRect(),
-          listRect: listbox.getBoundingClientRect(),
-          viewportTop,
-          viewportBottom,
-        });
-        if (Math.abs(delta) < 1) {
-          return;
-        }
-        window.scrollBy({
-          top: delta,
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-            ? "auto"
-            : "smooth",
-        });
-      });
-    };
-
-    revealCompletion();
-    window.visualViewport?.addEventListener("resize", revealCompletion);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.visualViewport?.removeEventListener("resize", revealCompletion);
-    };
-  }, [
-    promptCompletion.loading,
-    promptCompletion.options.length,
-    promptCompletion.visible,
+  useRevealPromptCompletion({
+    visible: promptCompletion.visible,
+    loading: promptCompletion.loading,
+    optionCount: promptCompletion.options.length,
     textInputRef,
-  ]);
+    composerRef,
+  });
 
   return (
     <div ref={composerRef} className="@container min-w-0 scroll-mb-3">

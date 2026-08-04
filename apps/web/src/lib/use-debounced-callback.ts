@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 
 import { useTimeout } from "./use-timeout";
 
@@ -16,7 +16,9 @@ export const useDebouncedCallback = <A extends unknown[]>(
   delayMs: number,
 ): DebouncedFunction<A> => {
   const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+  useLayoutEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   const timer = useTimeout();
 

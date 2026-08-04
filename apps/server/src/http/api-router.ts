@@ -20,7 +20,14 @@ import { createScreenCache } from "../screen/screen-cache";
 import type { ScreenStreamScheduler } from "../streams/screen-stream-scheduler";
 import type { SessionsStreamSource } from "../streams/sessions-stream-source";
 import type { StreamConnections } from "../streams/stream-connections";
-import { buildError, isOriginAllowed, requireAuth } from "./helpers";
+import {
+  buildError,
+  clearSessionAuthCookie,
+  isOriginAllowed,
+  isValidAuthToken,
+  requireAuth,
+  setSessionAuthCookie,
+} from "./helpers";
 import { createBranchRoutes } from "./routes/branch-routes";
 import { createFileRoutes } from "./routes/file-routes";
 import { createGitRoutes } from "./routes/git-routes";
@@ -91,6 +98,7 @@ const applyCorsHeaders = (
   c.header("Access-Control-Allow-Origin", origin);
   c.header("Access-Control-Allow-Methods", CORS_ALLOW_METHODS);
   c.header("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS);
+  c.header("Access-Control-Allow-Credentials", "true");
   c.header("Vary", mergeVary(c.res.headers.get("Vary"), "Origin"));
 };
 
@@ -181,7 +189,8 @@ export const createApiRouter = ({
     if (c.req.method === "OPTIONS") {
       return c.body(null, 204);
     }
-    if (!requireAuth(config, c)) {
+    const isSessionAuthRoute = c.req.path === "/auth/session" || c.req.path === "/api/auth/session";
+    if (!isSessionAuthRoute && !requireAuth(config, c)) {
       const clientKey = (() => {
         try {
           return getConnInfo(c).remote.address ?? "unknown";
@@ -196,6 +205,21 @@ export const createApiRouter = ({
       return c.json({ error: buildError("INVALID_PAYLOAD", "unauthorized") }, 401);
     }
     await next();
+  });
+
+  api.post("/auth/session", async (c) => {
+    const payload = await c.req.json<{ token?: unknown }>().catch(() => null);
+    const token = typeof payload?.token === "string" ? payload.token.trim() : "";
+    if (!token || !isValidAuthToken(config, token)) {
+      return c.json({ error: buildError("INVALID_PAYLOAD", "unauthorized") }, 401);
+    }
+    setSessionAuthCookie(c, token);
+    return c.body(null, 204);
+  });
+
+  api.delete("/auth/session", (c) => {
+    clearSessionAuthCookie(c);
+    return c.body(null, 204);
   });
 
   const withSessionRoutes = withMiddleware.route(

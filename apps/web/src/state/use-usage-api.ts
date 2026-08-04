@@ -79,6 +79,7 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
         query.set("refresh", "1");
       }
       const request = fetch(buildApiPath(apiBasePath, "/usage/dashboard", query), {
+        credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -120,6 +121,7 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
       const query = new URLSearchParams();
       query.set("range", options.range ?? DEFAULT_TIMELINE_RANGE);
       const request = fetch(buildApiPath(apiBasePath, "/usage/state-timeline", query), {
+        credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -161,6 +163,7 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
         query.set("refresh", "1");
       }
       const request = fetch(buildApiPath(apiBasePath, "/usage/billing", query), {
+        credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -206,6 +209,7 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
       const query = new URLSearchParams();
       query.set("range", options.range);
       const request = fetch(buildApiPath(apiBasePath, "/usage/repository-activity", query), {
+        credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
         },

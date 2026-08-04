@@ -214,6 +214,106 @@ const ChatGridTileHeader = ({
   </header>
 );
 
+const useChatGridScreenViewport = ({
+  paneId,
+  screenLines,
+  screenLoading,
+}: {
+  paneId: string;
+  screenLines: string[];
+  screenLoading: boolean;
+}) => {
+  const renderedScreenLines = useMemo(() => {
+    if (screenLines.length > 0) {
+      return screenLines.map((line) => {
+        let linkified = linkifyLogLineFileReferences(line, {
+          isLinkableToken: (rawToken) => rawToken.includes("/") || rawToken.includes("\\"),
+        });
+        if (linkified.includes("http://") || linkified.includes("https://")) {
+          linkified = linkifyLogLineHttpUrls(linkified);
+        }
+        return linkified;
+      });
+    }
+    return screenLoading ? [] : ["No screen data yet."];
+  }, [screenLines, screenLoading]);
+  const [displaySnapshot, setDisplaySnapshot] = useState<ScreenSnapshot>(() => ({
+    paneId,
+    lines: renderedScreenLines,
+  }));
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [forceFollow, setForceFollow] = useState(true);
+  const activePaneIdRef = useRef(paneId);
+  const pendingSnapshotRef = useRef<ScreenSnapshot | null>(null);
+  const isUserScrollingRef = useRef(false);
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const displayLines = displaySnapshot.paneId === paneId ? displaySnapshot.lines : [];
+  const effectiveIsAtBottom = displayLines.length === 0 ? true : isAtBottom;
+
+  useLayoutEffect(() => {
+    const snapshot = { paneId, lines: renderedScreenLines };
+    if (activePaneIdRef.current !== paneId) {
+      activePaneIdRef.current = paneId;
+      pendingSnapshotRef.current = null;
+      isUserScrollingRef.current = false;
+      setIsAtBottom(true);
+      setForceFollow(true);
+    }
+    if (isUserScrollingRef.current) {
+      pendingSnapshotRef.current = snapshot;
+      return;
+    }
+    pendingSnapshotRef.current = null;
+    setDisplaySnapshot(snapshot);
+  }, [paneId, renderedScreenLines]);
+
+  const handleUserScrollStateChange = useCallback(
+    (value: boolean) => {
+      if (activePaneIdRef.current !== paneId) {
+        return;
+      }
+      isUserScrollingRef.current = value;
+      if (value) {
+        setForceFollow(false);
+        return;
+      }
+      const pendingSnapshot = pendingSnapshotRef.current;
+      if (pendingSnapshot?.paneId === paneId) {
+        pendingSnapshotRef.current = null;
+        setDisplaySnapshot(pendingSnapshot);
+      }
+    },
+    [paneId],
+  );
+  const { scrollerRef, handleRangeChanged } = useStableVirtuosoScroll({
+    items: displayLines,
+    isAtBottom: effectiveIsAtBottom,
+    onUserScrollStateChange: handleUserScrollStateChange,
+  });
+  const scrollToBottom = useCallback(
+    (behavior: "auto" | "smooth" = "smooth") => {
+      setForceFollow(true);
+      virtuosoRef.current?.scrollToIndex({
+        index: Math.max(displayLines.length - 1, 0),
+        behavior,
+        align: "end",
+      });
+    },
+    [displayLines.length],
+  );
+
+  return {
+    displayLines,
+    effectiveIsAtBottom,
+    forceFollow,
+    setIsAtBottom,
+    virtuosoRef,
+    scrollerRef,
+    handleRangeChanged,
+    scrollToBottom,
+  };
+};
+
 export const ChatGridTile = ({
   session,
   nowMs,
@@ -236,9 +336,6 @@ export const ChatGridTile = ({
   const { requestRepoFileSearch } = useSessionFilesApi();
   const textInputRef = useRef<HTMLTextAreaElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
-  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [forceFollow, setForceFollow] = useState(true);
   const [autoEnter, setAutoEnter] = useState(true);
   const [shiftHeld, setShiftHeld] = useState(false);
   const [ctrlHeld, setCtrlHeld] = useState(false);
@@ -267,85 +364,20 @@ export const ChatGridTile = ({
     resetSessionTitle,
     skipSaveIfUnchanged: true,
   });
-  const renderedScreenLines = useMemo(() => {
-    if (screenLines.length > 0) {
-      return screenLines.map((line) => {
-        let linkified = linkifyLogLineFileReferences(line, {
-          isLinkableToken: (rawToken) => rawToken.includes("/") || rawToken.includes("\\"),
-        });
-        if (linkified.includes("http://") || linkified.includes("https://")) {
-          linkified = linkifyLogLineHttpUrls(linkified);
-        }
-        return linkified;
-      });
-    }
-    if (screenLoading) {
-      return [];
-    }
-    return ["No screen data yet."];
-  }, [screenLines, screenLoading]);
-  const [displaySnapshot, setDisplaySnapshot] = useState<ScreenSnapshot>(() => ({
+  const {
+    displayLines,
+    effectiveIsAtBottom,
+    forceFollow,
+    setIsAtBottom,
+    virtuosoRef,
+    scrollerRef,
+    handleRangeChanged,
+    scrollToBottom,
+  } = useChatGridScreenViewport({
     paneId: session.paneId,
-    lines: renderedScreenLines,
-  }));
-  const activePaneIdRef = useRef(session.paneId);
-  const pendingSnapshotRef = useRef<ScreenSnapshot | null>(null);
-  const isUserScrollingRef = useRef(false);
-  const displayLines =
-    displaySnapshot.paneId === session.paneId ? displaySnapshot.lines : ([] as string[]);
-  const effectiveIsAtBottom = displayLines.length === 0 ? true : isAtBottom;
-
-  useLayoutEffect(() => {
-    const snapshot = { paneId: session.paneId, lines: renderedScreenLines };
-    if (activePaneIdRef.current !== session.paneId) {
-      activePaneIdRef.current = session.paneId;
-      pendingSnapshotRef.current = null;
-      isUserScrollingRef.current = false;
-      setIsAtBottom(true);
-      setForceFollow(true);
-    }
-    if (isUserScrollingRef.current) {
-      pendingSnapshotRef.current = snapshot;
-      return;
-    }
-    pendingSnapshotRef.current = null;
-    setDisplaySnapshot(snapshot);
-  }, [renderedScreenLines, session.paneId]);
-
-  const handleUserScrollStateChange = useCallback(
-    (value: boolean) => {
-      if (activePaneIdRef.current !== session.paneId) {
-        return;
-      }
-      isUserScrollingRef.current = value;
-      if (value) {
-        setForceFollow(false);
-        return;
-      }
-      const pendingSnapshot = pendingSnapshotRef.current;
-      if (pendingSnapshot?.paneId === session.paneId) {
-        pendingSnapshotRef.current = null;
-        setDisplaySnapshot(pendingSnapshot);
-      }
-    },
-    [session.paneId],
-  );
-  const { scrollerRef, handleRangeChanged } = useStableVirtuosoScroll({
-    items: displayLines,
-    isAtBottom: effectiveIsAtBottom,
-    onUserScrollStateChange: handleUserScrollStateChange,
+    screenLines,
+    screenLoading,
   });
-  const scrollToBottom = useCallback(
-    (behavior: "auto" | "smooth" = "smooth") => {
-      setForceFollow(true);
-      virtuosoRef.current?.scrollToIndex({
-        index: Math.max(displayLines.length - 1, 0),
-        behavior,
-        align: "end",
-      });
-    },
-    [displayLines.length],
-  );
 
   const {
     send,

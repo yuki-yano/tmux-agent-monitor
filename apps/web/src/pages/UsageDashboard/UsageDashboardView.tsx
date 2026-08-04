@@ -83,6 +83,52 @@ const timelineRangeTabs = (
   </Tabs>
 );
 
+const UsageDashboardHeader = ({
+  backToListSearch,
+  loading,
+  onRefresh,
+}: {
+  backToListSearch: ReturnType<typeof resolveBackToListSearch>;
+  loading: boolean;
+  onRefresh: () => void;
+}) => (
+  <>
+    <div className="flex items-center justify-between gap-3">
+      <Link to="/" search={backToListSearch} className={backLinkClass}>
+        <ArrowLeft className="h-4 w-4" />
+        Back to list
+      </Link>
+      <ThemeToggle />
+    </div>
+    <header className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[var(--material-stroke)] bg-[var(--material-canvas)] p-4 shadow-[var(--material-shadow)] backdrop-blur-2xl sm:p-5">
+      <div>
+        <p className="text-latte-subtext0 text-xs font-medium uppercase tracking-[0.16em]">
+          VDE Monitor
+        </p>
+        <h1 className="font-display text-latte-text text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
+          Usage Dashboard
+        </h1>
+        <p className="text-latte-subtext1 mt-1 text-sm">
+          Monitor Codex / Claude limits and usage pace.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="relative h-8 w-8 p-0 after:absolute after:-inset-y-1.5 after:-inset-x-0.5 after:content-['']"
+        onClick={onRefresh}
+        aria-label="Refresh usage dashboard"
+        title="Refresh usage dashboard"
+      >
+        <RefreshCw
+          className={cn("h-3.5 w-3.5", loading && "animate-spin motion-reduce:animate-none")}
+        />
+      </Button>
+    </header>
+  </>
+);
+
 export const UsageDashboardView = ({
   sessions,
   connected,
@@ -163,45 +209,11 @@ export const UsageDashboardView = ({
         style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
       >
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-6">
-          <div className="flex items-center justify-between gap-3">
-            <Link to="/" search={backToListSearch} className={backLinkClass}>
-              <ArrowLeft className="h-4 w-4" />
-              Back to list
-            </Link>
-            <ThemeToggle />
-          </div>
-          <header className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[var(--material-stroke)] bg-[var(--material-canvas)] p-4 shadow-[var(--material-shadow)] backdrop-blur-2xl sm:p-5">
-            <div>
-              <p className="text-latte-subtext0 text-xs font-medium uppercase tracking-[0.16em]">
-                VDE Monitor
-              </p>
-              <h1 className="font-display text-latte-text text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
-                Usage Dashboard
-              </h1>
-              <p className="text-latte-subtext1 mt-1 text-sm">
-                Monitor Codex / Claude limits and usage pace.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="relative h-8 w-8 p-0 after:absolute after:-inset-y-1.5 after:-inset-x-0.5 after:content-['']"
-                onClick={onRefreshAll}
-                aria-label="Refresh usage dashboard"
-                title="Refresh usage dashboard"
-              >
-                <RefreshCw
-                  className={cn(
-                    "h-3.5 w-3.5",
-                    (dashboardLoading || timelineLoading || repositoryActivityLoading) &&
-                      "animate-spin motion-reduce:animate-none",
-                  )}
-                />
-              </Button>
-            </div>
-          </header>
+          <UsageDashboardHeader
+            backToListSearch={backToListSearch}
+            loading={dashboardLoading || timelineLoading || repositoryActivityLoading}
+            onRefresh={onRefreshAll}
+          />
 
           {dashboardError ? (
             <Callout tone="error" size="sm">

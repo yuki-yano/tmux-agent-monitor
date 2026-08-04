@@ -18,8 +18,11 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
       <TokenInputBanner
         authError={authError}
         onSubmit={(nextToken) => {
-          setToken(nextToken);
-          reconnect();
+          void setToken(nextToken).then((authenticated) => {
+            if (authenticated) {
+              reconnect();
+            }
+          });
         }}
       />
     </div>

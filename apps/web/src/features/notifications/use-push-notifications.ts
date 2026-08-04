@@ -6,7 +6,7 @@ import { useSessionConfigData } from "@/state/session-context";
 
 const DEVICE_ID_STORAGE_KEY = "vde-monitor-push-device-id";
 const SUBSCRIPTION_ID_STORAGE_KEY = "vde-monitor-push-subscription-id";
-const ENABLED_PANE_IDS_STORAGE_KEY = "vde-monitor-push-enabled-pane-ids";
+const ENABLED_PANE_IDS_STORAGE_KEY = "vde-monitor-push-enabled-pane-ids:v1";
 
 export type PushUiStatus =
   | "unsupported"
@@ -185,6 +185,7 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
       try {
         response = await fetch(`${apiBasePath}/notifications/subscriptions`, {
           method: "POST",
+          credentials: "include",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -290,6 +291,7 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
           `${apiBasePath}/notifications/subscriptions/${encodeURIComponent(currentSubscriptionId)}`,
           {
             method: "DELETE",
+            credentials: "include",
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -299,6 +301,7 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
       }
       await fetch(`${apiBasePath}/notifications/subscriptions/revoke`, {
         method: "POST",
+        credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -419,6 +422,9 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
       let current = await registration.pushManager.getSubscription();
       if (!isCurrentContext()) return;
       if (!current) {
+        // PushManager.subscribe creates a browser push subscription; this effect does not own a
+        // callback subscription handle that can be released during React cleanup.
+        // react-doctor-disable-next-line effect-needs-cleanup
         current = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(settings.vapidPublicKey),
@@ -465,7 +471,9 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
   }, [isSubscribed, paneId, settings?.pushEnabled, syncCurrentSubscription]);
 
   // Push availability and subscription state must be reconciled when notification context changes.
-  // react-doctor-disable-next-line no-fetch-in-effect
+  // Every post-await state update below is guarded by isCurrentRun(), which includes both the
+  // effect cancellation flag and its AbortController signal.
+  // react-doctor-disable-next-line no-fetch-in-effect, no-set-state-after-await-in-effect
   useEffect(() => {
     let cancelled = false;
     const context = paneScopeContextRef.current;
@@ -497,6 +505,7 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
 
       try {
         const response = await fetch(`${apiBasePath}/notifications/settings`, {
+          credentials: "include",
           headers: {
             Authorization: `Bearer ${token}`,
           },

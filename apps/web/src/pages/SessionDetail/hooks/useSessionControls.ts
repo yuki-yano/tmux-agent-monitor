@@ -5,7 +5,7 @@ import {
   type RawItem,
 } from "@vde-monitor/shared";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildImagePathInsertText,
   insertIntoTextarea,
@@ -84,13 +84,7 @@ export const useSessionControls = ({
   const [ctrlHeld, setCtrlHeld] = useAtom(controlsCtrlHeldAtom);
   const [rawMode, setRawMode] = useAtom(controlsRawModeAtom);
   const [allowDangerKeys, setAllowDangerKeys] = useAtom(controlsAllowDangerKeysAtom);
-  const paneVersionRef = useRef({ paneId, version: 0 });
-  if (paneVersionRef.current.paneId !== paneId) {
-    paneVersionRef.current = {
-      paneId,
-      version: paneVersionRef.current.version + 1,
-    };
-  }
+  const paneScope = useMemo(() => ({ paneId }), [paneId]);
   // Send-scoped error state: key send / permission shortcut / text send /
   // raw-mode direct typing / image upload failures all land here instead of
   // the shared screenError (screenErrorAtom, defined in ../atoms/screenAtoms.ts
@@ -100,20 +94,15 @@ export const useSessionControls = ({
   // deliberately excluded — those are one-off operations, not part of the
   // send flow, so screenError remains their error channel.
   const [sendErrorState, setSendErrorState] = useState<{
-    paneId: string;
-    paneVersion: number;
+    paneScope: { paneId: string };
     error: string | null;
-  }>(() => ({ paneId, paneVersion: paneVersionRef.current.version, error: null }));
-  const sendError =
-    sendErrorState.paneId === paneId &&
-    sendErrorState.paneVersion === paneVersionRef.current.version
-      ? sendErrorState.error
-      : null;
+  }>(() => ({ paneScope, error: null }));
+  const sendError = sendErrorState.paneScope === paneScope ? sendErrorState.error : null;
   const setSendError = useCallback(
     (error: string | null) => {
-      setSendErrorState({ paneId, paneVersion: paneVersionRef.current.version, error });
+      setSendErrorState({ paneScope, error });
     },
-    [paneId],
+    [paneScope],
   );
 
   useEffect(() => {

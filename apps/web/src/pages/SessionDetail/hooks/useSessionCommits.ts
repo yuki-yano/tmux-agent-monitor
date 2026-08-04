@@ -1,6 +1,6 @@
 import type { CommitDetail, CommitFileDiff, CommitLog } from "@vde-monitor/shared";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
@@ -292,11 +292,12 @@ export const useSessionCommits = ({
     void pollCommitLog();
   }, [pollCommitLog]);
 
-  // Keep scope-guard callback refs up to date before effects run.
-  onReconnectRef.current = () => {
-    void loadCommitLog({ force: true });
-  };
-  pollTickRef.current = pollCommitLogTick;
+  useLayoutEffect(() => {
+    onReconnectRef.current = () => {
+      void loadCommitLog({ force: true });
+    };
+    pollTickRef.current = pollCommitLogTick;
+  }, [loadCommitLog, pollCommitLogTick]);
 
   const toggleCommit = useCallback(
     (hash: string) => {

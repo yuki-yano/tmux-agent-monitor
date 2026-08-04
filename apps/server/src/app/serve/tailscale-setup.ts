@@ -10,8 +10,8 @@ export const buildTailscaleHttpsAccessUrl = ({
   dnsName: string;
   token: string;
 }) => {
-  const hashParams = new URLSearchParams({ token });
-  return `https://${dnsName}/#${hashParams.toString()}`;
+  const authParams = new URLSearchParams({ token });
+  return `https://${dnsName}/auth/session?${authParams.toString()}`;
 };
 
 export const buildTailscaleServeProxyTarget = ({

@@ -17,6 +17,8 @@ export const useSessionDoneAcknowledgement = ({
   const completedSeq = completion?.completedSeq ?? 0;
   const acknowledgedSeq = completion?.acknowledgedSeq ?? 0;
 
+  // clearRetry releases the timer and the returned cleanup also removes the visibility listener.
+  // react-doctor-disable-next-line effect-needs-cleanup
   useEffect(() => {
     let cancelled = false;
     let inFlight = false;

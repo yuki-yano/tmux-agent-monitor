@@ -21,6 +21,39 @@ import { WorkspaceOverviewTab } from "./WorkspaceOverviewTab";
 
 const PWA_TABS_OFFSET_CSS_VAR = "--vde-pwa-tabs-offset";
 
+type WorkspaceTabsDragOverlayProps = {
+  activeDragGroup: ReturnType<typeof usePwaTabsDnd>["activeDragGroup"];
+  activeTabId: string;
+  resolveTabLabel: ReturnType<typeof usePwaWorkspaceTabsVM>["resolveTabLabel"];
+  resolveTabStateClass: ReturnType<typeof usePwaWorkspaceTabsVM>["resolveTabStateClass"];
+};
+
+const WorkspaceTabsDragOverlay = ({
+  activeDragGroup,
+  activeTabId,
+  resolveTabLabel,
+  resolveTabStateClass,
+}: WorkspaceTabsDragOverlayProps) => (
+  <DragOverlay>
+    {activeDragGroup && (
+      <div className="flex items-center gap-1.5 rounded-xl border border-[var(--material-stroke)] bg-[var(--material-raised)] px-1.5 py-1.5 shadow-[var(--shadow-popover)] backdrop-blur-xl">
+        <span className="text-latte-text inline-flex h-7 items-center rounded-md bg-[var(--control-track)] px-1.5 text-[10px] font-semibold tracking-wide">
+          {activeDragGroup.label}
+        </span>
+        {activeDragGroup.tabs.map((tab) => (
+          <StaticTabChip
+            key={tab.id}
+            tab={tab}
+            label={resolveTabLabel(tab)}
+            active={activeTabId === tab.id}
+            statusClassName={resolveTabStateClass(tab)}
+          />
+        ))}
+      </div>
+    )}
+  </DragOverlay>
+);
+
 export const PwaWorkspaceTabs = () => {
   const {
     enabled,
@@ -300,24 +333,12 @@ export const PwaWorkspaceTabs = () => {
                 />
               </div>
             </div>
-            <DragOverlay>
-              {activeDragGroup && (
-                <div className="flex items-center gap-1.5 rounded-xl border border-[var(--material-stroke)] bg-[var(--material-raised)] px-1.5 py-1.5 shadow-[var(--shadow-popover)] backdrop-blur-xl">
-                  <span className="text-latte-text inline-flex h-7 items-center rounded-md bg-[var(--control-track)] px-1.5 text-[10px] font-semibold tracking-wide">
-                    {activeDragGroup.label}
-                  </span>
-                  {activeDragGroup.tabs.map((tab) => (
-                    <StaticTabChip
-                      key={tab.id}
-                      tab={tab}
-                      label={resolveTabLabel(tab)}
-                      active={activeTabId === tab.id}
-                      statusClassName={resolveTabStateClass(tab)}
-                    />
-                  ))}
-                </div>
-              )}
-            </DragOverlay>
+            <WorkspaceTabsDragOverlay
+              activeDragGroup={activeDragGroup}
+              activeTabId={activeTabId}
+              resolveTabLabel={resolveTabLabel}
+              resolveTabStateClass={resolveTabStateClass}
+            />
           </DndContext>
         </div>
       </div>

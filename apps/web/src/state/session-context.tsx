@@ -117,7 +117,7 @@ export type SessionConfigDataContextValue = {
 
 /** Core session lifecycle/interaction: connection, screen, messaging, pane control. */
 export type SessionCoreApiContextValue = {
-  setToken: (token: string | null) => void;
+  setToken: (token: string | null) => Promise<boolean>;
   reconnect: () => void;
   refreshSessions: () => Promise<void>;
   requestPromptCompletions: (

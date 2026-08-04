@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-const TOKEN_KEY = "vde-monitor-token";
 const API_BASE_URL_KEY = "vde-monitor-api-base-url";
+const COOKIE_SESSION_MARKER = "cookie-session";
 
 const isLoopbackHost = (hostname: string) =>
   hostname === "localhost" ||
@@ -42,50 +42,23 @@ const normalizeApiBaseUrl = (value: string | null) => {
   }
 };
 
-const readSessionAccessFromUrl = () => {
-  const rawHash = window.location.hash.startsWith("#")
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-  const hashParams = new URLSearchParams(rawHash);
-  const tokenRaw = hashParams.get("token");
-  const token = tokenRaw?.trim() || null;
-  const hasTokenParam = tokenRaw != null;
-  const apiBaseUrlRaw = hashParams.get("api");
-  const hasApiParam = apiBaseUrlRaw != null;
-  const hasAccessDirective = hasApiParam || hasTokenParam;
-  const apiBaseUrl = token && hasApiParam ? normalizeApiBaseUrl(apiBaseUrlRaw) : null;
-  if (hasAccessDirective) {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, token);
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-    }
-    if (apiBaseUrl) {
-      localStorage.setItem(API_BASE_URL_KEY, apiBaseUrl);
-    } else {
-      localStorage.removeItem(API_BASE_URL_KEY);
-    }
-  }
-  return { token, apiBaseUrl, hasAccessDirective };
+const readApiBaseUrlDirective = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasDirective = searchParams.has("api");
+  return {
+    hasDirective,
+    apiBaseUrl: hasDirective ? normalizeApiBaseUrl(searchParams.get("api")) : null,
+  };
 };
 
-/*
-  Kept out of readSessionAccessFromUrl on purpose: that runs during render, and
-  replaceState would synchronously re-enter the router while a component tree
-  is still rendering. Callers strip the URL from an effect instead.
-*/
-const stripAccessDirectiveFromUrl = () => {
-  const rawHash = window.location.hash.startsWith("#")
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-  const hashParams = new URLSearchParams(rawHash);
-  if (!hashParams.has("token") && !hashParams.has("api")) {
+const stripApiBaseUrlDirective = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  if (!searchParams.has("api")) {
     return;
   }
-  hashParams.delete("token");
-  hashParams.delete("api");
-  const nextHash = hashParams.toString();
-  const next = `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ""}`;
+  searchParams.delete("api");
+  const nextSearch = searchParams.toString();
+  const next = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
   window.history.replaceState({}, "", next);
 };
 
@@ -99,39 +72,46 @@ const readStoredApiBaseUrl = () => {
 };
 
 export const useSessionToken = () => {
-  const initialAccessRef = useRef<ReturnType<typeof readSessionAccessFromUrl> | null>(null);
-  if (initialAccessRef.current == null) {
-    initialAccessRef.current = readSessionAccessFromUrl();
-  }
-  const [token, setTokenState] = useState<string | null>(() => {
-    if (initialAccessRef.current?.hasAccessDirective) {
-      return initialAccessRef.current.token;
-    }
-    return localStorage.getItem(TOKEN_KEY);
-  });
-  const [apiBaseUrl] = useState<string | null>(() => {
-    if (initialAccessRef.current?.hasAccessDirective) {
-      return initialAccessRef.current.apiBaseUrl;
-    }
-    return readStoredApiBaseUrl();
-  });
+  const [initialDirective] = useState(readApiBaseUrlDirective);
+  const [token, setTokenState] = useState<string | null>(COOKIE_SESSION_MARKER);
+  const [apiBaseUrl] = useState<string | null>(() =>
+    initialDirective.hasDirective ? initialDirective.apiBaseUrl : readStoredApiBaseUrl(),
+  );
 
   useEffect(() => {
-    if (initialAccessRef.current?.hasAccessDirective) {
-      stripAccessDirectiveFromUrl();
-    }
-  }, []);
-
-  const setToken = (nextToken: string | null) => {
-    const trimmed = nextToken?.trim() ?? "";
-    if (trimmed.length === 0) {
-      localStorage.removeItem(TOKEN_KEY);
-      setTokenState(null);
+    if (!initialDirective.hasDirective) {
       return;
     }
-    localStorage.setItem(TOKEN_KEY, trimmed);
-    setTokenState(trimmed);
-  };
+    if (initialDirective.apiBaseUrl) {
+      localStorage.setItem(API_BASE_URL_KEY, initialDirective.apiBaseUrl);
+    } else {
+      localStorage.removeItem(API_BASE_URL_KEY);
+    }
+    stripApiBaseUrlDirective();
+  }, [initialDirective]);
+
+  const setToken = useCallback(
+    async (nextToken: string | null) => {
+      const trimmed = nextToken?.trim() ?? "";
+      const endpoint = `${apiBaseUrl ?? "/api"}/auth/session`;
+      try {
+        const response = await fetch(endpoint, {
+          method: trimmed ? "POST" : "DELETE",
+          credentials: "include",
+          headers: trimmed ? { "Content-Type": "application/json" } : undefined,
+          body: trimmed ? JSON.stringify({ token: trimmed }) : undefined,
+        });
+        if (!response.ok) {
+          return false;
+        }
+      } catch {
+        return false;
+      }
+      setTokenState(trimmed ? COOKIE_SESSION_MARKER : null);
+      return true;
+    },
+    [apiBaseUrl],
+  );
 
   return { token, setToken, apiBaseUrl };
 };

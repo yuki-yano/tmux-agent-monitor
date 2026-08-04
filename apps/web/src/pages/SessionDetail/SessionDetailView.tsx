@@ -121,6 +121,34 @@ const resolveMissingSessionState = (connectionIssue: string | null) => {
   };
 };
 
+const useMissingSessionGrace = (shouldDelayMissingState: boolean) => {
+  const [graceState, setGraceState] = useState({
+    shouldDelay: shouldDelayMissingState,
+    elapsed: false,
+  });
+  const missingSessionGraceTimer = useTimeout();
+  let currentGraceState = graceState;
+  if (graceState.shouldDelay !== shouldDelayMissingState) {
+    currentGraceState = { shouldDelay: shouldDelayMissingState, elapsed: false };
+    setGraceState(currentGraceState);
+  }
+
+  useEffect(() => {
+    if (!shouldDelayMissingState) {
+      return;
+    }
+    missingSessionGraceTimer.set(() => {
+      setGraceState((current) => (current.shouldDelay ? { ...current, elapsed: true } : current));
+    }, MISSING_SESSION_GRACE_MS);
+
+    return () => {
+      missingSessionGraceTimer.cancel();
+    };
+  }, [missingSessionGraceTimer, shouldDelayMissingState]);
+
+  return currentGraceState.elapsed;
+};
+
 export const SessionDetailView = () => {
   const { base } = useSessionDetailContext();
   const { session, connectionIssue, hasLoadedInitialSessions } = base;
@@ -147,8 +175,6 @@ export const SessionDetailView = () => {
   } = useSessionDetailSectionTabs({
     scope: { repoRoot: session?.repoRoot, branch: session?.branch },
   });
-  const [missingSessionGraceElapsed, setMissingSessionGraceElapsed] = useState(false);
-  const missingSessionGraceTimer = useTimeout();
   const { diffSectionProps, stateTimelineSectionProps, commitSectionProps, notesSectionProps } =
     useSessionDetailViewDataSectionProps({ isMobile });
   const {
@@ -172,26 +198,7 @@ export const SessionDetailView = () => {
     isSessionMissing && !hasLoadedInitialSessions && !hasConnectionIssue;
   const shouldDelayMissingState =
     isSessionMissing && hasLoadedInitialSessions && !hasConnectionIssue;
-
-  useEffect(() => {
-    if (!shouldDelayMissingState) {
-      return;
-    }
-    missingSessionGraceTimer.set(() => {
-      setMissingSessionGraceElapsed(true);
-    }, MISSING_SESSION_GRACE_MS);
-
-    return () => {
-      missingSessionGraceTimer.cancel();
-    };
-  }, [missingSessionGraceTimer, shouldDelayMissingState]);
-
-  useEffect(() => {
-    if (shouldDelayMissingState) {
-      return;
-    }
-    setMissingSessionGraceElapsed(false);
-  }, [shouldDelayMissingState]);
+  const missingSessionGraceElapsed = useMissingSessionGrace(shouldDelayMissingState);
 
   if (isSessionMissing) {
     const showMissingState = hasConnectionIssue || missingSessionGraceElapsed;

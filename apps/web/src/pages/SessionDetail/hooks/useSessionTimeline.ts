@@ -3,7 +3,7 @@ import type {
   SessionStateTimelineRange,
   SessionStateTimelineScope,
 } from "@vde-monitor/shared";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
@@ -116,17 +116,30 @@ export const useSessionTimeline = ({
   const activePaneIdRef = useRef(paneId);
   const timelineRequestIdRef = useRef(0);
   const pendingInteractiveLoadsRef = useRef(0);
-  const timelineScopeDowngradedRef = useRef(false);
-  const previousPaneIdRef = useRef(paneId);
-  if (previousPaneIdRef.current !== paneId) {
-    previousPaneIdRef.current = paneId;
-    timelineScopeDowngradedRef.current = false;
+  const [scopeAvailability, setScopeAvailability] = useState(() => ({
+    paneId,
+    hasRepoTimeline,
+    downgraded: storedTimelineScope === "repo" && !hasRepoTimeline,
+  }));
+  let currentScopeAvailability = scopeAvailability;
+  if (
+    scopeAvailability.paneId !== paneId ||
+    scopeAvailability.hasRepoTimeline !== hasRepoTimeline
+  ) {
+    currentScopeAvailability = {
+      paneId,
+      hasRepoTimeline,
+      downgraded:
+        scopeAvailability.paneId === paneId && scopeAvailability.downgraded
+          ? true
+          : storedTimelineScope === "repo" && !hasRepoTimeline,
+    };
+    setScopeAvailability(currentScopeAvailability);
   }
-  if (storedTimelineScope === "repo" && !hasRepoTimeline) {
-    timelineScopeDowngradedRef.current = true;
-  }
-  activePaneIdRef.current = paneId;
-  const timelineScope = timelineScopeDowngradedRef.current ? DEFAULT_SCOPE : storedTimelineScope;
+  useLayoutEffect(() => {
+    activePaneIdRef.current = paneId;
+  }, [paneId]);
+  const timelineScope = currentScopeAvailability.downgraded ? DEFAULT_SCOPE : storedTimelineScope;
 
   const loadTimeline = useCallback(
     async ({ silent = false }: LoadTimelineOptions = {}) => {
@@ -211,10 +224,10 @@ export const useSessionTimeline = ({
 
   const setTimelineScope = useCallback(
     (scope: SessionStateTimelineScope) => {
-      timelineScopeDowngradedRef.current = false;
+      setScopeAvailability({ paneId, hasRepoTimeline, downgraded: false });
       dispatch({ type: "setScope", scope: scope === "repo" && !hasRepoTimeline ? "pane" : scope });
     },
-    [hasRepoTimeline],
+    [hasRepoTimeline, paneId],
   );
 
   const setTimelineRange = useCallback((range: SessionStateTimelineRange) => {

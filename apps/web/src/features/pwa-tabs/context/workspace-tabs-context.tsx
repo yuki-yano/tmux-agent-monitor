@@ -73,6 +73,24 @@ const WORKSPACE_TABS_FALLBACK: WorkspaceTabsContextValue = {
 // session list: a freshly launched pane can take a moment to show up there.
 const MISSING_PANE_TAB_DISMISS_GRACE_MS = 5000;
 
+const subscribeToDisplayEnvironment = (update: () => void) => {
+  const mediaList = [...PWA_DISPLAY_MODE_QUERIES, WORKSPACE_TABS_MOBILE_MEDIA_QUERY]
+    .map((query) => window.matchMedia?.(query))
+    .filter((candidate): candidate is MediaQueryList => candidate != null);
+  mediaList.forEach((media) => {
+    media.addEventListener("change", update);
+  });
+  window.addEventListener("pageshow", update);
+  window.addEventListener("focus", update);
+  return () => {
+    mediaList.forEach((media) => {
+      media.removeEventListener("change", update);
+    });
+    window.removeEventListener("pageshow", update);
+    window.removeEventListener("focus", update);
+  };
+};
+
 type WorkspaceTabsTransition = {
   state: WorkspaceTabsState;
   navigationTarget: WorkspaceTab | null;
@@ -315,21 +333,7 @@ export const WorkspaceTabsProvider = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     const update = () => bumpDisplayEnvironmentVersion();
-    const mediaList = [...PWA_DISPLAY_MODE_QUERIES, WORKSPACE_TABS_MOBILE_MEDIA_QUERY]
-      .map((query) => window.matchMedia?.(query))
-      .filter((candidate): candidate is MediaQueryList => candidate != null);
-    mediaList.forEach((media) => {
-      media.addEventListener?.("change", update);
-    });
-    window.addEventListener("pageshow", update);
-    window.addEventListener("focus", update);
-    return () => {
-      mediaList.forEach((media) => {
-        media.removeEventListener?.("change", update);
-      });
-      window.removeEventListener("pageshow", update);
-      window.removeEventListener("focus", update);
-    };
+    return subscribeToDisplayEnvironment(update);
   }, []);
 
   useEffect(() => {
