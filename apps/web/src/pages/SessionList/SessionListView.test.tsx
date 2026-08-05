@@ -382,6 +382,20 @@ describe("SessionListView", () => {
     expect(onSearchQueryChange).toHaveBeenCalledWith("");
   });
 
+  it("keeps connection status on the second mobile row and moves actions beside the title", () => {
+    renderWithRouter(<SessionListView {...createViewProps()} />);
+
+    const actions = screen.getByRole("toolbar", { name: "Session list actions" });
+    const statusRow = screen.getByText("Connected").parentElement?.parentElement;
+
+    expect(actions.className).toContain("col-start-2");
+    expect(actions.className).toContain("row-start-1");
+    expect(actions.className).toContain("sm:row-auto");
+    expect(statusRow?.className).toContain("col-span-2");
+    expect(statusRow?.className).toContain("row-start-2");
+    expect(statusRow?.className).toContain("sm:row-auto");
+  });
+
   it("calls refresh when refresh button is clicked", () => {
     const onRefresh = vi.fn();
     const props = createViewProps({ connectionStatus: "healthy", onRefresh });

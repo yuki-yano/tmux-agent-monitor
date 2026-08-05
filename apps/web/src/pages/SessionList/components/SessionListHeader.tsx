@@ -195,8 +195,8 @@ export const SessionListHeader = ({
 
   return (
     <header className="animate-fade-in stagger-1 flex flex-col gap-3 rounded-3xl border border-[var(--material-stroke)] bg-[var(--material-canvas)] p-3 shadow-[var(--material-shadow)] backdrop-blur-2xl sm:gap-4 sm:p-5">
-      <Toolbar className="gap-3">
-        <div>
+      <Toolbar className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-2 sm:flex sm:items-center sm:gap-3">
+        <div className="min-w-0">
           <p className="text-latte-subtext0 text-xs font-medium uppercase tracking-[0.16em]">
             VDE Monitor
           </p>
@@ -204,62 +204,66 @@ export const SessionListHeader = ({
             Live Sessions
           </h1>
         </div>
-        <div className="ml-auto flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
+        <div className="col-span-2 row-start-2 flex items-center sm:col-auto sm:row-auto sm:ml-auto">
           <ConnectionStatusPill status={connectionStatus} transport={transport} />
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="hidden h-7 gap-1.5 px-2.5 text-[11px] uppercase tracking-[0.1em] lg:inline-flex"
-              onClick={onOpenUsage}
-            >
-              Usage
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="hidden h-7 gap-1.5 px-2.5 text-[11px] uppercase tracking-[0.1em] lg:inline-flex"
-              onClick={onOpenChatGrid}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              Chat Grid
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="relative h-7 w-7 p-0 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] lg:hidden"
-              onClick={onOpenUsage}
-              aria-label="Usage"
-              title="Usage"
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="relative hidden h-7 w-7 p-0 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] md:inline-flex lg:hidden"
-              onClick={onOpenChatGrid}
-              aria-label="Open Chat Grid"
-              title="Chat Grid"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="relative h-7 w-7 p-0 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']"
-              onClick={onRefresh}
-              aria-label="Refresh"
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span className="sr-only">Refresh</span>
-            </Button>
-            {themeControl}
-          </div>
+        </div>
+        <div
+          role="toolbar"
+          aria-label="Session list actions"
+          className="col-start-2 row-start-1 flex shrink-0 items-center gap-2 self-center sm:col-auto sm:row-auto"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="hidden h-7 gap-1.5 px-2.5 text-[11px] uppercase tracking-[0.1em] lg:inline-flex"
+            onClick={onOpenUsage}
+          >
+            Usage
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="hidden h-7 gap-1.5 px-2.5 text-[11px] uppercase tracking-[0.1em] lg:inline-flex"
+            onClick={onOpenChatGrid}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Chat Grid
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="relative h-7 w-7 p-0 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] lg:hidden"
+            onClick={onOpenUsage}
+            aria-label="Usage"
+            title="Usage"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="relative hidden h-7 w-7 p-0 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] md:inline-flex lg:hidden"
+            onClick={onOpenChatGrid}
+            aria-label="Open Chat Grid"
+            title="Chat Grid"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative h-7 w-7 p-0 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']"
+            onClick={onRefresh}
+            aria-label="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="sr-only">Refresh</span>
+          </Button>
+          {themeControl}
         </div>
       </Toolbar>
       <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_auto] lg:items-center">
