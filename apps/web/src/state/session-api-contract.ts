@@ -69,7 +69,6 @@ export const createApiClient = (
 ): ApiClientContract => {
   const client: unknown = hc(apiBasePath, {
     headers: authHeaders,
-    init: { credentials: "include" },
   });
   assertApiClientContract(client);
   return client;

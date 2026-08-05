@@ -185,7 +185,6 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
       try {
         response = await fetch(`${apiBasePath}/notifications/subscriptions`, {
           method: "POST",
-          credentials: "include",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -291,7 +290,6 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
           `${apiBasePath}/notifications/subscriptions/${encodeURIComponent(currentSubscriptionId)}`,
           {
             method: "DELETE",
-            credentials: "include",
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -301,7 +299,6 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
       }
       await fetch(`${apiBasePath}/notifications/subscriptions/revoke`, {
         method: "POST",
-        credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -505,7 +502,6 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
 
       try {
         const response = await fetch(`${apiBasePath}/notifications/settings`, {
-          credentials: "include",
           headers: {
             Authorization: `Bearer ${token}`,
           },

@@ -55,7 +55,7 @@ export const TokenInputBanner = ({ authError, onSubmit }: TokenInputBannerProps)
         </Button>
       </form>
       <p className="text-latte-subtext0 text-xs">
-        Re-open the access URL from the CLI output if you need a new authenticated session.
+        Re-open the URL from CLI output (`#token=...`) if you need a new token link.
       </p>
     </Card>
   );

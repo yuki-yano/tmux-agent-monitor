@@ -126,21 +126,22 @@ describe("ensureBackendAvailable", () => {
 });
 
 describe("buildAccessUrl", () => {
-  it("builds a cookie-session URL without an api parameter for the same origin", () => {
+  it("omits api hash param when ui/api host:port are the same", () => {
     const url = buildAccessUrl({
       displayHost: "localhost",
       displayPort: 11080,
       token: "abc123",
     });
     const parsed = new URL(url);
+    const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+    const hashParams = new URLSearchParams(hash);
 
     expect(parsed.origin).toBe("http://localhost:11080");
-    expect(parsed.pathname).toBe("/auth/session");
-    expect(parsed.searchParams.get("token")).toBe("abc123");
-    expect(parsed.searchParams.has("api")).toBe(false);
+    expect(hashParams.get("token")).toBe("abc123");
+    expect(hashParams.has("api")).toBe(false);
   });
 
-  it("includes the api endpoint in the cookie-session URL for a different origin", () => {
+  it("embeds token and api endpoint in hash params when api is different origin", () => {
     const url = buildAccessUrl({
       displayHost: "100.102.60.85",
       displayPort: 24181,
@@ -148,25 +149,27 @@ describe("buildAccessUrl", () => {
       apiBaseUrl: "http://100.102.60.85:11081/api",
     });
     const parsed = new URL(url);
+    const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+    const hashParams = new URLSearchParams(hash);
 
     expect(parsed.origin).toBe("http://100.102.60.85:24181");
-    expect(parsed.pathname).toBe("/auth/session");
-    expect(parsed.searchParams.get("token")).toBe("abc123");
-    expect(parsed.searchParams.get("api")).toBe("http://100.102.60.85:11081/api");
+    expect(hashParams.get("token")).toBe("abc123");
+    expect(hashParams.get("api")).toBe("http://100.102.60.85:11081/api");
   });
 });
 
 describe("buildTailscaleHttpsAccessUrl", () => {
-  it("builds a ts.net HTTPS cookie-session URL", () => {
+  it("builds a ts.net HTTPS URL with token hash", () => {
     const url = buildTailscaleHttpsAccessUrl({
       dnsName: "macbook.example.ts.net",
       token: "abc123",
     });
     const parsed = new URL(url);
+    const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+    const hashParams = new URLSearchParams(hash);
 
     expect(parsed.origin).toBe("https://macbook.example.ts.net");
-    expect(parsed.pathname).toBe("/auth/session");
-    expect(parsed.searchParams.get("token")).toBe("abc123");
-    expect(parsed.searchParams.has("api")).toBe(false);
+    expect(hashParams.get("token")).toBe("abc123");
+    expect(hashParams.has("api")).toBe(false);
   });
 });

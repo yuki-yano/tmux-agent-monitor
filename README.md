@@ -70,7 +70,7 @@ npx vde-monitor@latest --tailscale
 Startup prints a URL like:
 
 ```text
-vde-monitor: http://localhost:11080/auth/session?token=...
+vde-monitor: http://localhost:11080/#token=...
 ```
 
 Open the URL in your browser.
@@ -145,7 +145,7 @@ For Tailscale HTTPS access:
    - `y` / `yes`: runs `tailscale serve --bg <printed-web-port>` automatically.
    - default `N`: skips auto setup and prints manual recovery command.
 3. If existing `tailscale serve` settings are already present, vde-monitor does not overwrite them and prints guidance instead.
-4. Open `https://<device>.<tailnet>.ts.net/auth/session?token=...` (not the plain `http://100.x.x.x/...` URL).
+4. Open `https://<device>.<tailnet>.ts.net/#token=...` (not the plain `http://100.x.x.x/...` URL).
 5. Verify with `tailscale serve status`.
 
 Notes for iOS:
@@ -484,7 +484,7 @@ pnpm run build:watch
   - with cmux-only access, launch vde-monitor from inside cmux; for Password mode, set
     `CMUX_SOCKET_PASSWORD`
 - URL opens but API fails:
-  - re-open the access URL printed by the CLI to establish a fresh authenticated session
+  - check token in URL hash (`#token=...`)
   - rotate token with `npx vde-monitor@latest token rotate`
 - Mobile device cannot connect:
   - re-check network path (SSH forward / Tailscale / LAN)

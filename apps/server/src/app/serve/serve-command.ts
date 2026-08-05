@@ -301,11 +301,11 @@ export const buildAccessUrl = ({
   token,
   apiBaseUrl,
 }: BuildAccessUrlInput) => {
-  const authParams = new URLSearchParams({ token });
+  const hashParams = new URLSearchParams({ token });
   if (apiBaseUrl) {
-    authParams.set("api", apiBaseUrl);
+    hashParams.set("api", apiBaseUrl);
   }
-  return `http://${displayHost}:${displayPort}/auth/session?${authParams.toString()}`;
+  return `http://${displayHost}:${displayPort}/#${hashParams.toString()}`;
 };
 
 type CliOverrides = {
@@ -620,7 +620,7 @@ export const runServe = async (args: ParsedArgs) => {
         console.log(`vde-monitor (tailscale-https): ${secureUrl}`);
         if (apiBaseUrl) {
           console.log(
-            "[vde-monitor] Use the tailscale-https URL above for push tests (it intentionally omits the api query parameter).",
+            "[vde-monitor] Use the tailscale-https URL above for push tests (it intentionally omits #api).",
           );
         }
       } else {

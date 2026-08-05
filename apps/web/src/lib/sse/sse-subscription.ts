@@ -140,7 +140,6 @@ export const createSseSubscription = (options: SseSubscriptionOptions): SseSubsc
         lastEventId != null ? { "Last-Event-ID": lastEventId } : {};
 
       const response = await fetch(url, {
-        credentials: "include",
         headers: {
           ...getHeaders(),
           Accept: "text/event-stream",

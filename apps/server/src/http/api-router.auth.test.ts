@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authHeaders, createTestContext } from "./api-router.test-helpers";
-import { SESSION_AUTH_COOKIE_NAME } from "./helpers";
 
 describe("createApiRouter", () => {
   beforeEach(() => {
@@ -24,64 +23,6 @@ describe("createApiRouter", () => {
       headers: { Authorization: `Bearer ${wrongToken}` },
     });
     expect(res.status).toBe(401);
-  });
-
-  it("exchanges a valid token for a hardened session cookie", async () => {
-    const { api } = createTestContext();
-    const exchange = await api.request("/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: "token" }),
-    });
-
-    expect(exchange.status).toBe(204);
-    const setCookie = exchange.headers.get("set-cookie");
-    expect(setCookie).toContain(`${SESSION_AUTH_COOKIE_NAME}=token`);
-    expect(setCookie).toContain("HttpOnly");
-    expect(setCookie).toContain("Secure");
-    expect(setCookie).toContain("SameSite=Strict");
-    expect(setCookie).toContain("Path=/");
-
-    const cookie = setCookie?.split(";", 1)[0] ?? "";
-    const authenticated = await api.request("/sessions", { headers: { Cookie: cookie } });
-    expect(authenticated.status).toBe(200);
-  });
-
-  it("keeps private-network HTTP sessions usable without marking the cookie Secure", async () => {
-    const { api } = createTestContext();
-    const exchange = await api.request("http://192.168.0.10/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: "token" }),
-    });
-
-    expect(exchange.status).toBe(204);
-    const setCookie = exchange.headers.get("set-cookie");
-    expect(setCookie).toContain(`${SESSION_AUTH_COOKIE_NAME}=token`);
-    expect(setCookie).toContain("HttpOnly");
-    expect(setCookie).toContain("SameSite=Strict");
-    expect(setCookie).not.toContain("Secure");
-  });
-
-  it("rejects an invalid session-cookie exchange", async () => {
-    const { api } = createTestContext();
-    const exchange = await api.request("/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: "wrong-token" }),
-    });
-
-    expect(exchange.status).toBe(401);
-    expect(exchange.headers.get("set-cookie")).toBeNull();
-  });
-
-  it("clears the session cookie without requiring an active session", async () => {
-    const { api } = createTestContext();
-    const response = await api.request("/auth/session", { method: "DELETE" });
-
-    expect(response.status).toBe(204);
-    expect(response.headers.get("set-cookie")).toContain(`${SESSION_AUTH_COOKIE_NAME}=`);
-    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
   });
 
   it("throttles repeated auth failures with 429", async () => {

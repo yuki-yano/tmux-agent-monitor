@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
+const TOKEN_KEY = "vde-monitor-token";
 const API_BASE_URL_KEY = "vde-monitor-api-base-url";
-const COOKIE_SESSION_MARKER = "cookie-session";
 
 const isLoopbackHost = (hostname: string) =>
   hostname === "localhost" ||
@@ -42,23 +42,38 @@ const normalizeApiBaseUrl = (value: string | null) => {
   }
 };
 
-const readApiBaseUrlDirective = () => {
-  const searchParams = new URLSearchParams(window.location.search);
-  const hasDirective = searchParams.has("api");
-  return {
-    hasDirective,
-    apiBaseUrl: hasDirective ? normalizeApiBaseUrl(searchParams.get("api")) : null,
-  };
+const readSessionAccessFromUrl = () => {
+  const rawHash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const hashParams = new URLSearchParams(rawHash);
+  const tokenRaw = hashParams.get("token");
+  const token = tokenRaw?.trim() || null;
+  const hasTokenParam = tokenRaw != null;
+  const apiBaseUrlRaw = hashParams.get("api");
+  const hasApiParam = apiBaseUrlRaw != null;
+  const hasAccessDirective = hasApiParam || hasTokenParam;
+  const apiBaseUrl = token && hasApiParam ? normalizeApiBaseUrl(apiBaseUrlRaw) : null;
+  return { token, apiBaseUrl, hasAccessDirective };
 };
 
-const stripApiBaseUrlDirective = () => {
-  const searchParams = new URLSearchParams(window.location.search);
-  if (!searchParams.has("api")) {
+/*
+  Kept out of readSessionAccessFromUrl on purpose: that runs during render, and
+  replaceState would synchronously re-enter the router while a component tree
+  is still rendering. Callers strip the URL from an effect instead.
+*/
+const stripAccessDirectiveFromUrl = () => {
+  const rawHash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const hashParams = new URLSearchParams(rawHash);
+  if (!hashParams.has("token") && !hashParams.has("api")) {
     return;
   }
-  searchParams.delete("api");
-  const nextSearch = searchParams.toString();
-  const next = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+  hashParams.delete("token");
+  hashParams.delete("api");
+  const nextHash = hashParams.toString();
+  const next = `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ""}`;
   window.history.replaceState({}, "", next);
 };
 
@@ -72,46 +87,47 @@ const readStoredApiBaseUrl = () => {
 };
 
 export const useSessionToken = () => {
-  const [initialDirective] = useState(readApiBaseUrlDirective);
-  const [token, setTokenState] = useState<string | null>(COOKIE_SESSION_MARKER);
-  const [apiBaseUrl] = useState<string | null>(() =>
-    initialDirective.hasDirective ? initialDirective.apiBaseUrl : readStoredApiBaseUrl(),
-  );
+  const [initialAccess] = useState(readSessionAccessFromUrl);
+  const [token, setTokenState] = useState<string | null>(() => {
+    if (initialAccess.hasAccessDirective) {
+      return initialAccess.token;
+    }
+    return localStorage.getItem(TOKEN_KEY);
+  });
+  const [apiBaseUrl] = useState<string | null>(() => {
+    if (initialAccess.hasAccessDirective) {
+      return initialAccess.apiBaseUrl;
+    }
+    return readStoredApiBaseUrl();
+  });
 
   useEffect(() => {
-    if (!initialDirective.hasDirective) {
+    if (!initialAccess.hasAccessDirective) {
       return;
     }
-    if (initialDirective.apiBaseUrl) {
-      localStorage.setItem(API_BASE_URL_KEY, initialDirective.apiBaseUrl);
+    if (initialAccess.token) {
+      localStorage.setItem(TOKEN_KEY, initialAccess.token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+    if (initialAccess.apiBaseUrl) {
+      localStorage.setItem(API_BASE_URL_KEY, initialAccess.apiBaseUrl);
     } else {
       localStorage.removeItem(API_BASE_URL_KEY);
     }
-    stripApiBaseUrlDirective();
-  }, [initialDirective]);
+    stripAccessDirectiveFromUrl();
+  }, [initialAccess]);
 
-  const setToken = useCallback(
-    async (nextToken: string | null) => {
-      const trimmed = nextToken?.trim() ?? "";
-      const endpoint = `${apiBaseUrl ?? "/api"}/auth/session`;
-      try {
-        const response = await fetch(endpoint, {
-          method: trimmed ? "POST" : "DELETE",
-          credentials: "include",
-          headers: trimmed ? { "Content-Type": "application/json" } : undefined,
-          body: trimmed ? JSON.stringify({ token: trimmed }) : undefined,
-        });
-        if (!response.ok) {
-          return false;
-        }
-      } catch {
-        return false;
-      }
-      setTokenState(trimmed ? COOKIE_SESSION_MARKER : null);
-      return true;
-    },
-    [apiBaseUrl],
-  );
+  const setToken = (nextToken: string | null) => {
+    const trimmed = nextToken?.trim() ?? "";
+    if (trimmed.length === 0) {
+      localStorage.removeItem(TOKEN_KEY);
+      setTokenState(null);
+      return;
+    }
+    localStorage.setItem(TOKEN_KEY, trimmed);
+    setTokenState(trimmed);
+  };
 
   return { token, setToken, apiBaseUrl };
 };
