@@ -138,7 +138,7 @@ export const useSessionScreen = ({
     scrollToBottom,
     handleAtBottomChange,
     handleUserScrollStateChange,
-    virtuosoRef,
+    viewportRef,
     scrollerRef,
   } = useScreenScroll({
     paneId,
@@ -239,7 +239,7 @@ export const useSessionScreen = ({
     scrollToBottom,
     handleModeChange,
     toggleWrapMode,
-    virtuosoRef,
+    viewportRef,
     scrollerRef,
   };
 };

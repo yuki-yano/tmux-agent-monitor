@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
-import { type ReactNode, forwardRef, useImperativeHandle } from "react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logModalSnapRequestAtom } from "@/features/shared-session-ui/atoms/logAtoms";
@@ -9,8 +9,9 @@ import { LogModal } from "@/features/shared-session-ui/components/LogModal";
 
 let latestOnUserScrollStateChange: ((value: boolean) => void) | null = null;
 let latestAtBottomStateChange: ((value: boolean) => void) | null = null;
-const scrollToIndex = vi.fn();
+const scrollToEnd = vi.fn();
 let latestFollowOutput: "auto" | "smooth" | boolean | undefined;
+let virtualizerAtEnd = true;
 const mockScrollerRef = { current: null as HTMLDivElement | null };
 const mockUseWorkspaceTabs = vi.hoisted(
   () =>
@@ -37,8 +38,8 @@ const mockUseWorkspaceTabs = vi.hoisted(
     },
 );
 
-vi.mock("@/features/shared-session-ui/hooks/useStableVirtuosoScroll", () => ({
-  useStableVirtuosoScroll: ({
+vi.mock("@/features/shared-session-ui/hooks/useUserScrollState", () => ({
+  useUserScrollState: ({
     onUserScrollStateChange,
   }: {
     onUserScrollStateChange?: (value: boolean) => void;
@@ -46,44 +47,36 @@ vi.mock("@/features/shared-session-ui/hooks/useStableVirtuosoScroll", () => ({
     latestOnUserScrollStateChange = onUserScrollStateChange ?? null;
     return {
       scrollerRef: mockScrollerRef,
-      handleRangeChanged: vi.fn(),
     };
   },
 }));
 
-vi.mock("react-virtuoso", () => ({
-  Virtuoso: forwardRef(
-    (
-      {
-        data = [],
-        atBottomStateChange,
-        followOutput,
-        itemContent,
-      }: {
-        data?: string[];
-        atBottomStateChange?: (value: boolean) => void;
-        followOutput?: "auto" | "smooth" | boolean;
-        itemContent: (index: number, item: string) => ReactNode;
-      },
-      ref,
-    ) => {
-      latestAtBottomStateChange = atBottomStateChange ?? null;
-      latestFollowOutput = followOutput;
-      useImperativeHandle(ref, () => ({ scrollToIndex }));
-      return (
-        <div data-testid="virtuoso">
-          {(() => {
-            const itemCounts = new Map<string, number>();
-            return data.map((item, index) => {
-              const count = itemCounts.get(item) ?? 0;
-              itemCounts.set(item, count + 1);
-              return <div key={`${item}-${count}`}>{itemContent(index, item)}</div>;
-            });
-          })()}
-        </div>
-      );
-    },
-  ),
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: {
+    count: number;
+    followOnAppend?: "auto" | "smooth" | boolean;
+    onChange?: (instance: unknown, sync: boolean) => void;
+  }) => {
+    const instance = {
+      range: options.count > 0 ? { startIndex: 0, endIndex: options.count - 1 } : null,
+      getVirtualItems: () =>
+        Array.from({ length: options.count }, (_, index) => ({
+          index,
+          key: `item-${index}`,
+          start: index * 16,
+        })),
+      getTotalSize: () => options.count * 16,
+      isAtEnd: () => virtualizerAtEnd,
+      measureElement: vi.fn(),
+      scrollToEnd,
+    };
+    latestAtBottomStateChange = (value) => {
+      virtualizerAtEnd = value;
+      options.onChange?.(instance, false);
+    };
+    latestFollowOutput = options.followOnAppend;
+    return instance;
+  },
 }));
 
 vi.mock("@/features/pwa-tabs/context/workspace-tabs-context", () => ({
@@ -122,6 +115,7 @@ describe("LogModal", () => {
     latestOnUserScrollStateChange = null;
     latestAtBottomStateChange = null;
     latestFollowOutput = undefined;
+    virtualizerAtEnd = true;
     mockScrollerRef.current = null;
     mockUseWorkspaceTabs.enabled = false;
     mockUseWorkspaceTabs.activeTabId = "system:sessions";
@@ -245,15 +239,15 @@ describe("LogModal", () => {
     );
 
     expect(screen.getByText("pane-a-line")).toBeTruthy();
-    expect(scrollToIndex).toHaveBeenCalledTimes(1);
-    scrollToIndex.mockClear();
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+    scrollToEnd.mockClear();
 
     rerender(
       <LogModal state={buildState({ session: sessionB, logLines: [] })} actions={actions} />,
     );
 
     expect(screen.queryByText("pane-a-line")).toBeNull();
-    expect(scrollToIndex).not.toHaveBeenCalled();
+    expect(scrollToEnd).not.toHaveBeenCalled();
 
     act(() => {
       store.set(logModalSnapRequestAtom, { paneId: "pane-b", version: 2 });
@@ -266,8 +260,8 @@ describe("LogModal", () => {
     );
 
     expect(screen.getByText("pane-b-line")).toBeTruthy();
-    expect(scrollToIndex).toHaveBeenCalledTimes(1);
-    expect(scrollToIndex).toHaveBeenCalledWith({ index: 0, behavior: "auto", align: "end" });
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+    expect(scrollToEnd).toHaveBeenCalledWith({ behavior: "auto" });
 
     rerender(
       <LogModal
@@ -275,7 +269,7 @@ describe("LogModal", () => {
         actions={actions}
       />,
     );
-    expect(scrollToIndex).toHaveBeenCalledTimes(1);
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
   });
 
   it("resets paused and buffered state when the modal is reopened", () => {
@@ -303,14 +297,14 @@ describe("LogModal", () => {
     expect(latestFollowOutput).toBe("auto");
   });
 
-  it("uses Virtuoso as the sole scroll-to-bottom authority", () => {
+  it("uses the virtualizer as the sole scroll-to-bottom authority", () => {
     const scrollTo = vi.fn();
     mockScrollerRef.current = { scrollTo } as unknown as HTMLDivElement;
     const state = buildState({ logLines: ["line1", "line2"] });
     const wrapper = createWrapper();
     const actions = buildActions();
     const { rerender } = render(<LogModal state={state} actions={actions} />, { wrapper });
-    scrollToIndex.mockClear();
+    scrollToEnd.mockClear();
 
     act(() => {
       latestOnUserScrollStateChange?.(true);
@@ -319,7 +313,7 @@ describe("LogModal", () => {
     expect(latestFollowOutput).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Scroll to bottom" }));
 
-    expect(scrollToIndex).toHaveBeenCalledWith({ index: 1, behavior: "smooth", align: "end" });
+    expect(scrollToEnd).toHaveBeenCalledWith({ behavior: "smooth" });
     expect(scrollTo).not.toHaveBeenCalled();
     expect(latestFollowOutput).toBe("auto");
 

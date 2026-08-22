@@ -6,8 +6,8 @@ import {
   useReducer,
   useRef,
 } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
 
+import type { VirtualizedViewportHandle } from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
 import type { ScreenMode } from "@/lib/screen-loading";
 
 type UseScreenScrollParams = {
@@ -67,7 +67,7 @@ export const useScreenScroll = ({
     initialScreenScrollState,
   );
 
-  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const viewportRef = useRef<VirtualizedViewportHandle | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const onClearPendingRef = useRef(onClearPending);
   // react-doctor-disable-next-line no-event-handler
@@ -87,17 +87,16 @@ export const useScreenScroll = ({
   const scrollToBottom = useCallback(
     (behavior: "auto" | "smooth" = "auto") => {
       if (screenLinesLength === 0) return false;
-      const hasVirtuoso = Boolean(virtuosoRef.current);
+      const hasVirtualizedViewport = Boolean(viewportRef.current);
       const hasScroller = Boolean(scrollerRef.current);
-      if (!hasVirtuoso && !hasScroller) {
+      if (!hasVirtualizedViewport && !hasScroller) {
         return false;
       }
       dispatchScrollState({ type: "resume-following" });
-      if (virtuosoRef.current) {
-        const index = screenLinesLength - 1;
-        virtuosoRef.current.scrollToIndex({ index, align: "end", behavior });
+      if (viewportRef.current) {
+        viewportRef.current.scrollToEnd({ behavior });
       }
-      if (!hasVirtuoso) {
+      if (!hasVirtualizedViewport) {
         window.requestAnimationFrame(() => {
           const scroller = scrollerRef.current;
           if (scroller != null) {
@@ -172,7 +171,7 @@ export const useScreenScroll = ({
     scrollToBottom,
     handleAtBottomChange,
     handleUserScrollStateChange,
-    virtuosoRef,
+    viewportRef,
     scrollerRef,
   };
 };

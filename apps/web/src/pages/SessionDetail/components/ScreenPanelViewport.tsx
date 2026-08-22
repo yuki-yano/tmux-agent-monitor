@@ -1,8 +1,10 @@
 import { type KeyboardEvent, type MouseEvent, type RefObject } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
 
 import { LoadingOverlay } from "@/components/ui";
-import { AnsiVirtualizedViewport } from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
+import {
+  AnsiVirtualizedViewport,
+  type VirtualizedViewportHandle,
+} from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
 import { sanitizeLogCopyText } from "@/lib/clipboard";
 import type { ScreenMode } from "@/lib/screen-loading";
 
@@ -22,7 +24,7 @@ type ScreenPanelViewportProps = {
   isScreenLoading: boolean;
   screenLines: string[];
   smartLineClassifications: SmartWrapLineClassification[];
-  virtuosoRef: RefObject<VirtuosoHandle | null>;
+  viewportRef: RefObject<VirtualizedViewportHandle | null>;
   scrollerRef: RefObject<HTMLDivElement | null>;
   onAtBottomChange: (value: boolean) => void;
   onRangeChanged: (range: { startIndex: number; endIndex: number }) => void;
@@ -42,7 +44,7 @@ export const ScreenPanelViewport = ({
   isScreenLoading,
   screenLines,
   smartLineClassifications,
-  virtuosoRef,
+  viewportRef,
   scrollerRef,
   onAtBottomChange,
   onRangeChanged,
@@ -94,6 +96,7 @@ export const ScreenPanelViewport = ({
   return (
     <AnsiVirtualizedViewport
       lines={screenLines}
+      scrollContextKey={scrollContextKey}
       loading={isScreenLoading}
       loadingLabel="Loading screen..."
       loadingEntrance="delayed"
@@ -101,12 +104,12 @@ export const ScreenPanelViewport = ({
       shouldFollowOutput={shouldFollowOutput}
       onAtBottomChange={onAtBottomChange}
       onRangeChanged={onRangeChanged}
-      virtuosoRef={virtuosoRef}
+      viewportRef={viewportRef}
       scrollerRef={scrollerRef}
       onScrollToBottom={onScrollToBottom}
       className="border-latte-surface2/80 bg-latte-crust/95 shadow-inner-soft relative min-h-[260px] w-full min-w-0 max-w-full flex-1 rounded-2xl border-2 sm:min-h-[320px]"
-      viewportClassName="w-full min-w-0 max-w-full"
-      listClassName="text-latte-text w-max min-w-full px-1 py-1 font-mono text-xs sm:px-2 sm:py-2"
+      viewportClassName="w-full min-w-0 max-w-full px-1 py-1 sm:px-2 sm:py-2"
+      listClassName="text-latte-text w-max min-w-full font-mono text-xs"
       lineClassName="min-h-4 whitespace-pre leading-4"
       height={SCREEN_VIEWPORT_HEIGHT}
       sanitizeCopyText={sanitizeLogCopyText}

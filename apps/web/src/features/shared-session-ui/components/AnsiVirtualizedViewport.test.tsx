@@ -2,43 +2,50 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { AnsiVirtualizedViewport } from "./AnsiVirtualizedViewport";
+import { AnsiVirtualizedViewport, type VirtualizedViewportHandle } from "./AnsiVirtualizedViewport";
 
-const virtuosoState = vi.hoisted(() => ({
-  followOutput: undefined as "auto" | "smooth" | boolean | undefined,
+const virtualizerState = vi.hoisted(() => ({
+  atEnd: true,
+  options: undefined as
+    | {
+        count: number;
+        estimateSize?: () => number;
+        followOnAppend?: boolean | "auto" | "smooth";
+        useFlushSync?: boolean;
+      }
+    | undefined,
+  scrollToEnd: vi.fn(),
 }));
 
-vi.mock("react-virtuoso", () => ({
-  Virtuoso: ({ followOutput }: { followOutput?: "auto" | "smooth" | boolean }) => {
-    virtuosoState.followOutput = followOutput;
-    return <div data-testid="virtuoso" />;
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: {
+    count: number;
+    estimateSize?: () => number;
+    followOnAppend?: boolean | "auto" | "smooth";
+    useFlushSync?: boolean;
+  }) => {
+    virtualizerState.options = options;
+    return {
+      range: options.count > 0 ? { startIndex: 0, endIndex: options.count - 1 } : null,
+      getVirtualItems: () =>
+        Array.from({ length: options.count }, (_, index) => ({
+          index,
+          key: `item-${index}`,
+          start: index * 16,
+        })),
+      getTotalSize: () => options.count * 16,
+      isAtEnd: () => virtualizerState.atEnd,
+      measureElement: vi.fn(),
+      scrollToEnd: virtualizerState.scrollToEnd,
+    };
   },
 }));
 
-type ScrollMetrics = {
-  scrollHeight: number;
-  clientHeight: number;
-  scrollTop: number;
-};
-
-const installScrollMetrics = (node: HTMLDivElement, metrics: ScrollMetrics) => {
-  const scrollTopSetter = vi.fn((value: number) => {
-    metrics.scrollTop = value;
-  });
-  Object.defineProperty(node, "scrollHeight", {
-    configurable: true,
-    get: () => metrics.scrollHeight,
-  });
-  Object.defineProperty(node, "clientHeight", {
-    configurable: true,
-    get: () => metrics.clientHeight,
-  });
-  Object.defineProperty(node, "scrollTop", {
-    configurable: true,
-    get: () => metrics.scrollTop,
-    set: scrollTopSetter,
-  });
-  return scrollTopSetter;
+const defaultProps = {
+  scrollContextKey: "pane-1",
+  loading: false,
+  loadingLabel: "Loading",
+  onAtBottomChange: vi.fn(),
 };
 
 describe("AnsiVirtualizedViewport", () => {
@@ -47,11 +54,9 @@ describe("AnsiVirtualizedViewport", () => {
 
     render(
       <AnsiVirtualizedViewport
+        {...defaultProps}
         lines={["line-1", "line-2"]}
-        loading={false}
-        loadingLabel="Loading"
         isAtBottom={false}
-        onAtBottomChange={vi.fn()}
         onScrollToBottom={onScrollToBottom}
       />,
     );
@@ -69,23 +74,16 @@ describe("AnsiVirtualizedViewport", () => {
 
     const { container } = render(
       <AnsiVirtualizedViewport
+        {...defaultProps}
         lines={["line-1", "line-2"]}
-        loading={false}
-        loadingLabel="Loading"
         isAtBottom
-        onAtBottomChange={vi.fn()}
         sanitizeCopyText={(raw) => raw.replace(/\r\n/gu, "\n")}
       />,
     );
 
     const event = new Event("copy", { bubbles: true }) as ClipboardEvent;
-    Object.defineProperty(event, "clipboardData", {
-      value: {
-        setData,
-      },
-    });
+    Object.defineProperty(event, "clipboardData", { value: { setData } });
     event.preventDefault = preventDefault;
-
     container.firstElementChild?.dispatchEvent(event);
 
     expect(setData).toHaveBeenCalledWith("text/plain", "line-1\nline-2");
@@ -93,106 +91,224 @@ describe("AnsiVirtualizedViewport", () => {
     getSelectionSpy.mockRestore();
   });
 
-  it("disables followOutput while the viewport is paused above the bottom", () => {
-    const props = {
-      lines: ["line-1", "line-2"],
-      loading: false,
-      loadingLabel: "Loading",
-      onAtBottomChange: vi.fn(),
-    };
+  it("only follows appended output while follow intent is active", () => {
     const { rerender } = render(
-      <AnsiVirtualizedViewport {...props} isAtBottom followOutput="smooth" />,
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "line-2"]}
+        isAtBottom
+        followOutput="smooth"
+      />,
     );
 
-    expect(virtuosoState.followOutput).toBe("smooth");
+    expect(virtualizerState.options?.followOnAppend).toBe("smooth");
 
-    rerender(<AnsiVirtualizedViewport {...props} isAtBottom={false} followOutput="smooth" />);
+    rerender(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "line-2"]}
+        isAtBottom={false}
+        followOutput="smooth"
+      />,
+    );
 
-    expect(virtuosoState.followOutput).toBe(false);
+    expect(virtualizerState.options?.followOnAppend).toBe(false);
   });
 
-  it("follows explicit follow intent independently from the physical bottom state", () => {
+  it("contains the absolute scroller and avoids commit-time flushSync", () => {
+    render(
+      <AnsiVirtualizedViewport {...defaultProps} lines={["line-1"]} isAtBottom height="320px" />,
+    );
+
+    const log = screen.getByRole("log", { name: "Terminal output" });
+    const region = screen.getByRole("region", { name: "Scrollable terminal output" });
+    expect(log.className).toContain("relative");
+    expect(log.className).toContain("flex-none");
+    expect(log.className).not.toContain("flex-1");
+    expect(log.style.height).toBe("320px");
+    expect(region.className).toContain("absolute");
+    expect(virtualizerState.options?.useFlushSync).toBe(false);
+  });
+
+  it("uses the supplied line-height estimate", () => {
     render(
       <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1"]}
+        isAtBottom
+        estimatedLineHeight={20}
+      />,
+    );
+
+    expect(virtualizerState.options?.estimateSize?.()).toBe(20);
+  });
+
+  it("stretches every row to the widest rendered line without losing horizontal position", () => {
+    const { rerender } = render(
+      <AnsiVirtualizedViewport {...defaultProps} lines={["short", "long"]} isAtBottom />,
+    );
+    const region = screen.getByRole("region", { name: "Scrollable terminal output" });
+    const list = region.firstElementChild as HTMLDivElement;
+    const rows = Array.from(list.querySelectorAll<HTMLElement>("[data-index]"));
+    let rowWidths = [600, 1200];
+
+    Object.defineProperty(list, "clientWidth", { configurable: true, value: 600 });
+    rows.forEach((row, index) => {
+      Object.defineProperty(row, "scrollWidth", {
+        configurable: true,
+        get: () => rowWidths[index],
+      });
+    });
+
+    rerender(<AnsiVirtualizedViewport {...defaultProps} lines={["short", "longer"]} isAtBottom />);
+
+    expect(list.style.width).toBe("1200px");
+    expect(rows.every((row) => row.style.minWidth === "100%")).toBe(true);
+
+    region.scrollLeft = 100;
+    rowWidths = [600, 700];
+    rerender(
+      <AnsiVirtualizedViewport {...defaultProps} lines={["shorter", "longest"]} isAtBottom />,
+    );
+
+    expect(list.style.width).toBe("1200px");
+    expect(region.scrollLeft).toBe(100);
+
+    region.scrollLeft = 0;
+    rerender(
+      <AnsiVirtualizedViewport {...defaultProps} lines={["shortest", "longest!"]} isAtBottom />,
+    );
+
+    expect(list.style.width).toBe("700px");
+
+    region.scrollLeft = 100;
+    rowWidths = [600, 650];
+    rerender(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        scrollContextKey="pane-2"
+        lines={["new", "context"]}
+        isAtBottom
+      />,
+    );
+
+    expect(list.style.width).toBe("650px");
+  });
+
+  it("follows explicit intent independently from the physical bottom state", () => {
+    render(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
         lines={["line-1", "line-2"]}
-        loading={false}
-        loadingLabel="Loading"
         isAtBottom={false}
-        onAtBottomChange={vi.fn()}
         followOutput="smooth"
         shouldFollowOutput
       />,
     );
 
-    expect(virtuosoState.followOutput).toBe("smooth");
+    expect(virtualizerState.options?.followOnAppend).toBe("smooth");
   });
 
-  it("pins the scroller to the bottom before paint when followed output grows", () => {
-    const scrollerRef = createRef<HTMLDivElement>();
-    const node = document.createElement("div");
-    scrollerRef.current = node;
-    const metrics = { scrollHeight: 100, clientHeight: 100, scrollTop: 0 };
-    const scrollTopSetter = installScrollMetrics(node, metrics);
-    const props = {
-      loading: false,
-      loadingLabel: "Loading",
-      isAtBottom: true,
-      shouldFollowOutput: true,
-      onAtBottomChange: vi.fn(),
-      scrollerRef,
-    };
-    const view = render(<AnsiVirtualizedViewport {...props} lines={["line-1"]} />);
+  it("scrolls to the end when a followed capped buffer rolls forward", () => {
+    virtualizerState.scrollToEnd.mockClear();
+    const { rerender } = render(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "line-2"]}
+        isAtBottom
+        shouldFollowOutput
+      />,
+    );
+    const initialCalls = virtualizerState.scrollToEnd.mock.calls.length;
 
-    metrics.scrollHeight = 200;
-    metrics.scrollTop = 50;
-    view.rerender(<AnsiVirtualizedViewport {...props} lines={["line-1", "line-2"]} />);
+    rerender(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-2", "line-3"]}
+        isAtBottom
+        shouldFollowOutput
+      />,
+    );
 
-    expect(scrollTopSetter).toHaveBeenCalledWith(200);
+    expect(virtualizerState.scrollToEnd.mock.calls.length).toBeGreaterThan(initialCalls);
   });
 
-  it("does not pin growing output after following is paused", () => {
-    const scrollerRef = createRef<HTMLDivElement>();
-    const node = document.createElement("div");
-    scrollerRef.current = node;
-    const metrics = { scrollHeight: 100, clientHeight: 100, scrollTop: 0 };
-    const scrollTopSetter = installScrollMetrics(node, metrics);
-    const props = {
-      loading: false,
-      loadingLabel: "Loading",
-      isAtBottom: true,
-      shouldFollowOutput: false,
-      onAtBottomChange: vi.fn(),
-      scrollerRef,
-    };
-    const view = render(<AnsiVirtualizedViewport {...props} lines={["line-1"]} />);
+  it("scrolls to the end when a followed capped buffer shrinks", () => {
+    virtualizerState.scrollToEnd.mockClear();
+    const { rerender } = render(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "line-2", "line-3"]}
+        isAtBottom
+        shouldFollowOutput
+      />,
+    );
+    const initialCalls = virtualizerState.scrollToEnd.mock.calls.length;
 
-    metrics.scrollHeight = 200;
-    metrics.scrollTop = 50;
-    view.rerender(<AnsiVirtualizedViewport {...props} lines={["line-1", "line-2"]} />);
+    rerender(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-2", "line-3"]}
+        isAtBottom
+        shouldFollowOutput
+      />,
+    );
 
-    expect(scrollTopSetter).not.toHaveBeenCalled();
+    expect(virtualizerState.scrollToEnd.mock.calls.length).toBeGreaterThan(initialCalls);
   });
 
-  it("does not rewrite scrollTop when followed output remains at the bottom", () => {
-    const scrollerRef = createRef<HTMLDivElement>();
-    const node = document.createElement("div");
-    scrollerRef.current = node;
-    const metrics = { scrollHeight: 100, clientHeight: 100, scrollTop: 0 };
-    const scrollTopSetter = installScrollMetrics(node, metrics);
-    const props = {
-      loading: false,
-      loadingLabel: "Loading",
-      isAtBottom: true,
-      shouldFollowOutput: true,
-      onAtBottomChange: vi.fn(),
-      scrollerRef,
-    };
-    const view = render(<AnsiVirtualizedViewport {...props} lines={["line-1"]} />);
+  it("does not scroll to the end after following is paused", () => {
+    virtualizerState.scrollToEnd.mockClear();
+    const { rerender } = render(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1"]}
+        isAtBottom={false}
+        shouldFollowOutput={false}
+      />,
+    );
 
-    metrics.scrollHeight = 200;
-    metrics.scrollTop = 100;
-    view.rerender(<AnsiVirtualizedViewport {...props} lines={["line-1", "line-2"]} />);
+    rerender(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "line-2"]}
+        isAtBottom={false}
+        shouldFollowOutput={false}
+      />,
+    );
 
-    expect(scrollTopSetter).not.toHaveBeenCalled();
+    expect(virtualizerState.scrollToEnd).not.toHaveBeenCalled();
+  });
+
+  it("exposes a library-independent scroll handle", () => {
+    virtualizerState.scrollToEnd.mockClear();
+    const viewportRef = createRef<VirtualizedViewportHandle>();
+    render(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1"]}
+        isAtBottom={false}
+        shouldFollowOutput={false}
+        viewportRef={viewportRef}
+      />,
+    );
+
+    viewportRef.current?.scrollToEnd({ behavior: "auto" });
+
+    expect(virtualizerState.scrollToEnd).toHaveBeenCalledWith({ behavior: "auto" });
+  });
+
+  it("publishes the visible range", () => {
+    const onRangeChanged = vi.fn();
+    render(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "line-2"]}
+        isAtBottom
+        onRangeChanged={onRangeChanged}
+      />,
+    );
+
+    expect(onRangeChanged).toHaveBeenCalledWith({ startIndex: 0, endIndex: 1 });
   });
 });

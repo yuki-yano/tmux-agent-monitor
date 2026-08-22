@@ -10,7 +10,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
 
 import { ResumeWorktreeDialog } from "@/features/launch-agent/ResumeWorktreeDialog";
 import { Button, Callout, Card, Tabs, TabsList, TabsTrigger, Toolbar } from "@/components/ui";
@@ -23,7 +22,8 @@ import type { ScreenWrapMode } from "../atoms/screenAtoms";
 import { usePromptContextLayout } from "../hooks/usePromptContextLayout";
 import { useScreenPanelLogReferenceLinking } from "../hooks/useScreenPanelLogReferenceLinking";
 import { useScreenPanelWorktreeSelector } from "../hooks/useScreenPanelWorktreeSelector";
-import { useStableVirtuosoScroll } from "@/features/shared-session-ui/hooks/useStableVirtuosoScroll";
+import type { VirtualizedViewportHandle } from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
+import { useUserScrollState } from "@/features/shared-session-ui/hooks/useUserScrollState";
 import { formatBranchLabel } from "@/lib/session-format";
 
 import { DISCONNECTED_MESSAGE } from "../sessionDetailUtils";
@@ -68,7 +68,7 @@ type ScreenPanelState = {
   isScreenLoading: boolean;
   imageBase64: string | null;
   screenLines: string[];
-  virtuosoRef: RefObject<VirtuosoHandle | null>;
+  viewportRef: RefObject<VirtualizedViewportHandle | null>;
   scrollerRef: RefObject<HTMLDivElement | null>;
   isAtBottom: boolean;
   shouldFollowOutput: boolean;
@@ -289,7 +289,7 @@ export const ScreenPanel = memo(({ state, actions, controls }: ScreenPanelProps)
     isScreenLoading,
     imageBase64,
     screenLines,
-    virtuosoRef,
+    viewportRef,
     scrollerRef,
     isAtBottom,
     shouldFollowOutput,
@@ -375,9 +375,7 @@ export const ScreenPanel = memo(({ state, actions, controls }: ScreenPanelProps)
     containerRef: branchPillContainerRef,
   });
 
-  const { scrollerRef: stableScrollerRef, handleRangeChanged } = useStableVirtuosoScroll({
-    items: screenLines,
-    isAtBottom,
+  const { scrollerRef: stableScrollerRef } = useUserScrollState({
     enabled: mode === "text" && effectiveWrapMode === "off",
     scrollerRef,
     onUserScrollStateChange,
@@ -410,7 +408,6 @@ export const ScreenPanel = memo(({ state, actions, controls }: ScreenPanelProps)
     agent,
     screenLines,
     onResolveFileReferenceCandidates,
-    onRangeChanged: handleRangeChanged,
   });
 
   const { handleResolveFileReference, handleResolveFileReferenceKeyDown } =
@@ -527,7 +524,7 @@ export const ScreenPanel = memo(({ state, actions, controls }: ScreenPanelProps)
         isScreenLoading={isScreenLoading}
         screenLines={linkifiedScreenLines}
         smartLineClassifications={smartLineClassifications}
-        virtuosoRef={virtuosoRef}
+        viewportRef={viewportRef}
         scrollerRef={stableScrollerRef}
         onAtBottomChange={onAtBottomChange}
         onRangeChanged={handleScreenRangeChanged}

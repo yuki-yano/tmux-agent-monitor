@@ -13,7 +13,6 @@ import {
   useRef,
   useState,
 } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
 import {
   buildImagePathInsertText,
   insertIntoTextarea,
@@ -28,14 +27,17 @@ import {
   TagPill,
   TextButton,
 } from "@/components/ui";
-import { AnsiVirtualizedViewport } from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
+import {
+  AnsiVirtualizedViewport,
+  type VirtualizedViewportHandle,
+} from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
 import { PaneTextComposer } from "@/features/shared-session-ui/components/PaneTextComposer";
 import { usePaneSendText } from "@/features/shared-session-ui/hooks/usePaneSendText";
 import { useTerminalControls } from "@/features/shared-session-ui/hooks/useTerminalControls";
 import { useTitleEditor } from "@/features/shared-session-ui/hooks/useTitleEditor";
 import { confirmDangerousText } from "@/features/shared-session-ui/model/danger-confirm";
 import { useRawInputHandlers } from "@/features/shared-session-ui/hooks/useRawInputHandlers";
-import { useStableVirtuosoScroll } from "@/features/shared-session-ui/hooks/useStableVirtuosoScroll";
+import { useUserScrollState } from "@/features/shared-session-ui/hooks/useUserScrollState";
 import {
   linkifyLogLineFileReferences,
   linkifyLogLineHttpUrls,
@@ -244,9 +246,10 @@ const useChatGridScreenViewport = ({
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [forceFollow, setForceFollow] = useState(true);
   const activePaneIdRef = useRef(paneId);
+  const snappedPaneIdRef = useRef<string | null>(null);
   const pendingSnapshotRef = useRef<ScreenSnapshot | null>(null);
   const isUserScrollingRef = useRef(false);
-  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const viewportRef = useRef<VirtualizedViewportHandle | null>(null);
   const displayLines = displaySnapshot.paneId === paneId ? displaySnapshot.lines : [];
   const effectiveIsAtBottom = displayLines.length === 0 ? true : isAtBottom;
 
@@ -285,31 +288,29 @@ const useChatGridScreenViewport = ({
     },
     [paneId],
   );
-  const { scrollerRef, handleRangeChanged } = useStableVirtuosoScroll({
-    items: displayLines,
-    isAtBottom: effectiveIsAtBottom,
+  const { scrollerRef } = useUserScrollState({
     onUserScrollStateChange: handleUserScrollStateChange,
   });
-  const scrollToBottom = useCallback(
-    (behavior: "auto" | "smooth" = "smooth") => {
-      setForceFollow(true);
-      virtuosoRef.current?.scrollToIndex({
-        index: Math.max(displayLines.length - 1, 0),
-        behavior,
-        align: "end",
-      });
-    },
-    [displayLines.length],
-  );
+  const scrollToBottom = useCallback((behavior: "auto" | "smooth" = "smooth") => {
+    setForceFollow(true);
+    viewportRef.current?.scrollToEnd({ behavior });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (displayLines.length === 0 || snappedPaneIdRef.current === paneId) {
+      return;
+    }
+    viewportRef.current?.scrollToEnd({ behavior: "auto" });
+    snappedPaneIdRef.current = paneId;
+  }, [displayLines.length, paneId]);
 
   return {
     displayLines,
     effectiveIsAtBottom,
     forceFollow,
     setIsAtBottom,
-    virtuosoRef,
+    viewportRef,
     scrollerRef,
-    handleRangeChanged,
     scrollToBottom,
   };
 };
@@ -369,9 +370,8 @@ export const ChatGridTile = ({
     effectiveIsAtBottom,
     forceFollow,
     setIsAtBottom,
-    virtuosoRef,
+    viewportRef,
     scrollerRef,
-    handleRangeChanged,
     scrollToBottom,
   } = useChatGridScreenViewport({
     paneId: session.paneId,
@@ -530,18 +530,18 @@ export const ChatGridTile = ({
 
           <AnsiVirtualizedViewport
             lines={displayLines}
+            scrollContextKey={session.paneId}
             loading={screenLoading}
             loadingLabel="Loading screen..."
             isAtBottom={effectiveIsAtBottom}
             shouldFollowOutput={effectiveIsAtBottom || forceFollow}
             onAtBottomChange={setIsAtBottom}
-            onRangeChanged={handleRangeChanged}
-            virtuosoRef={virtuosoRef}
+            viewportRef={viewportRef}
             scrollerRef={scrollerRef}
             onScrollToBottom={scrollToBottom}
             className="border-latte-surface2/80 bg-latte-crust/95 shadow-inner-soft relative min-h-[180px] w-full min-w-0 flex-1 rounded-2xl border"
-            viewportClassName="h-full w-full min-w-0"
-            listClassName="text-latte-text w-max min-w-full px-1.5 py-1 font-mono text-xs sm:px-2 sm:py-1.5"
+            viewportClassName="h-full w-full min-w-0 px-1.5 py-1 sm:px-2 sm:py-1.5"
+            listClassName="text-latte-text w-max min-w-full font-mono text-xs"
             lineClassName="min-h-4 whitespace-pre leading-4"
             height="100%"
           />

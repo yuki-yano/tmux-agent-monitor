@@ -130,7 +130,7 @@ describe("useSessionScreen", () => {
         resolvePaneTwo = resolve;
       });
     });
-    const scrollToIndex = vi.fn();
+    const scrollToEnd = vi.fn();
     const wrapper = createWrapper();
     const { result, rerender } = renderHook(
       ({ paneId }) => useSessionScreen(buildArgs({ paneId, requestScreen })),
@@ -141,9 +141,9 @@ describe("useSessionScreen", () => {
       expect(result.current.screenLines).toEqual(["old-1", "old-2", "old-3"]);
     });
     act(() => {
-      result.current.virtuosoRef.current = {
-        scrollToIndex,
-      } as unknown as typeof result.current.virtuosoRef.current;
+      result.current.viewportRef.current = {
+        scrollToEnd,
+      } as unknown as typeof result.current.viewportRef.current;
     });
 
     rerender({ paneId: "pane-2" });
@@ -169,11 +169,7 @@ describe("useSessionScreen", () => {
       expect(result.current.screenLines).toEqual(["new-1", "new-2"]);
       expect(result.current.isScreenLoading).toBe(false);
     });
-    expect(scrollToIndex).toHaveBeenLastCalledWith({
-      index: 1,
-      align: "end",
-      behavior: "auto",
-    });
+    expect(scrollToEnd).toHaveBeenLastCalledWith({ behavior: "auto" });
   });
 
   it("keeps screen lines when disconnected", async () => {

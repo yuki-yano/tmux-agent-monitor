@@ -8,7 +8,7 @@ import {
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { LaunchCommandResponse, SessionDetail } from "@vde-monitor/shared";
 import type { MutableRefObject, ReactNode } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
+import type { VirtualizedViewportHandle } from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
@@ -374,7 +374,7 @@ const buildDefaultContextValue = () => {
         scrollToBottom: vi.fn(),
         handleModeChange: vi.fn(),
         toggleWrapMode: vi.fn(),
-        virtuosoRef: { current: null } as MutableRefObject<VirtuosoHandle | null>,
+        viewportRef: { current: null } as MutableRefObject<VirtualizedViewportHandle | null>,
         scrollerRef: { current: null } as MutableRefObject<HTMLDivElement | null>,
       },
       controls: {

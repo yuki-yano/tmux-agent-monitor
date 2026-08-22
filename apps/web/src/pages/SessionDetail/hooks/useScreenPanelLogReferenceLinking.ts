@@ -25,7 +25,6 @@ type UseScreenPanelLogReferenceLinkingArgs = {
   agent: "codex" | "claude" | "unknown";
   screenLines: string[];
   onResolveFileReferenceCandidates: (rawTokens: string[]) => Promise<string[]>;
-  onRangeChanged: (range: ScreenRange) => void;
 };
 
 type ResolveContext = {
@@ -65,7 +64,6 @@ export const useScreenPanelLogReferenceLinking = ({
   agent,
   screenLines,
   onResolveFileReferenceCandidates,
-  onRangeChanged,
 }: UseScreenPanelLogReferenceLinkingArgs) => {
   const [linkableTokens, setLinkableTokens] = useState<Set<string>>(new Set());
   const [visibleRange, setVisibleRange] = useState<ScreenRange | null>(null);
@@ -258,9 +256,8 @@ export const useScreenPanelLogReferenceLinking = ({
         return;
       }
       setVisibleRange(range);
-      onRangeChanged(range);
     },
-    [onRangeChanged, screenLines.length],
+    [screenLines.length],
   );
 
   return {

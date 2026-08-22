@@ -33,7 +33,7 @@ export const useScreenPanelState = () => {
       scrollToBottom: screen.scrollToBottom,
       handleModeChange: screen.handleModeChange,
       toggleWrapMode: screen.toggleWrapMode,
-      virtuosoRef: screen.virtuosoRef,
+      viewportRef: screen.viewportRef,
       scrollerRef: screen.scrollerRef,
       handleRefreshScreen,
       handleRefreshWorktrees: virtualWorktree.refreshWorktrees,

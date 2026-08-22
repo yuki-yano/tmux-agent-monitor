@@ -36,7 +36,7 @@ const buildContextValue = () => {
         scrollToBottom: vi.fn(),
         handleModeChange: vi.fn(),
         toggleWrapMode: vi.fn(),
-        virtuosoRef: { current: null },
+        viewportRef: { current: null },
         scrollerRef: { current: null },
       },
       controls: {

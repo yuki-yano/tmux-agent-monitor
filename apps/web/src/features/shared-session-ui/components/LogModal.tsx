@@ -2,7 +2,6 @@ import type { SessionSummary } from "@vde-monitor/shared";
 import { useAtomValue } from "jotai";
 import { ArrowRight, ExternalLink, X } from "lucide-react";
 import { useCallback, useLayoutEffect, useReducer, useRef, useState } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
 
 import {
   Button,
@@ -17,8 +16,11 @@ import {
 } from "@/components/ui";
 import { useWorkspaceTabs } from "@/features/pwa-tabs/context/workspace-tabs-context";
 import { logModalSnapRequestAtom } from "@/features/shared-session-ui/atoms/logAtoms";
-import { AnsiVirtualizedViewport } from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
-import { useStableVirtuosoScroll } from "@/features/shared-session-ui/hooks/useStableVirtuosoScroll";
+import {
+  AnsiVirtualizedViewport,
+  type VirtualizedViewportHandle,
+} from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
+import { useUserScrollState } from "@/features/shared-session-ui/hooks/useUserScrollState";
 import { resolveSessionDisplayTitle } from "@/features/shared-session-ui/model/session-display";
 import { sanitizeLogCopyText } from "@/lib/clipboard";
 
@@ -90,7 +92,7 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
   const { onClose, onOpenHere, onOpenNewTab } = actions;
   const { enabled: pwaTabsEnabled } = useWorkspaceTabs();
   const snapRequest = useAtomValue(logModalSnapRequestAtom);
-  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const viewportRef = useRef<VirtualizedViewportHandle | null>(null);
   const [{ isAtBottom, followIntent }, dispatchScrollState] = useReducer(
     reduceLogScrollState,
     initialLogScrollState,
@@ -123,9 +125,7 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
     },
     [paneId, snapVersion],
   );
-  const { scrollerRef, handleRangeChanged } = useStableVirtuosoScroll({
-    items: displayLines,
-    isAtBottom: effectiveIsAtBottom,
+  const { scrollerRef } = useUserScrollState({
     enabled: open,
     onUserScrollStateChange: handleUserScrollStateChange,
   });
@@ -166,11 +166,7 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
         return;
       }
       dispatchScrollState({ type: "resume-following" });
-      virtuosoRef.current?.scrollToIndex({
-        index: displayLines.length - 1,
-        behavior,
-        align: "end",
-      });
+      viewportRef.current?.scrollToEnd({ behavior });
     },
     [displayLines.length],
   );
@@ -273,21 +269,22 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
           )}
           <AnsiVirtualizedViewport
             lines={displayLines}
+            scrollContextKey={`${paneId ?? "closed"}:${snapVersion}`}
             loading={loading}
             loadingLabel="Loading log..."
             isAtBottom={effectiveIsAtBottom}
             shouldFollowOutput={effectiveIsAtBottom || followIntent}
             onAtBottomChange={handleAtBottomChange}
-            onRangeChanged={handleRangeChanged}
-            virtuosoRef={virtuosoRef}
+            viewportRef={viewportRef}
             scrollerRef={scrollerRef}
             scrollerClassName="overscroll-contain"
             onScrollToBottom={scrollToBottom}
             className="border-latte-surface2/50 bg-latte-crust/60 shadow-inner-soft relative mt-2.5 flex min-h-0 w-full flex-1 rounded-xl border sm:mt-3"
-            viewportClassName="h-full w-full min-w-0 max-w-full"
-            listClassName="text-latte-text w-max min-w-max px-2 py-1.5 font-mono text-[12px] leading-[16px] sm:px-3 sm:py-2"
+            viewportClassName="h-full w-full min-w-0 max-w-full px-2 py-1.5 sm:px-3 sm:py-2"
+            listClassName="text-latte-text w-max min-w-full font-mono text-[12px] leading-[16px]"
             lineClassName="min-h-4 whitespace-pre leading-5"
             height="100%"
+            estimatedLineHeight={20}
             sanitizeCopyText={sanitizeLogCopyText}
           />
         </Card>

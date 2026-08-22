@@ -15,7 +15,6 @@ describe("useScreenPanelLogReferenceLinking", () => {
         agent: "codex",
         screenLines: ["src/start.ts", "plain line", "tail.tsx"],
         onResolveFileReferenceCandidates,
-        onRangeChanged: vi.fn(),
       }),
     );
 
@@ -47,7 +46,6 @@ describe("useScreenPanelLogReferenceLinking", () => {
         agent: "codex",
         screenLines,
         onResolveFileReferenceCandidates,
-        onRangeChanged: vi.fn(),
       }),
     );
 
@@ -59,8 +57,7 @@ describe("useScreenPanelLogReferenceLinking", () => {
     expect(firstCallTokens).not.toContain("src/out-of-range.ts");
   });
 
-  it("does not forward invalid range when lines are empty", () => {
-    const onRangeChanged = vi.fn();
+  it("ignores an invalid range when lines are empty", () => {
     const { result } = renderHook(() =>
       useScreenPanelLogReferenceLinking({
         mode: "text",
@@ -70,7 +67,6 @@ describe("useScreenPanelLogReferenceLinking", () => {
         agent: "codex",
         screenLines: [],
         onResolveFileReferenceCandidates: vi.fn(async () => []),
-        onRangeChanged,
       }),
     );
 
@@ -78,12 +74,11 @@ describe("useScreenPanelLogReferenceLinking", () => {
       result.current.handleScreenRangeChanged({ startIndex: 0, endIndex: -1 });
     });
 
-    expect(onRangeChanged).not.toHaveBeenCalled();
+    expect(result.current.linkifiedScreenLines).toEqual([]);
   });
 
   it("re-runs resolve when context key changes even if tokens are unchanged", async () => {
     const onResolveFileReferenceCandidates = vi.fn(async (rawTokens: string[]) => rawTokens);
-    const onRangeChanged = vi.fn();
     const { rerender } = renderHook(
       ({ paneId }: { paneId: string }) =>
         useScreenPanelLogReferenceLinking({
@@ -94,7 +89,6 @@ describe("useScreenPanelLogReferenceLinking", () => {
           agent: "codex",
           screenLines: ["src/reused.ts"],
           onResolveFileReferenceCandidates,
-          onRangeChanged,
         }),
       { initialProps: { paneId: "%1" } },
     );
@@ -125,7 +119,6 @@ describe("useScreenPanelLogReferenceLinking", () => {
           agent: "codex",
           screenLines,
           onResolveFileReferenceCandidates,
-          onRangeChanged: vi.fn(),
         }),
       { initialProps: { screenLines: ["src/retry.ts"] } },
     );
@@ -159,7 +152,6 @@ describe("useScreenPanelLogReferenceLinking", () => {
           agent: "codex",
           screenLines,
           onResolveFileReferenceCandidates,
-          onRangeChanged: vi.fn(),
         }),
       { initialProps: { effectiveWrapMode: "smart" } as { effectiveWrapMode: "off" | "smart" } },
     );

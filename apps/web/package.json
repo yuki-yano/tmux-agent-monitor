@@ -17,6 +17,7 @@
     "@radix-ui/react-radio-group": "^1.4.3",
     "@radix-ui/react-tabs": "^1.1.17",
     "@tanstack/react-router": "^1.170.17",
+    "@tanstack/react-virtual": "3.14.10",
     "@vde-monitor/shared": "workspace:*",
     "ansi-to-html": "^0.7.2",
     "class-variance-authority": "^0.7.1",
@@ -30,7 +31,6 @@
     "react-dom": "^19.2.7",
     "react-file-icon": "^1.6.0",
     "react-markdown": "^10.1.0",
-    "react-virtuoso": "^4.18.10",
     "remark-gfm": "^4.0.1",
     "shiki": "^4.3.1",
     "tailwind-merge": "^3.6.0"

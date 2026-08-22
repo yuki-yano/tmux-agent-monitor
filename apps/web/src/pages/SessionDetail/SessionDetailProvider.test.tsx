@@ -149,7 +149,7 @@ vi.mock("./hooks/useSessionScreen", () => ({
     scrollToBottom: vi.fn(),
     handleModeChange: vi.fn(),
     toggleWrapMode: vi.fn(),
-    virtuosoRef: { current: null },
+    viewportRef: { current: null },
     scrollerRef: { current: null },
   }),
 }));

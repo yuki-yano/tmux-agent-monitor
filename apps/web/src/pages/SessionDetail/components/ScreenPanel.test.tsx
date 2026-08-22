@@ -1,28 +1,22 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ScreenPanel } from "./ScreenPanel";
 
-vi.mock("react-virtuoso", () => ({
-  Virtuoso: ({
-    data = [],
-    itemContent,
-  }: {
-    data?: string[];
-    itemContent: (index: number, item: string) => ReactNode;
-  }) => (
-    <div data-testid="virtuoso">
-      {(() => {
-        const itemCounts = new Map<string, number>();
-        return data.map((item, index) => {
-          const count = itemCounts.get(item) ?? 0;
-          itemCounts.set(item, count + 1);
-          return <div key={`${item}-${count}`}>{itemContent(index, item)}</div>;
-        });
-      })()}
-    </div>
-  ),
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: { count: number }) => ({
+    range: options.count > 0 ? { startIndex: 0, endIndex: options.count - 1 } : null,
+    getVirtualItems: () =>
+      Array.from({ length: options.count }, (_, index) => ({
+        index,
+        key: `item-${index}`,
+        start: index * 16,
+      })),
+    getTotalSize: () => options.count * 16,
+    isAtEnd: () => true,
+    measureElement: vi.fn(),
+    scrollToEnd: vi.fn(),
+  }),
 }));
 
 describe("ScreenPanel", () => {
@@ -90,7 +84,7 @@ describe("ScreenPanel", () => {
     isScreenLoading: false,
     imageBase64: null,
     screenLines: ["line"],
-    virtuosoRef: { current: null },
+    viewportRef: { current: null },
     scrollerRef: { current: null },
     isAtBottom: true,
     shouldFollowOutput: true,
@@ -346,7 +340,7 @@ describe("ScreenPanel", () => {
     });
     const actions = buildActions();
     render(<ScreenPanel state={state} actions={actions} controls={null} />);
-    expect(screen.queryByTestId("virtuoso")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Scrollable terminal output" })).toBeNull();
     expect(screen.getByText(/supercalifragilisticexpialidocious/)).toBeTruthy();
     const smartScroller = screen.getByTestId("smart-screen-scroller");
     expect(smartScroller.getAttribute("style")).toContain("60vh");
@@ -1112,7 +1106,9 @@ describe("ScreenPanel", () => {
 
     render(<ScreenPanel state={state} actions={actions} controls={null} />);
 
-    const container = screen.getByTestId("virtuoso").parentElement;
+    const container = screen.getByRole("region", {
+      name: "Scrollable terminal output",
+    }).parentElement;
     expect(container).toBeTruthy();
     const event = new Event("copy", { bubbles: true, cancelable: true });
     Object.defineProperty(event, "clipboardData", { value: { setData } });

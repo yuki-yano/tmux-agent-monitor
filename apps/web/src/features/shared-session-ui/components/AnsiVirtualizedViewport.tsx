@@ -1,49 +1,43 @@
+import { type Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDown } from "lucide-react";
 import {
   type ClipboardEvent,
-  type HTMLAttributes,
   type KeyboardEvent,
   type MouseEvent,
   type Ref,
   type RefObject,
   memo,
   useCallback,
+  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
-import { type Components, Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { IconButton, LoadingOverlay } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
+import { type VirtualLineItemsState, reconcileVirtualLineItems } from "../lib/virtual-line-items";
 import { TerminalHtmlLine } from "./TerminalHtmlLine";
 
-type AnsiVirtuosoContext = {
-  listClassName?: string;
-  scrollerClassName?: string;
-  scrollerRef?: RefObject<HTMLDivElement | null>;
-};
+type VisibleRange = { startIndex: number; endIndex: number };
 
-type ScrollerComponent = Components<string, AnsiVirtuosoContext>["Scroller"];
-type AnsiVirtuosoComponentProps = HTMLAttributes<HTMLDivElement> & {
-  context?: AnsiVirtuosoContext;
-  ref?: Ref<HTMLDivElement>;
+export type VirtualizedViewportHandle = {
+  scrollToEnd: (options?: { behavior?: "auto" | "smooth" }) => void;
 };
 
 type AnsiVirtualizedViewportProps = {
   lines: string[];
+  scrollContextKey: string;
   loading: boolean;
   loadingLabel: string;
   loadingEntrance?: "immediate" | "delayed";
   isAtBottom: boolean;
   onAtBottomChange: (value: boolean) => void;
-  onRangeChanged?: (range: { startIndex: number; endIndex: number }) => void;
+  onRangeChanged?: (range: VisibleRange) => void;
   followOutput?: "auto" | "smooth" | boolean;
   shouldFollowOutput?: boolean;
-  initialTopMostItemIndex?: number;
-  virtuosoRef?: React.RefObject<VirtuosoHandle | null>;
-  scroller?: ScrollerComponent;
+  viewportRef?: Ref<VirtualizedViewportHandle>;
   scrollerRef?: RefObject<HTMLDivElement | null>;
   scrollerClassName?: string;
   onScrollToBottom?: (behavior: "auto" | "smooth") => void;
@@ -52,56 +46,25 @@ type AnsiVirtualizedViewportProps = {
   listClassName?: string;
   lineClassName?: string;
   height?: string | number;
+  estimatedLineHeight?: number;
   sanitizeCopyText?: (raw: string) => string;
   onLineClick?: (event: MouseEvent<HTMLDivElement>) => void;
   onLineKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
 };
 
-const resolveIsAtBottom = (node: HTMLDivElement) =>
-  node.scrollHeight - (node.scrollTop + node.clientHeight) <= 2;
-
-const assignRef = <T,>(ref: Ref<T> | undefined, value: T | null) => {
-  if (typeof ref === "function") {
-    ref(value);
-    return;
-  }
-  if (ref) {
-    ref.current = value;
-  }
+type CommittedVirtualLines = {
+  scrollContextKey: string;
+  state: VirtualLineItemsState;
 };
 
-const DefaultScroller = ({ className, context, ref, ...props }: AnsiVirtuosoComponentProps) => {
-  const setScrollerRef = (node: HTMLDivElement | null) => {
-    assignRef(ref, node);
-    if (context?.scrollerRef) {
-      context.scrollerRef.current = node;
-    }
-  };
-
-  return (
-    <div
-      ref={setScrollerRef}
-      role="region"
-      aria-label="Scrollable terminal output"
-      tabIndex={0}
-      {...props}
-      className={cn(
-        "custom-scrollbar w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto rounded-2xl",
-        context?.scrollerClassName,
-        className,
-      )}
-    />
-  );
+type VirtualLineEdges = {
+  scrollContextKey: string;
+  count: number;
+  firstId: string | null;
+  lastId: string | null;
 };
 
-const AnsiVirtualizedList = ({ className, context, ref, ...props }: AnsiVirtuosoComponentProps) => (
-  <div ref={ref} {...props} className={cn(context?.listClassName, className)} />
-);
-
-const DEFAULT_VIRTUOSO_COMPONENTS: Components<string, AnsiVirtuosoContext> = {
-  Scroller: DefaultScroller,
-  List: AnsiVirtualizedList,
-};
+const EMPTY_VIRTUAL_LINES_STATE: VirtualLineItemsState = { items: [], nextId: 0 };
 
 // Memoized so rows whose html is unchanged skip re-rendering while the
 // screen stream replaces the lines array on every SSE event.
@@ -111,8 +74,15 @@ const AnsiLine = memo(({ html, className }: { html: string; className?: string }
 
 AnsiLine.displayName = "AnsiLine";
 
+const getFollowBehavior = (followOutput: AnsiVirtualizedViewportProps["followOutput"]) =>
+  followOutput === "smooth" ? "smooth" : "auto";
+
+const isSameRange = (left: VisibleRange | null, right: VisibleRange) =>
+  left?.startIndex === right.startIndex && left.endIndex === right.endIndex;
+
 export const AnsiVirtualizedViewport = ({
   lines,
+  scrollContextKey,
   loading,
   loadingLabel,
   loadingEntrance = "immediate",
@@ -121,10 +91,8 @@ export const AnsiVirtualizedViewport = ({
   onRangeChanged,
   followOutput = "auto",
   shouldFollowOutput = isAtBottom,
-  initialTopMostItemIndex,
-  virtuosoRef,
-  scroller,
-  scrollerRef,
+  viewportRef,
+  scrollerRef: scrollerRefProp,
   scrollerClassName,
   onScrollToBottom,
   className,
@@ -132,36 +100,147 @@ export const AnsiVirtualizedViewport = ({
   listClassName,
   lineClassName = "min-h-4 whitespace-pre leading-4",
   height = "100%",
+  estimatedLineHeight = 16,
   sanitizeCopyText,
   onLineClick,
   onLineKeyDown,
 }: AnsiVirtualizedViewportProps) => {
   const internalScrollerRef = useRef<HTMLDivElement | null>(null);
-  const resolvedScrollerRef = scrollerRef ?? internalScrollerRef;
-  const virtuosoComponents = useMemo<Components<string, AnsiVirtuosoContext>>(() => {
-    if (!scroller) {
-      return DEFAULT_VIRTUOSO_COMPONENTS;
-    }
-    return {
-      ...DEFAULT_VIRTUOSO_COMPONENTS,
-      Scroller: scroller,
-    };
-  }, [scroller]);
-  const virtuosoContext = useMemo(
-    () => ({ listClassName, scrollerClassName, scrollerRef: resolvedScrollerRef }),
-    [listClassName, resolvedScrollerRef, scrollerClassName],
+  const scrollerRef = scrollerRefProp ?? internalScrollerRef;
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const committedVirtualLinesRef = useRef<CommittedVirtualLines | null>(null);
+  const onAtBottomChangeRef = useRef(onAtBottomChange);
+  const onRangeChangedRef = useRef(onRangeChanged);
+  const lastPublishedAtBottomRef = useRef<boolean | null>(null);
+  const lastPublishedRangeRef = useRef<VisibleRange | null>(null);
+  const previousEdgesRef = useRef<VirtualLineEdges | null>(null);
+  const widthContextKeyRef = useRef(scrollContextKey);
+
+  const virtualLinesState = useMemo(() => {
+    const committed = committedVirtualLinesRef.current;
+    const previousState =
+      committed?.scrollContextKey === scrollContextKey
+        ? committed.state
+        : {
+            items: EMPTY_VIRTUAL_LINES_STATE.items,
+            nextId: committed?.state.nextId ?? EMPTY_VIRTUAL_LINES_STATE.nextId,
+          };
+    return reconcileVirtualLineItems(previousState, lines);
+  }, [lines, scrollContextKey]);
+  const virtualLines = virtualLinesState.items;
+  const followBehavior = getFollowBehavior(followOutput);
+
+  useLayoutEffect(() => {
+    committedVirtualLinesRef.current = { scrollContextKey, state: virtualLinesState };
+  }, [scrollContextKey, virtualLinesState]);
+
+  useLayoutEffect(() => {
+    onAtBottomChangeRef.current = onAtBottomChange;
+    onRangeChangedRef.current = onRangeChanged;
+  }, [onAtBottomChange, onRangeChanged]);
+
+  const publishVirtualState = useCallback(
+    (instance: Virtualizer<HTMLDivElement, HTMLDivElement>) => {
+      const nextAtBottom = lines.length === 0 || instance.isAtEnd(2);
+      if (lastPublishedAtBottomRef.current !== nextAtBottom) {
+        lastPublishedAtBottomRef.current = nextAtBottom;
+        onAtBottomChangeRef.current(nextAtBottom);
+      }
+      const range = instance.range;
+      if (range == null) {
+        return;
+      }
+      const nextRange = { startIndex: range.startIndex, endIndex: range.endIndex };
+      if (!isSameRange(lastPublishedRangeRef.current, nextRange)) {
+        lastPublishedRangeRef.current = nextRange;
+        onRangeChangedRef.current?.(nextRange);
+      }
+    },
+    [lines.length],
+  );
+
+  const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
+    count: virtualLines.length,
+    getScrollElement: () => scrollerRef.current,
+    estimateSize: () => estimatedLineHeight,
+    getItemKey: (index) => virtualLines[index]?.id ?? index,
+    useFlushSync: false,
+    anchorTo: "end",
+    followOnAppend: shouldFollowOutput ? followBehavior : false,
+    scrollEndThreshold: 2,
+    overscan: 8,
+    onChange: publishVirtualState,
+  });
+  const virtualItems = virtualizer.getVirtualItems();
+
+  useImperativeHandle(
+    viewportRef,
+    () => ({
+      scrollToEnd: (options) => virtualizer.scrollToEnd(options),
+    }),
+    [virtualizer],
   );
 
   useLayoutEffect(() => {
-    if (!shouldFollowOutput) {
+    publishVirtualState(virtualizer);
+    const previousEdges = previousEdgesRef.current;
+    const nextEdges = {
+      scrollContextKey,
+      count: virtualLines.length,
+      firstId: virtualLines[0]?.id ?? null,
+      lastId: virtualLines[virtualLines.length - 1]?.id ?? null,
+    };
+    previousEdgesRef.current = nextEdges;
+    const rolledWithoutCountGrowth =
+      previousEdges?.scrollContextKey === scrollContextKey &&
+      previousEdges.count >= nextEdges.count &&
+      nextEdges.count > 0 &&
+      (previousEdges.firstId !== nextEdges.firstId || previousEdges.lastId !== nextEdges.lastId);
+    if (shouldFollowOutput && rolledWithoutCountGrowth) {
+      virtualizer.scrollToEnd({ behavior: followBehavior });
+    }
+  }, [
+    followBehavior,
+    publishVirtualState,
+    scrollContextKey,
+    shouldFollowOutput,
+    virtualLines,
+    virtualizer,
+  ]);
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const scroller = scrollerRef.current;
+    if (!list || !scroller) {
       return;
     }
-    const node = resolvedScrollerRef.current;
-    if (!node || resolveIsAtBottom(node)) {
-      return;
+
+    const contextChanged = widthContextKeyRef.current !== scrollContextKey;
+    widthContextKeyRef.current = scrollContextKey;
+    const inlineWidth = list.style.width.endsWith("px")
+      ? Number.parseFloat(list.style.width)
+      : Number.NaN;
+    const currentWidth = Number.isFinite(inlineWidth)
+      ? inlineWidth
+      : list.getBoundingClientRect().width;
+    const canShrink = contextChanged || scroller.scrollLeft <= 0.5;
+
+    if (canShrink) {
+      list.style.width = "100%";
     }
-    node.scrollTop = node.scrollHeight;
-  }, [lines, resolvedScrollerRef, shouldFollowOutput]);
+
+    let widestRow = list.clientWidth;
+    for (const child of list.children) {
+      if (child instanceof HTMLElement) {
+        widestRow = Math.max(widestRow, child.scrollWidth);
+      }
+    }
+
+    const nextWidth = canShrink ? widestRow : Math.max(currentWidth, widestRow);
+    if (nextWidth > 0) {
+      list.style.width = `${Math.ceil(nextWidth)}px`;
+    }
+  }, [scrollContextKey, scrollerRef, virtualItems, virtualLines]);
 
   const handleCopy = useCallback(
     (event: ClipboardEvent<HTMLDivElement>) => {
@@ -183,46 +262,70 @@ export const AnsiVirtualizedViewport = ({
     [sanitizeCopyText],
   );
 
-  const renderLine = useCallback(
-    (_index: number, line: string) => <AnsiLine html={line} className={lineClassName} />,
-    [lineClassName],
-  );
-
   const scrollToBottom = useCallback(() => {
     if (onScrollToBottom) {
       onScrollToBottom("smooth");
       return;
     }
-    virtuosoRef?.current?.scrollToIndex({
-      index: Math.max(lines.length - 1, 0),
-      behavior: "smooth",
-      align: "end",
-    });
-  }, [lines.length, onScrollToBottom, virtuosoRef]);
+    virtualizer.scrollToEnd({ behavior: "smooth" });
+  }, [onScrollToBottom, virtualizer]);
 
   return (
     <div
       role="log"
       aria-label="Terminal output"
-      className={className}
+      className={cn(
+        "relative min-h-0 overflow-hidden",
+        className,
+        height !== "100%" && "flex-none",
+      )}
+      style={{ height }}
       onCopy={handleCopy}
       onClick={onLineClick}
       onKeyDown={onLineKeyDown}
     >
       {loading && <LoadingOverlay label={loadingLabel} entrance={loadingEntrance} />}
-      <Virtuoso<string, AnsiVirtuosoContext>
-        ref={virtuosoRef}
-        data={lines}
-        initialTopMostItemIndex={initialTopMostItemIndex ?? Math.max(lines.length - 1, 0)}
-        followOutput={shouldFollowOutput ? followOutput : false}
-        atBottomStateChange={onAtBottomChange}
-        rangeChanged={onRangeChanged}
-        components={virtuosoComponents}
-        context={virtuosoContext}
-        className={viewportClassName}
-        style={{ height }}
-        itemContent={renderLine}
-      />
+      <div
+        ref={scrollerRef}
+        role="region"
+        aria-label="Scrollable terminal output"
+        tabIndex={0}
+        className={cn(
+          "custom-scrollbar absolute inset-0 h-full min-h-0 w-full min-w-0 max-w-full overflow-x-auto overflow-y-auto rounded-2xl",
+          viewportClassName,
+          scrollerClassName,
+        )}
+      >
+        <div
+          ref={listRef}
+          className={cn("relative", listClassName)}
+          style={{ height: virtualizer.getTotalSize() }}
+        >
+          {virtualItems.map((virtualItem) => {
+            const line = virtualLines[virtualItem.index];
+            if (!line) {
+              return null;
+            }
+            return (
+              <div
+                key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "max-content",
+                  minWidth: "100%",
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <AnsiLine html={line.html} className={lineClassName} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
       {!isAtBottom && (
         <IconButton
           type="button"

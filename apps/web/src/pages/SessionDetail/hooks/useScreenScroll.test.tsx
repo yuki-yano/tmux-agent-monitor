@@ -86,9 +86,9 @@ describe("useScreenScroll", () => {
     );
 
     act(() => {
-      result.current.virtuosoRef.current = {
-        scrollToIndex: vi.fn(),
-      } as unknown as typeof result.current.virtuosoRef.current;
+      result.current.viewportRef.current = {
+        scrollToEnd: vi.fn(),
+      } as unknown as typeof result.current.viewportRef.current;
       result.current.scrollerRef.current = {
         scrollTo: vi.fn(),
         scrollHeight: 200,
@@ -132,9 +132,9 @@ describe("useScreenScroll", () => {
     );
 
     act(() => {
-      result.current.virtuosoRef.current = {
-        scrollToIndex: vi.fn(),
-      } as unknown as typeof result.current.virtuosoRef.current;
+      result.current.viewportRef.current = {
+        scrollToEnd: vi.fn(),
+      } as unknown as typeof result.current.viewportRef.current;
       result.current.scrollerRef.current = {
         scrollTo: vi.fn(),
         scrollHeight: 200,
@@ -155,7 +155,7 @@ describe("useScreenScroll", () => {
     const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
-    const scrollToIndex = vi.fn();
+    const scrollToEnd = vi.fn();
     const scrollTo = vi.fn();
 
     const { result, rerender } = renderHook(
@@ -172,9 +172,9 @@ describe("useScreenScroll", () => {
     );
 
     act(() => {
-      result.current.virtuosoRef.current = {
-        scrollToIndex,
-      } as unknown as typeof result.current.virtuosoRef.current;
+      result.current.viewportRef.current = {
+        scrollToEnd,
+      } as unknown as typeof result.current.viewportRef.current;
       result.current.scrollerRef.current = {
         scrollTo,
         scrollHeight: 100,
@@ -192,7 +192,7 @@ describe("useScreenScroll", () => {
 
     rerender({ mode: "text" as ScreenMode, screenLinesLength: 3 });
 
-    expect(scrollToIndex).toHaveBeenCalled();
+    expect(scrollToEnd).toHaveBeenCalled();
   });
 
   it("snaps to bottom after pane change when text lines arrive", () => {
@@ -205,7 +205,7 @@ describe("useScreenScroll", () => {
     const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
-    const scrollToIndex = vi.fn();
+    const scrollToEnd = vi.fn();
     const scrollTo = vi.fn();
 
     const { result, rerender } = renderHook(
@@ -222,9 +222,9 @@ describe("useScreenScroll", () => {
     );
 
     act(() => {
-      result.current.virtuosoRef.current = {
-        scrollToIndex,
-      } as unknown as typeof result.current.virtuosoRef.current;
+      result.current.viewportRef.current = {
+        scrollToEnd,
+      } as unknown as typeof result.current.viewportRef.current;
       result.current.scrollerRef.current = {
         scrollTo,
         scrollHeight: 120,
@@ -232,14 +232,10 @@ describe("useScreenScroll", () => {
     });
 
     rerender({ paneId: "pane-2", screenLinesLength: 0 });
-    expect(scrollToIndex).not.toHaveBeenCalled();
+    expect(scrollToEnd).not.toHaveBeenCalled();
 
     rerender({ paneId: "pane-2", screenLinesLength: 3 });
-    expect(scrollToIndex).toHaveBeenCalledWith({
-      index: 2,
-      align: "end",
-      behavior: "auto",
-    });
+    expect(scrollToEnd).toHaveBeenCalledWith({ behavior: "auto" });
   });
 
   it("snaps to bottom on each initial text mount", () => {
@@ -357,9 +353,9 @@ describe("useScreenScroll", () => {
     );
 
     act(() => {
-      result.current.virtuosoRef.current = {
-        scrollToIndex: vi.fn(),
-      } as unknown as typeof result.current.virtuosoRef.current;
+      result.current.viewportRef.current = {
+        scrollToEnd: vi.fn(),
+      } as unknown as typeof result.current.viewportRef.current;
       result.current.scrollToBottom("auto");
       isUserScrollingRef.current = true;
     });
