@@ -233,6 +233,30 @@ describe("AnsiVirtualizedViewport", () => {
     expect(virtualizerState.scrollToEnd.mock.calls.length).toBeGreaterThan(initialCalls);
   });
 
+  it("scrolls to the end when followed output grows before stable trailing lines", () => {
+    virtualizerState.scrollToEnd.mockClear();
+    const { rerender } = render(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "prompt", "status"]}
+        isAtBottom
+        shouldFollowOutput
+      />,
+    );
+    const initialCalls = virtualizerState.scrollToEnd.mock.calls.length;
+
+    rerender(
+      <AnsiVirtualizedViewport
+        {...defaultProps}
+        lines={["line-1", "line-2", "prompt", "status"]}
+        isAtBottom
+        shouldFollowOutput
+      />,
+    );
+
+    expect(virtualizerState.scrollToEnd.mock.calls.length).toBeGreaterThan(initialCalls);
+  });
+
   it("scrolls to the end when a followed capped buffer shrinks", () => {
     virtualizerState.scrollToEnd.mockClear();
     const { rerender } = render(

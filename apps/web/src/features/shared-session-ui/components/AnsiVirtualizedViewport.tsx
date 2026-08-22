@@ -196,7 +196,11 @@ export const AnsiVirtualizedViewport = ({
       previousEdges.count >= nextEdges.count &&
       nextEdges.count > 0 &&
       (previousEdges.firstId !== nextEdges.firstId || previousEdges.lastId !== nextEdges.lastId);
-    if (shouldFollowOutput && rolledWithoutCountGrowth) {
+    const grewBeforeStableEnd =
+      previousEdges?.scrollContextKey === scrollContextKey &&
+      previousEdges.count < nextEdges.count &&
+      previousEdges.lastId === nextEdges.lastId;
+    if (shouldFollowOutput && (grewBeforeStableEnd || rolledWithoutCountGrowth)) {
       virtualizer.scrollToEnd({ behavior: followBehavior });
     }
   }, [
