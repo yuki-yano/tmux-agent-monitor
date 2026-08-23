@@ -1,0 +1,4138 @@
+{
+  "schemaVersion": 1,
+  "scope": {
+    "root": "apps/web/src",
+    "productionExtensions": [".ts", ".tsx"],
+    "excluded": ["*.test.*", "*.spec.*", "__tests__"]
+  },
+  "metrics": {
+    "productionFiles": 335,
+    "useEffect": 134,
+    "useLayoutEffect": 35,
+    "effectTotal": 169,
+    "sessionDetailEffects": 84,
+    "useMemo": 164,
+    "useCallback": 396,
+    "memo": 43,
+    "sessionDetailAndLibUseMemo": 75,
+    "sessionDetailAndLibUseCallback": 192,
+    "visibilityPollingCallerFiles": 10,
+    "sessionDetailOwnershipLines": 1882,
+    "reactOxlintDisable": 11,
+    "reactDoctorDisable": 53,
+    "exhaustiveDepsSuppression": 0,
+    "useNoMemoDirective": 0
+  },
+  "classificationSummary": {
+    "derived-state": 7,
+    "dom-layout": 23,
+    "event-migration": 12,
+    "external-sync": 42,
+    "identity-reset": 30,
+    "ref-mirror": 32,
+    "request-bridge": 23
+  },
+  "inventory": [
+    {
+      "file": "apps/web/src/components/ui/file-path-label-utils.ts",
+      "line": 160,
+      "column": 3,
+      "owner": "useOverflowTruncate",
+      "hook": "useLayoutEffect",
+      "dependencies": ["text"],
+      "fingerprint": "f5edfdfacd6f",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/components/ui/file-path-label-utils.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const el = ref.current; if (!el) return; if (!text) { // oxlint-disable-next-line react/set-state-in-effect -- Layout measurement state must reset before paint. setTruncate",
+      "id": "E001"
+    },
+    {
+      "file": "apps/web/src/components/ui/file-path-label-utils.ts",
+      "line": 202,
+      "column": 3,
+      "owner": "useSegmentTruncate",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "containerRef",
+        "fallbackRef",
+        "minVisibleSegments",
+        "reservePx",
+        "segments",
+        "segments.length",
+        "segmentsKey",
+        "text"
+      ],
+      "fingerprint": "2d57bf053bec",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/components/ui/file-path-label-utils.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const primary = containerRef.current; const fallback = fallbackRef?.current; const container = primary ?? fallback; const measureEl = measureRef.current; if (!container || ",
+      "id": "E002"
+    },
+    {
+      "file": "apps/web/src/features/launch-agent/LaunchAgentButton.tsx",
+      "line": 481,
+      "column": 3,
+      "owner": "LaunchAgentButton",
+      "hook": "useEffect",
+      "dependencies": ["open", "repoRootForModal", "requestWorktrees", "useWorktree"],
+      "fingerprint": "dc07e9637a44",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/launch-agent/LaunchAgentButton.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const sourcePaneId = sourcePaneIdForModalRef.current; if (!open || !useWorktree || !sourcePaneId) { return; } let active = true; dispatchFormState({ type: \"loadWorktreesSta",
+      "id": "E003"
+    },
+    {
+      "file": "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx",
+      "line": 534,
+      "column": 3,
+      "owner": "ResumeWorktreeDialog",
+      "hook": "useEffect",
+      "dependencies": ["launchOptionsDefaultText", "open", "sourceSession", "targetWorktrees"],
+      "fingerprint": "bcc07de459f1",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/launch-agent/ResumeWorktreeDialog.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!open) { initializedForOpenRef.current = false; return; } if (initializedForOpenRef.current) { return; } initializedForOpenRef.current = true; dispatchFormState({ type:",
+      "id": "E004"
+    },
+    {
+      "file": "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx",
+      "line": 580,
+      "column": 3,
+      "owner": "ResumeWorktreeDialog",
+      "hook": "useEffect",
+      "dependencies": ["open", "sourceSession.worktreePath", "targetWorktrees"],
+      "fingerprint": "7fdbc4714ed5",
+      "category": "derived-state",
+      "disposition": "render-or-reducer",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/launch-agent/ResumeWorktreeDialog.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!open) { return; } dispatchFormState({ type: \"syncTargetWorktrees\", targetWorktrees, defaultWorktreePath: sourceSession.worktreePath?.trim(), }); }",
+      "id": "E005"
+    },
+    {
+      "file": "apps/web/src/features/notifications/use-push-notifications.ts",
+      "line": 135,
+      "column": 3,
+      "owner": "usePushNotifications",
+      "hook": "useEffect",
+      "dependencies": ["subscriptionId", "subscriptionIdRef"],
+      "fingerprint": "c94bf5cf906f",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/notifications/use-push-notifications.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { subscriptionIdRef.current = subscriptionId; }",
+      "id": "E006"
+    },
+    {
+      "file": "apps/web/src/features/notifications/use-push-notifications.ts",
+      "line": 150,
+      "column": 3,
+      "owner": "usePushNotifications",
+      "hook": "useLayoutEffect",
+      "dependencies": ["paneScopeContextKey", "paneScopeContextRef", "paneScopePostQueueRef"],
+      "fingerprint": "26cd9672b5d0",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/notifications/use-push-notifications.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const previous = paneScopeContextRef.current; if (previous.key !== paneScopeContextKey || previous.controller.signal.aborted) { previous.controller.abort(); paneScopeContex",
+      "id": "E007"
+    },
+    {
+      "file": "apps/web/src/features/notifications/use-push-notifications.ts",
+      "line": 474,
+      "column": 3,
+      "owner": "usePushNotifications",
+      "hook": "useEffect",
+      "dependencies": [
+        "apiBasePath",
+        "authError",
+        "disableNotifications",
+        "paneScopeContextRef",
+        "token",
+        "upsertSubscription"
+      ],
+      "fingerprint": "328c4b072fc3",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/notifications/use-push-notifications.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { let cancelled = false; const context = paneScopeContextRef.current; const isCurrentRun = () => !cancelled && context === paneScopeContextRef.current && !context.controller.",
+      "id": "E008"
+    },
+    {
+      "file": "apps/web/src/features/pull-to-refresh/PullToRefreshContainer.tsx",
+      "line": 40,
+      "column": 3,
+      "owner": "PullToRefreshContainer",
+      "hook": "useEffect",
+      "dependencies": ["onRefresh"],
+      "fingerprint": "b3d236225390",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pull-to-refresh/PullToRefreshContainer.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onRefreshRef.current = onRefresh; }",
+      "id": "E009"
+    },
+    {
+      "file": "apps/web/src/features/pull-to-refresh/PullToRefreshContainer.tsx",
+      "line": 44,
+      "column": 3,
+      "owner": "PullToRefreshContainer",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "e9d7ab33ffca",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pull-to-refresh/PullToRefreshContainer.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { document.documentElement.classList.add(\"pull-to-refresh-enabled\"); return () => { document.documentElement.classList.remove(\"pull-to-refresh-enabled\"); }; }",
+      "id": "E010"
+    },
+    {
+      "file": "apps/web/src/features/pull-to-refresh/PullToRefreshContainer.tsx",
+      "line": 51,
+      "column": 3,
+      "owner": "PullToRefreshContainer",
+      "hook": "useEffect",
+      "dependencies": ["config"],
+      "fingerprint": "bf260e95d855",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pull-to-refresh/PullToRefreshContainer.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const content = contentRef.current; if (content == null) { return; } const tracker = createPullGestureTracker(config); let pulling = false; const setTranslate = (px: number",
+      "id": "E011"
+    },
+    {
+      "file": "apps/web/src/features/pwa-tabs/components/PwaWorkspaceTabs.tsx",
+      "line": 155,
+      "column": 3,
+      "owner": "PwaWorkspaceTabs",
+      "hook": "useLayoutEffect",
+      "dependencies": ["activeTabId", "controlsGroupElement", "orderedTabGroups", "tabs"],
+      "fingerprint": "6391d424a5ab",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pwa-tabs/components/PwaWorkspaceTabs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const currentGroupKeys = orderedTabGroups.map((group) => group.key); const focusedGroupKey = focusedGroupControlKeyRef.current; const focusedGroupWasRemoved = focusedGroupK",
+      "id": "E012"
+    },
+    {
+      "file": "apps/web/src/features/pwa-tabs/components/PwaWorkspaceTabs.tsx",
+      "line": 220,
+      "column": 3,
+      "owner": "PwaWorkspaceTabs",
+      "hook": "useEffect",
+      "dependencies": ["enabled"],
+      "fingerprint": "72ee8e091f65",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pwa-tabs/components/PwaWorkspaceTabs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof document === \"undefined\") { return; } if (!enabled) { document.documentElement.style.removeProperty(PWA_TABS_OFFSET_CSS_VAR); return; } const element = rootRef.c",
+      "id": "E013"
+    },
+    {
+      "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
+      "line": 211,
+      "column": 3,
+      "owner": "useDismissMissingWorkspaceSessionTabs",
+      "hook": "useEffect",
+      "dependencies": [
+        "connected",
+        "dismissSessionTabsByPaneIds",
+        "enabled",
+        "livePaneIds",
+        "missingPaneCheckTick",
+        "missingPaneSinceRef",
+        "tabs"
+      ],
+      "fingerprint": "8fcf0bed1565",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pwa-tabs/context/workspace-tabs-context.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const missingSince = missingPaneSinceRef.current; if (!enabled || !connected) { missingSince.clear(); return; } const missingPaneIds = tabs .filter( (tab): tab is Workspace",
+      "id": "E014"
+    },
+    {
+      "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
+      "line": 334,
+      "column": 3,
+      "owner": "WorkspaceTabsProvider",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "9189f0db7e20",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pwa-tabs/context/workspace-tabs-context.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const update = () => bumpDisplayEnvironmentVersion(); return subscribeToDisplayEnvironment(update); }",
+      "id": "E015"
+    },
+    {
+      "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
+      "line": 339,
+      "column": 3,
+      "owner": "WorkspaceTabsProvider",
+      "hook": "useEffect",
+      "dependencies": ["applyTabsTransition", "enabled", "pathname"],
+      "fingerprint": "3faf05c31f97",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pwa-tabs/context/workspace-tabs-context.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled) { return; } applyTabsTransition((previous) => withoutNavigation(syncWorkspaceTabsWithPathname(previous, pathname, Date.now())), ); }",
+      "id": "E016"
+    },
+    {
+      "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
+      "line": 352,
+      "column": 3,
+      "owner": "WorkspaceTabsProvider",
+      "hook": "useEffect",
+      "dependencies": ["enabled", "tabsState"],
+      "fingerprint": "17ed7cb77c75",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/pwa-tabs/context/workspace-tabs-context.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled) { return; } window.localStorage.setItem(WORKSPACE_TABS_STORAGE_KEY, serializeWorkspaceTabsState(tabsState)); }",
+      "id": "E017"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
+      "line": 133,
+      "column": 3,
+      "owner": "AnsiVirtualizedViewport",
+      "hook": "useLayoutEffect",
+      "dependencies": ["scrollContextKey", "virtualLinesState"],
+      "fingerprint": "852dbe412eb2",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { committedVirtualLinesRef.current = { scrollContextKey, state: virtualLinesState }; }",
+      "id": "E018"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
+      "line": 137,
+      "column": 3,
+      "owner": "AnsiVirtualizedViewport",
+      "hook": "useLayoutEffect",
+      "dependencies": ["onAtBottomChange", "onRangeChanged"],
+      "fingerprint": "b808cf29ed19",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onAtBottomChangeRef.current = onAtBottomChange; onRangeChangedRef.current = onRangeChanged; }",
+      "id": "E019"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
+      "line": 185,
+      "column": 3,
+      "owner": "AnsiVirtualizedViewport",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "followBehavior",
+        "publishVirtualState",
+        "scrollContextKey",
+        "shouldFollowOutput",
+        "virtualLines",
+        "virtualizer"
+      ],
+      "fingerprint": "2412ec756366",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { publishVirtualState(virtualizer); const previousEdges = previousEdgesRef.current; const nextEdges = { scrollContextKey, count: virtualLines.length, firstId: virtualLines[0]",
+      "id": "E020"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
+      "line": 216,
+      "column": 3,
+      "owner": "AnsiVirtualizedViewport",
+      "hook": "useLayoutEffect",
+      "dependencies": ["scrollContextKey", "scrollerRef", "virtualItems", "virtualLines"],
+      "fingerprint": "fa3eccb3d534",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const list = listRef.current; const scroller = scrollerRef.current; if (!list || !scroller) { return; } const contextChanged = widthContextKeyRef.current !== scrollContextK",
+      "id": "E021"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/LogModal.tsx",
+      "line": 133,
+      "column": 3,
+      "owner": "LogModal",
+      "hook": "useLayoutEffect",
+      "dependencies": ["logLines", "open", "paneId", "snapRequest.paneId", "snapVersion"],
+      "fingerprint": "8c1e882261b9",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!open || !paneId) { activeContextRef.current = null; pendingSnapshotRef.current = null; pendingSnapRef.current = null; isUserScrollingRef.current = false; // oxlint-dis",
+      "id": "E022"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/LogModal.tsx",
+      "line": 175,
+      "column": 3,
+      "owner": "LogModal",
+      "hook": "useLayoutEffect",
+      "dependencies": ["displayLines.length", "open", "paneId", "scrollToBottom", "snapVersion"],
+      "fingerprint": "86d02ab4fc38",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if ( !open || displayLines.length === 0 || !matchesContext(pendingSnapRef.current, paneId, snapVersion) ) { return; } scrollToBottom(\"auto\"); pendingSnapRef.current = null;",
+      "id": "E023"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/PaneTextComposer.tsx",
+      "line": 514,
+      "column": 3,
+      "owner": "useRevealPromptCompletion",
+      "hook": "useEffect",
+      "dependencies": ["composerRef", "loading", "optionCount", "textInputRef", "visible"],
+      "fingerprint": "acb305abb898",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/components/PaneTextComposer.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!visible || window.innerWidth >= 768) { return; } let frame = 0; const revealCompletion = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { con",
+      "id": "E024"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/PaneTextComposer.tsx",
+      "line": 717,
+      "column": 3,
+      "owner": "PaneTextComposer",
+      "hook": "useEffect",
+      "dependencies": ["syncPromptHeight", "textInputRef"],
+      "fingerprint": "6e7b516db1d4",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/components/PaneTextComposer.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (textInputRef.current) { syncPromptHeight(textInputRef.current); } }",
+      "id": "E025"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/PaneTextComposer.tsx",
+      "line": 723,
+      "column": 3,
+      "owner": "PaneTextComposer",
+      "hook": "useEffect",
+      "dependencies": ["draftStorageKey", "syncPromptHeight", "textInputRef"],
+      "fingerprint": "b218bf0d1c11",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/components/PaneTextComposer.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (draftStorageKey == null || !textInputRef.current) { return; } textInputRef.current.value = readStoredPromptDraft(draftStorageKey); syncPromptHeight(textInputRef.current",
+      "id": "E026"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/prompt-completion/usePromptCompletion.ts",
+      "line": 120,
+      "column": 3,
+      "owner": "usePromptCompletion",
+      "hook": "useEffect",
+      "dependencies": [
+        "agent",
+        "enabled",
+        "paneId",
+        "requestPromptCompletions",
+        "requestRepoFileSearch",
+        "tokenQuery",
+        "tokenTrigger"
+      ],
+      "fingerprint": "1d84be3c4035",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const requestId = requestIdRef.current + 1; requestIdRef.current = requestId; if ( !enabled || !paneId || !requestPromptCompletions || !requestRepoFileSearch || !tokenTrigg",
+      "id": "E027"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx",
+      "line": 193,
+      "column": 3,
+      "owner": "useQuickPanelPhase",
+      "hook": "useEffect",
+      "dependencies": ["finishClosing", "panelPhase"],
+      "fingerprint": "697681af8d3f",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/shared-session-ui/components/QuickPanel.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (panelPhase !== \"closing\") { return; } // Animations never fire inside display:none subtrees (e.g. the md:hidden // wrapper on desktop), so force-unmount if animationend",
+      "id": "E028"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx",
+      "line": 218,
+      "column": 3,
+      "owner": "QuickPanel",
+      "hook": "useEffect",
+      "dependencies": ["onClose", "open"],
+      "fingerprint": "2a3a2df34ba7",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/shared-session-ui/components/QuickPanel.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!open) { return; } const handlePointerDown = (event: PointerEvent) => { const target = event.target; if (!(target instanceof Element)) { return; } if (target.closest(\"[",
+      "id": "E029"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx",
+      "line": 268,
+      "column": 3,
+      "owner": "QuickPanel",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "075fa1b6d9a4",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/shared-session-ui/components/QuickPanel.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const target = scrollRef.current; if (!target) return; const handleWheel = (event: WheelEvent) => { const { scrollHeight, clientHeight, scrollTop } = target; if (scrollHeig",
+      "id": "E030"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useMultiPaneScreenFeed.ts",
+      "line": 141,
+      "column": 3,
+      "owner": "useMultiPaneScreenFeed",
+      "hook": "useEffect",
+      "dependencies": ["canPoll", "fetchOnMount", "normalizedPaneIds.length", "pollNow"],
+      "fingerprint": "3bf48638a3f5",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/hooks/useMultiPaneScreenFeed.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!fetchOnMount || !canPoll() || normalizedPaneIds.length === 0) { return; } void pollNow(); }",
+      "id": "E031"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useMultiPaneScreenFeed.ts",
+      "line": 148,
+      "column": 3,
+      "owner": "useMultiPaneScreenFeed",
+      "hook": "useEffect",
+      "dependencies": ["cache", "clearCache", "error", "loading", "normalizedRetainedPaneIds"],
+      "fingerprint": "6d64e689e2bc",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/hooks/useMultiPaneScreenFeed.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const activePaneIds = new Set(normalizedRetainedPaneIds); const stalePaneIds = findStalePaneIds( { ...cache, ...loading, ...error, }, activePaneIds, ); stalePaneIds.forEach",
+      "id": "E032"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/usePaneSendText.ts",
+      "line": 94,
+      "column": 3,
+      "owner": "usePaneSendText",
+      "hook": "useLayoutEffect",
+      "dependencies": ["paneId"],
+      "fingerprint": "657e955b365c",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/shared-session-ui/hooks/usePaneSendText.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (activePaneRef.current.paneId !== paneId) { activePaneRef.current = { paneId, generation: activePaneRef.current.generation + 1, }; sendTextInFlightRef.current = false; l",
+      "id": "E033"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts",
+      "line": 116,
+      "column": 3,
+      "owner": "useRawInputHandlers",
+      "hook": "useLayoutEffect",
+      "dependencies": ["allowDangerKeys"],
+      "fingerprint": "3009e1fcea0e",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { allowDangerRef.current = allowDangerKeys; }",
+      "id": "E034"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts",
+      "line": 120,
+      "column": 3,
+      "owner": "useRawInputHandlers",
+      "hook": "useEffect",
+      "dependencies": ["rawMode"],
+      "fingerprint": "93e786f949fe",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // react-doctor-disable-next-line no-event-handler if (!rawMode) { rawQueueRef.current = []; if (rawFlushTimerRef.current != null) { window.clearTimeout(rawFlushTimerRef.cu",
+      "id": "E035"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts",
+      "line": 131,
+      "column": 3,
+      "owner": "useRawInputHandlers",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "8094c05ea1d2",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // Drop any pending flush on unmount so queued input is not sent to the // pane after the user has navigated away. return () => { if (rawFlushTimerRef.current != null) { wi",
+      "id": "E036"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useScreenCache.ts",
+      "line": 101,
+      "column": 3,
+      "owner": "useScreenCache",
+      "hook": "useEffect",
+      "dependencies": ["cache"],
+      "fingerprint": "d8f2a1226d96",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { cacheRef.current = cache; }",
+      "id": "E037"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSessionListPins.ts",
+      "line": 18,
+      "column": 3,
+      "owner": "useSessionListPins",
+      "hook": "useEffect",
+      "dependencies": ["pins"],
+      "fingerprint": "84cb69ef4f82",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/hooks/useSessionListPins.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { storeSessionListPins(pins); }",
+      "id": "E038"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSessionLogs.ts",
+      "line": 141,
+      "column": 3,
+      "owner": "useSessionLogs",
+      "hook": "useEffect",
+      "dependencies": ["fetchLog", "logModalOpen", "selectedPaneId"],
+      "fingerprint": "e9f979781eef",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/shared-session-ui/hooks/useSessionLogs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!logModalOpen || !selectedPaneId) { return; } void fetchLog(selectedPaneId); }",
+      "id": "E039"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSessionLogs.ts",
+      "line": 179,
+      "column": 3,
+      "owner": "useSessionLogs",
+      "hook": "useEffect",
+      "dependencies": ["closeLogModal", "closeQuickPanel", "logModalOpen", "quickPanelOpen"],
+      "fingerprint": "c18d345646d2",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/features/shared-session-ui/hooks/useSessionLogs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!quickPanelOpen && !logModalOpen) { return; } const handleKeyDown = (event: KeyboardEvent) => { if (event.key !== \"Escape\") return; if (logModalOpen) { closeLogModal();",
+      "id": "E040"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreview.ts",
+      "line": 302,
+      "column": 3,
+      "owner": "useSidebarPreview",
+      "hook": "useEffect",
+      "dependencies": ["clearPreviewCache", "previewCache", "sessionIndex"],
+      "fingerprint": "aa1088ea41c5",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const activePaneIds = new Set(sessionIndex.keys()); const stalePaneIds = findStalePaneIds(previewCache, activePaneIds); stalePaneIds.forEach((paneId) => { clearPreviewCache",
+      "id": "E041"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewHoverController.ts",
+      "line": 163,
+      "column": 3,
+      "owner": "useSidebarPreviewHoverController",
+      "hook": "useEffect",
+      "dependencies": ["hoveredPaneId", "setPreviewFrame", "updatePreviewPosition"],
+      "fingerprint": "8af13f227a3c",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!hoveredPaneId) { pendingPreviewPaneRef.current = null; setPreviewFrame(null); return; } // The hook publishes geometry to the owning overlay after the hovered DOM node",
+      "id": "E042"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewHoverController.ts",
+      "line": 174,
+      "column": 3,
+      "owner": "useSidebarPreviewHoverController",
+      "hook": "useEffect",
+      "dependencies": ["hoveredPaneId", "schedulePreviewPosition"],
+      "fingerprint": "8b14324ed70a",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!hoveredPaneId) { return; } const handleUpdate = () => schedulePreviewPosition(hoveredPaneId); window.addEventListener(\"resize\", handleUpdate); window.addEventListener(",
+      "id": "E043"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewHoverController.ts",
+      "line": 187,
+      "column": 3,
+      "owner": "useSidebarPreviewHoverController",
+      "hook": "useEffect",
+      "dependencies": ["clearHoverTimer"],
+      "fingerprint": "97ac27dbdd61",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { return () => { clearHoverTimer(); if (typeof window !== \"undefined\" && rafIdRef.current != null) { window.cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }",
+      "id": "E044"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache.ts",
+      "line": 104,
+      "column": 3,
+      "owner": "useSidebarPreviewTimelineCache",
+      "hook": "useEffect",
+      "dependencies": ["timelineCache"],
+      "fingerprint": "bd41704daafc",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { timelineCacheRef.current = timelineCache; }",
+      "id": "E045"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache.ts",
+      "line": 134,
+      "column": 3,
+      "owner": "useSidebarPreviewTimelineCache",
+      "hook": "useEffect",
+      "dependencies": ["sessionIndex"],
+      "fingerprint": "5acc826090a5",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const activePaneIds = new Set(sessionIndex.keys()); dispatch({ type: \"prune\", activePaneIds }); }",
+      "id": "E046"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useUserScrollState.ts",
+      "line": 32,
+      "column": 3,
+      "owner": "useUserScrollState",
+      "hook": "useLayoutEffect",
+      "dependencies": ["onUserScrollStateChange"],
+      "fingerprint": "8f264547ef6c",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/hooks/useUserScrollState.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onUserScrollStateChangeRef.current = onUserScrollStateChange; }",
+      "id": "E047"
+    },
+    {
+      "file": "apps/web/src/features/shared-session-ui/hooks/useUserScrollState.ts",
+      "line": 74,
+      "column": 3,
+      "owner": "useUserScrollState",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "enabled",
+        "handleKeyDown",
+        "handleScroll",
+        "scrollerRef",
+        "setUserScrolling",
+        "startUserScroll"
+      ],
+      "fingerprint": "a2c96aeb1781",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/features/shared-session-ui/hooks/useUserScrollState.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled) { setUserScrolling(false); return undefined; } const scroller = scrollerRef.current; if (!scroller) { return undefined; } scroller.addEventListener(\"scroll\", ",
+      "id": "E048"
+    },
+    {
+      "file": "apps/web/src/lib/use-debounced-callback.ts",
+      "line": 20,
+      "column": 3,
+      "owner": "useDebouncedCallback",
+      "hook": "useLayoutEffect",
+      "dependencies": ["callback"],
+      "fingerprint": "6c2dae421a81",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-debounced-callback.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { callbackRef.current = callback; }",
+      "id": "E049"
+    },
+    {
+      "file": "apps/web/src/lib/use-now-ms.ts",
+      "line": 6,
+      "column": 3,
+      "owner": "useNowMs",
+      "hook": "useEffect",
+      "dependencies": ["intervalMs"],
+      "fingerprint": "151d351581f8",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const timer = window.setInterval(() => setNowMs(Date.now()), intervalMs); return () => window.clearInterval(timer); }",
+      "id": "E050"
+    },
+    {
+      "file": "apps/web/src/lib/use-pointer-drag.ts",
+      "line": 16,
+      "column": 3,
+      "owner": "usePointerDrag",
+      "hook": "useEffect",
+      "dependencies": ["onMove"],
+      "fingerprint": "94e980d9852f",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onMoveRef.current = onMove; }",
+      "id": "E051"
+    },
+    {
+      "file": "apps/web/src/lib/use-pointer-drag.ts",
+      "line": 20,
+      "column": 3,
+      "owner": "usePointerDrag",
+      "hook": "useEffect",
+      "dependencies": ["onEnd"],
+      "fingerprint": "eefa17a2a829",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onEndRef.current = onEnd; }",
+      "id": "E052"
+    },
+    {
+      "file": "apps/web/src/lib/use-pointer-drag.ts",
+      "line": 24,
+      "column": 3,
+      "owner": "usePointerDrag",
+      "hook": "useEffect",
+      "dependencies": ["cursor"],
+      "fingerprint": "ba687ecc2fad",
+      "category": "ref-mirror",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { cursorRef.current = cursor; }",
+      "id": "E053"
+    },
+    {
+      "file": "apps/web/src/lib/use-pointer-drag.ts",
+      "line": 28,
+      "column": 3,
+      "owner": "usePointerDrag",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "2a2f791d488d",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof window === \"undefined\") return; const handlePointerMove = (event: PointerEvent) => { if (!dragContextRef.current) return; onMoveRef.current(event, dragContextRef",
+      "id": "E054"
+    },
+    {
+      "file": "apps/web/src/lib/use-sidebar-width.ts",
+      "line": 21,
+      "column": 3,
+      "owner": "useSidebarWidth",
+      "hook": "useEffect",
+      "dependencies": ["sidebarWidth"],
+      "fingerprint": "eca987873fee",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-sidebar-width.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof window === \"undefined\") return; window.localStorage.setItem(STORAGE_KEY, String(sidebarWidth)); }",
+      "id": "E055"
+    },
+    {
+      "file": "apps/web/src/lib/use-split-ratio.ts",
+      "line": 29,
+      "column": 3,
+      "owner": "useSplitRatio",
+      "hook": "useEffect",
+      "dependencies": ["ratio", "storageKey"],
+      "fingerprint": "4e08c92e0047",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-split-ratio.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof window === \"undefined\") return; window.localStorage.setItem(storageKey, String(ratio)); }",
+      "id": "E056"
+    },
+    {
+      "file": "apps/web/src/lib/use-timeout.ts",
+      "line": 28,
+      "column": 3,
+      "owner": "useTimeout",
+      "hook": "useEffect",
+      "dependencies": ["cancel"],
+      "fingerprint": "905b6ec3e0b7",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-timeout.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => cancel",
+      "id": "E057"
+    },
+    {
+      "file": "apps/web/src/lib/use-visibility-polling.ts",
+      "line": 22,
+      "column": 3,
+      "owner": "useVisibilityPolling",
+      "hook": "useEffect",
+      "dependencies": ["onTick"],
+      "fingerprint": "9c3c8fbff45e",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-visibility-polling.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onTickRef.current = onTick; }",
+      "id": "E058"
+    },
+    {
+      "file": "apps/web/src/lib/use-visibility-polling.ts",
+      "line": 26,
+      "column": 3,
+      "owner": "useVisibilityPolling",
+      "hook": "useEffect",
+      "dependencies": ["onResume"],
+      "fingerprint": "c0d526106d8a",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-visibility-polling.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onResumeRef.current = onResume; }",
+      "id": "E059"
+    },
+    {
+      "file": "apps/web/src/lib/use-visibility-polling.ts",
+      "line": 30,
+      "column": 3,
+      "owner": "useVisibilityPolling",
+      "hook": "useEffect",
+      "dependencies": ["shouldPoll"],
+      "fingerprint": "51694123f2e4",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-visibility-polling.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { shouldPollRef.current = shouldPoll; }",
+      "id": "E060"
+    },
+    {
+      "file": "apps/web/src/lib/use-visibility-polling.ts",
+      "line": 34,
+      "column": 3,
+      "owner": "useVisibilityPolling",
+      "hook": "useEffect",
+      "dependencies": ["enabled", "intervalMs", "shouldPoll"],
+      "fingerprint": "2f04fbcab143",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/lib/use-visibility-polling.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled || typeof window === \"undefined\") { return; } let intervalId: number | null = null; const canPoll = () => { if (document.hidden) return false; if (navigator.on",
+      "id": "E061"
+    },
+    {
+      "file": "apps/web/src/pages/ChatGrid/components/ChatGridCandidateModal.tsx",
+      "line": 81,
+      "column": 3,
+      "owner": "ChatGridCandidateModalContent",
+      "hook": "useEffect",
+      "dependencies": ["debouncedSearchQuery", "searchQuery"],
+      "fingerprint": "375bf343d7c8",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/ChatGrid/components/ChatGridCandidateModal.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (searchQuery === debouncedSearchQuery) { return; } const debounceMs = searchQuery.length === 0 ? 0 : CHAT_GRID_CANDIDATE_SEARCH_DEBOUNCE_MS; const timeoutId = window.set",
+      "id": "E062"
+    },
+    {
+      "file": "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx",
+      "line": 256,
+      "column": 3,
+      "owner": "useChatGridScreenViewport",
+      "hook": "useLayoutEffect",
+      "dependencies": ["paneId", "renderedScreenLines"],
+      "fingerprint": "f8e55dfb319d",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/ChatGrid/components/ChatGridTile.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const snapshot = { paneId, lines: renderedScreenLines }; if (activePaneIdRef.current !== paneId) { activePaneIdRef.current = paneId; pendingSnapshotRef.current = null; isUs",
+      "id": "E063"
+    },
+    {
+      "file": "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx",
+      "line": 299,
+      "column": 3,
+      "owner": "useChatGridScreenViewport",
+      "hook": "useLayoutEffect",
+      "dependencies": ["displayLines.length", "paneId"],
+      "fingerprint": "56d272f4b5b1",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/ChatGrid/components/ChatGridTile.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (displayLines.length === 0 || snappedPaneIdRef.current === paneId) { return; } viewportRef.current?.scrollToEnd({ behavior: \"auto\" }); snappedPaneIdRef.current = paneId;",
+      "id": "E064"
+    },
+    {
+      "file": "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx",
+      "line": 479,
+      "column": 3,
+      "owner": "ChatGridTile",
+      "hook": "useEffect",
+      "dependencies": ["titleEditing"],
+      "fingerprint": "5f9329c7582f",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/ChatGrid/components/ChatGridTile.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!titleEditing) { return; } const input = titleInputRef.current; if (!input) { return; } input.focus(); input.select(); }",
+      "id": "E065"
+    },
+    {
+      "file": "apps/web/src/pages/ChatGrid/useChatGridVM.ts",
+      "line": 157,
+      "column": 3,
+      "owner": "useChatGridVM",
+      "hook": "useEffect",
+      "dependencies": [
+        "effectiveHasResolvedGridSelection",
+        "navigate",
+        "paneIdsFromSearch",
+        "selectedPaneIds"
+      ],
+      "fingerprint": "d50d02338726",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (paneIdsFromSearch.length > 0 && !effectiveHasResolvedGridSelection) { return; } const availablePaneParam = serializeChatGridPaneParam(selectedPaneIds); const currentPan",
+      "id": "E066"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/DiffPatch.tsx",
+      "line": 138,
+      "column": 5,
+      "owner": "<module>",
+      "hook": "useEffect",
+      "dependencies": [
+        "onResolveFileReferenceCandidates",
+        "referenceCandidateTokenSet",
+        "referenceCandidateTokens"
+      ],
+      "fingerprint": "4f7a397b4bfe",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!onResolveFileReferenceCandidates || referenceCandidateTokens.length === 0) { return; } const requestId = activeResolveCandidatesRequestIdRef.current + 1; activeResolve",
+      "id": "E067"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/DiffSection.tsx",
+      "line": 423,
+      "column": 3,
+      "owner": "<module>",
+      "hook": "useEffect",
+      "dependencies": ["diffSummary", "setExpandedDiffs"],
+      "fingerprint": "de65e42cb91f",
+      "category": "derived-state",
+      "disposition": "render-or-reducer",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/DiffSection.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { syncExpandedDiffs(diffSummary, setExpandedDiffs); }",
+      "id": "E068"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/FileContentModal.tsx",
+      "line": 377,
+      "column": 3,
+      "owner": "FileContentModal",
+      "hook": "useEffect",
+      "dependencies": ["open"],
+      "fingerprint": "5d33b9b75213",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/FileContentModal.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!open) { return; } const previousBodyOverflow = document.body.style.overflow; const previousBodyPaddingRight = document.body.style.paddingRight; const previousBodyOvers",
+      "id": "E069"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/FileContentModal.tsx",
+      "line": 402,
+      "column": 3,
+      "owner": "FileContentModal",
+      "hook": "useEffect",
+      "dependencies": [
+        "activePath",
+        "diffAvailable",
+        "diffBinary",
+        "diffError",
+        "diffLoading",
+        "diffPatch",
+        "markdownViewMode",
+        "onLoadDiff",
+        "onMarkdownViewModeChange",
+        "open"
+      ],
+      "fingerprint": "3bca156e3280",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/FileContentModal.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!open || markdownViewMode !== \"diff\") { return; } if (!diffAvailable) { onMarkdownViewModeChange(\"code\"); return; } if (!activePath || diffPatch != null || diffBinary |",
+      "id": "E070"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/LogFileCandidateModal.tsx",
+      "line": 42,
+      "column": 3,
+      "owner": "LogFileCandidateModal",
+      "hook": "useEffect",
+      "dependencies": ["open"],
+      "fingerprint": "cbb3ee99b855",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/components/LogFileCandidateModal.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!open) { return; } const rafId = window.requestAnimationFrame(() => { searchInputRef.current?.focus(); }); return () => { window.cancelAnimationFrame(rafId); }; }",
+      "id": "E071"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/SessionHeader.tsx",
+      "line": 113,
+      "column": 3,
+      "owner": "SessionTitleInput",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "b2a516a6e032",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/SessionHeader.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const input = titleInputRef.current; if (!input) { return; } input.focus(); input.select(); }",
+      "id": "E072"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
+      "line": 45,
+      "column": 3,
+      "owner": "ShikiCodeBlock",
+      "hook": "useLayoutEffect",
+      "dependencies": ["language", "normalizedCode", "retryToken", "theme"],
+      "fingerprint": "acc8bd605571",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { horizontalScrollRef.current = 0; verticalScrollRef.current = 0; const scroller = scrollerRef.current; if (scroller) { scroller.scrollLeft = 0; scroller.scrollTop = 0; } // ",
+      "id": "E073"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
+      "line": 63,
+      "column": 3,
+      "owner": "ShikiCodeBlock",
+      "hook": "useEffect",
+      "dependencies": ["language", "normalizedCode", "retryToken", "theme"],
+      "fingerprint": "e89ce58255b1",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { let alive = true; void highlightCode({ code: normalizedCode, lang: language, theme, }) .then((result) => { if (!alive) { return; } setHtml(result.html); }) .catch(() => { i",
+      "id": "E074"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
+      "line": 87,
+      "column": 3,
+      "owner": "ShikiCodeBlock",
+      "hook": "useLayoutEffect",
+      "dependencies": ["error", "html"],
+      "fingerprint": "77d6be1a2097",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const scroller = scrollerRef.current; if (!scroller) { return; } if (horizontalScrollRef.current > 0) { scroller.scrollLeft = horizontalScrollRef.current; } if (verticalScr",
+      "id": "E075"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
+      "line": 153,
+      "column": 3,
+      "owner": "ShikiCodeBlock",
+      "hook": "useLayoutEffect",
+      "dependencies": ["error", "highlightLine", "sanitizedHighlightedHtml"],
+      "fingerprint": "a879e383542e",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (highlightLine == null || highlightLine <= 0) { return; } const scroller = scrollerRef.current; if (!scroller) { return; } const target = scroller.querySelector<HTMLElem",
+      "id": "E076"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
+      "line": 99,
+      "column": 3,
+      "owner": "SmartScreenViewport",
+      "hook": "useEffect",
+      "dependencies": ["lines.length", "onRangeChanged"],
+      "fingerprint": "978b16c4e7d6",
+      "category": "derived-state",
+      "disposition": "render-or-reducer",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (lines.length === 0) { return; } onRangeChanged({ startIndex: 0, endIndex: lines.length - 1 }); }",
+      "id": "E077"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
+      "line": 106,
+      "column": 3,
+      "owner": "SmartScreenViewport",
+      "hook": "useLayoutEffect",
+      "dependencies": ["decoratedLines", "scrollerRef", "shouldFollowOutput"],
+      "fingerprint": "f755299f0b7a",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!shouldFollowOutput) { return; } const node = scrollerRef.current; if (!node) { return; } // Writing scrollTop cancels in-flight scroll momentum (including // horizonta",
+      "id": "E078"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
+      "line": 125,
+      "column": 3,
+      "owner": "SmartScreenViewport",
+      "hook": "useEffect",
+      "dependencies": ["decoratedLines", "onAtBottomChange", "scrollerRef"],
+      "fingerprint": "5466a2a944e2",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const node = scrollerRef.current; if (!node) { return; } // react-doctor-disable-next-line no-pass-data-to-parent, no-prop-callback-in-effect onAtBottomChange(resolveIsAtBo",
+      "id": "E079"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
+      "line": 168,
+      "column": 3,
+      "owner": "SmartScreenViewport",
+      "hook": "useEffect",
+      "dependencies": ["resetUserScroll", "scrollContextKey"],
+      "fingerprint": "c5b069e422c7",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (previousScrollContextKeyRef.current === scrollContextKey) { return; } previousScrollContextKeyRef.current = scrollContextKey; resetUserScroll(); }",
+      "id": "E080"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
+      "line": 176,
+      "column": 3,
+      "owner": "SmartScreenViewport",
+      "hook": "useEffect",
+      "dependencies": ["resetUserScroll"],
+      "fingerprint": "0ceeaf7c4bc9",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => () => resetUserScroll()",
+      "id": "E081"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoFocus.ts",
+      "line": 13,
+      "column": 3,
+      "owner": "useNoteAutoFocus",
+      "hook": "useEffect",
+      "dependencies": ["editingNoteId"],
+      "fingerprint": "8a50e52965fe",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useNoteAutoFocus.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!editingNoteId) { return; } const textarea = editingTextareaRef.current; if (!textarea) { return; } const rafId = window.requestAnimationFrame(() => { const end = texta",
+      "id": "E082"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts",
+      "line": 32,
+      "column": 3,
+      "owner": "useNoteAutoSave",
+      "hook": "useEffect",
+      "dependencies": ["editingNoteId"],
+      "fingerprint": "d358dd2415f9",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { editingNoteIdRef.current = editingNoteId; }",
+      "id": "E083"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts",
+      "line": 36,
+      "column": 3,
+      "owner": "useNoteAutoSave",
+      "hook": "useEffect",
+      "dependencies": ["editingBody"],
+      "fingerprint": "af6dcf2bb6be",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { editingBodyRef.current = editingBody; }",
+      "id": "E084"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts",
+      "line": 81,
+      "column": 3,
+      "owner": "useNoteAutoSave",
+      "hook": "useEffect",
+      "dependencies": ["debouncedSave", "editingBody", "editingNoteId"],
+      "fingerprint": "96f8b78d6775",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!editingNoteId) { debouncedSave.cancel(); return; } if (editingBody === lastSavedBodyRef.current) { debouncedSave.cancel(); return; } debouncedSave.run(editingNoteId, e",
+      "id": "E085"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useNotesPolling.ts",
+      "line": 20,
+      "column": 3,
+      "owner": "useNotesPolling",
+      "hook": "useEffect",
+      "dependencies": ["intervalMs", "onRefresh", "repoRoot"],
+      "fingerprint": "0bb3b3edd6b0",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useNotesPolling.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!repoRoot) { return; } onRefresh({ silent: true }); const intervalId = window.setInterval(() => { onRefresh({ silent: true }); }, intervalMs); return () => { window.cle",
+      "id": "E086"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/usePromptContextLayout.ts",
+      "line": 137,
+      "column": 3,
+      "owner": "usePromptContextLayout",
+      "hook": "useEffect",
+      "dependencies": [
+        "evaluateBranchLabelPlacement",
+        "gitAdditionsLabel",
+        "gitDeletionsLabel",
+        "isVirtualActive",
+        "visibleFileChangeCategoriesKey"
+      ],
+      "fingerprint": "d4dbcfbf3f1b",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { evaluateBranchLabelPlacement(); if (typeof window === \"undefined\") { return; } const rowNode = promptGitContextRowRef.current; const leftNode = promptGitContextLeftRef.curr",
+      "id": "E087"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScopeGuard.ts",
+      "line": 58,
+      "column": 3,
+      "owner": "useScopeGuard",
+      "hook": "useLayoutEffect",
+      "dependencies": ["scopeKey"],
+      "fingerprint": "67aff32bc2aa",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScopeGuard.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { activeScopeRef.current = scopeKey; }",
+      "id": "E088"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScopeGuard.ts",
+      "line": 63,
+      "column": 3,
+      "owner": "useScopeGuard",
+      "hook": "useEffect",
+      "dependencies": ["connected", "onReconnectRef"],
+      "fingerprint": "1b4336e2733d",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScopeGuard.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (prevConnectedRef.current === false && connected) { onReconnectRef.current(); } prevConnectedRef.current = connected; }",
+      "id": "E089"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
+      "line": 156,
+      "column": 3,
+      "owner": "useScreenFetch",
+      "hook": "useLayoutEffect",
+      "dependencies": ["mode", "paneId", "screenContextKey"],
+      "fingerprint": "5dad31ef5090",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenFetch.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { currentContextRef.current = { key: screenContextKey, paneId, mode }; }",
+      "id": "E090"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
+      "line": 542,
+      "column": 3,
+      "owner": "useScreenFetch",
+      "hook": "useEffect",
+      "dependencies": ["cursorRef", "transport"],
+      "fingerprint": "ff02e8f42a46",
+      "category": "identity-reset",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenFetch.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const prev = prevTransportRef.current; prevTransportRef.current = transport; if (prev === \"sse\" && transport !== \"sse\") { cursorRef.current = null; } }",
+      "id": "E091"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
+      "line": 552,
+      "column": 3,
+      "owner": "useScreenFetch",
+      "hook": "useEffect",
+      "dependencies": ["refreshScreen", "transport"],
+      "fingerprint": "9acec1c5844e",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenFetch.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // Text screens arrive through the stream. REST is reserved for image mode // and for polling fallback after the stream fails to connect. if (transport !== \"polling\") { ret",
+      "id": "E092"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
+      "line": 564,
+      "column": 3,
+      "owner": "useScreenFetch",
+      "hook": "useEffect",
+      "dependencies": ["connected", "error", "resetDisconnectedState", "setError"],
+      "fingerprint": "6f46129aafbe",
+      "category": "identity-reset",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenFetch.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // react-doctor-disable-next-line no-event-handler, no-pass-data-to-parent if (!connected) { // react-doctor-disable-next-line no-pass-data-to-parent resetDisconnectedState",
+      "id": "E093"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenMode.ts",
+      "line": 38,
+      "column": 3,
+      "owner": "useScreenMode",
+      "hook": "useEffect",
+      "dependencies": ["modeLoaded"],
+      "fingerprint": "a54b0ed920f2",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenMode.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { modeLoadedRef.current = modeLoaded; }",
+      "id": "E094"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenMode.ts",
+      "line": 43,
+      "column": 3,
+      "owner": "useScreenMode",
+      "hook": "useLayoutEffect",
+      "dependencies": ["paneId", "setMode", "setModeLoaded"],
+      "fingerprint": "141e2d21a498",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenMode.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { modeLoadedRef.current = initialModeLoaded; setMode(\"text\"); setModeLoaded(initialModeLoaded); }",
+      "id": "E095"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelLogReferenceLinking.ts",
+      "line": 156,
+      "column": 3,
+      "owner": "useScreenPanelLogReferenceLinking",
+      "hook": "useEffect",
+      "dependencies": [
+        "agent",
+        "effectiveWrapMode",
+        "onResolveFileReferenceCandidates",
+        "paneId",
+        "referenceCandidateTokenSet",
+        "referenceCandidateTokens",
+        "sourceRepoRoot"
+      ],
+      "fingerprint": "bdbf0aacc451",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useScreenPanelLogReferenceLinking.test.ts"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const resolveContext: ResolveContext = { paneId, sourceRepoRoot, agent, effectiveWrapMode, referenceCandidateTokens, resolver: onResolveFileReferenceCandidates, }; const pr",
+      "id": "E096"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts",
+      "line": 50,
+      "column": 3,
+      "owner": "useScreenPanelWorktreeSelector",
+      "hook": "useEffect",
+      "dependencies": ["enabled", "isOpen", "lastClosedAtRef", "refreshWorktrees"],
+      "fingerprint": "ca2a447c6a32",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled) { return; } if (!isOpen) { lastClosedAtRef.current = Date.now(); return; } const elapsedSinceCloseMs = Date.now() - lastClosedAtRef.current; if (elapsedSinceC",
+      "id": "E097"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts",
+      "line": 70,
+      "column": 3,
+      "owner": "useScreenPanelWorktreeSelector",
+      "hook": "useEffect",
+      "dependencies": ["isOpen"],
+      "fingerprint": "0d53964fa26c",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof document === \"undefined\") { return; } const { body } = document; if (isOpen) { body.dataset[WORKTREE_SELECTOR_OPEN_BODY_DATASET_KEY] = \"true\"; } else { delete bo",
+      "id": "E098"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts",
+      "line": 85,
+      "column": 3,
+      "owner": "useScreenPanelWorktreeSelector",
+      "hook": "useEffect",
+      "dependencies": ["containerRef", "isOpen", "setRequestedOpen"],
+      "fingerprint": "37e2ed92c120",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!isOpen || typeof document === \"undefined\") { return; } const handlePointerDown = (event: PointerEvent) => { const containerNode = containerRef.current; if (!containerN",
+      "id": "E099"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPollingPauseReason.ts",
+      "line": 41,
+      "column": 3,
+      "owner": "useScreenPollingPauseReason",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "c4ff4b6900ea",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useScreenPollingPauseReason.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof window === \"undefined\") { return; } const targetDocument = typeof document !== \"undefined\" ? document : null; const updatePauseReason = () => bumpBrowserStateVer",
+      "id": "E100"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
+      "line": 79,
+      "column": 3,
+      "owner": "useScreenScroll",
+      "hook": "useLayoutEffect",
+      "dependencies": ["onClearPending"],
+      "fingerprint": "12e7f61cf8e9",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenScroll.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onClearPendingRef.current = onClearPending; }",
+      "id": "E101"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
+      "line": 134,
+      "column": 3,
+      "owner": "useScreenScroll",
+      "hook": "useLayoutEffect",
+      "dependencies": ["isUserScrollingRef", "mode", "onClearPending", "paneId"],
+      "fingerprint": "5e7bbe17d087",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenScroll.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const isInitialContext = !didInitializeContextRef.current; const modeChanged = prevModeRef.current !== mode; const paneChanged = prevPaneIdRef.current !== paneId; if (!isIn",
+      "id": "E102"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
+      "line": 151,
+      "column": 3,
+      "owner": "useScreenScroll",
+      "hook": "useLayoutEffect",
+      "dependencies": ["mode", "screenLinesLength", "scrollToBottom"],
+      "fingerprint": "2aec0f400dc3",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenScroll.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!snapToBottomRef.current || mode !== \"text\" || screenLinesLength === 0) { return; } const didSnap = scrollToBottom(\"auto\"); if (didSnap) { snapToBottomRef.current = fal",
+      "id": "E103"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
+      "line": 161,
+      "column": 3,
+      "owner": "useScreenScroll",
+      "hook": "useEffect",
+      "dependencies": ["isUserScrollingRef"],
+      "fingerprint": "3b4c5582ebea",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenScroll.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { return () => { isUserScrollingRef.current = false; onClearPendingRef.current(); }; }",
+      "id": "E104"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts",
+      "line": 43,
+      "column": 3,
+      "owner": "useScreenStream",
+      "hook": "useEffect",
+      "dependencies": ["onScreenEvent"],
+      "fingerprint": "9a2f25ff64af",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenStream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onScreenEventRef.current = onScreenEvent; }",
+      "id": "E105"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts",
+      "line": 47,
+      "column": 3,
+      "owner": "useScreenStream",
+      "hook": "useEffect",
+      "dependencies": ["fallbackDelayMs", "screenEventKey", "streamKey"],
+      "fingerprint": "d4707baece23",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenStream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (streamKey == null || screenEventKey === streamKey) { return; } const fallbackTimer = setTimeout(() => { setFallbackKey(streamKey); }, fallbackDelayMs); return () => cle",
+      "id": "E106"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts",
+      "line": 57,
+      "column": 3,
+      "owner": "useScreenStream",
+      "hook": "useEffect",
+      "dependencies": ["apiBasePath", "paneId", "streamKey", "token"],
+      "fingerprint": "e50d2dcbba6b",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenStream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (streamKey == null || !token) { return; } const url = `${apiBasePath}/streams/sessions/${encodeURIComponent(paneId)}/screen`; const sub = createSseSubscription({ url, ge",
+      "id": "E107"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenWrapMode.ts",
+      "line": 32,
+      "column": 3,
+      "owner": "useScreenWrapMode",
+      "hook": "useEffect",
+      "dependencies": ["setWrapModeAtom", "wrapMode"],
+      "fingerprint": "87b0178108f7",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenWrapMode.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (loadedRef.current) { return; } loadedRef.current = true; const stored = readStoredWrapMode(); if (stored && stored !== wrapMode) { setWrapModeAtom(stored); } }",
+      "id": "E108"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts",
+      "line": 111,
+      "column": 3,
+      "owner": "useSessionBranches",
+      "hook": "useLayoutEffect",
+      "dependencies": ["paneId"],
+      "fingerprint": "8bdd8bf32b9a",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionBranches.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (activePaneRef.current.paneId === paneId) { return; } activePaneRef.current = { paneId, generation: activePaneRef.current.generation + 1, }; }",
+      "id": "E109"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts",
+      "line": 121,
+      "column": 3,
+      "owner": "useSessionBranches",
+      "hook": "useEffect",
+      "dependencies": ["paneId"],
+      "fingerprint": "a0d1c35a7ae1",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionBranches.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { latestRequestIdRef.current += 1; hasLoadedRef.current = false; dispatch({ type: \"resetPane\", paneId }); }",
+      "id": "E110"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts",
+      "line": 177,
+      "column": 3,
+      "owner": "useSessionBranches",
+      "hook": "useEffect",
+      "dependencies": ["fetchBranches", "session?.repoRoot"],
+      "fingerprint": "7e6d060bba55",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionBranches.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { void fetchBranches({ resetEntries: true }); }",
+      "id": "E111"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
+      "line": 295,
+      "column": 3,
+      "owner": "useSessionCommits",
+      "hook": "useLayoutEffect",
+      "dependencies": ["loadCommitLog", "pollCommitLogTick"],
+      "fingerprint": "2fe58bc42767",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionCommits.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onReconnectRef.current = () => { void loadCommitLog({ force: true }); }; pollTickRef.current = pollCommitLogTick; }",
+      "id": "E112"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
+      "line": 340,
+      "column": 3,
+      "owner": "useSessionCommits",
+      "hook": "useEffect",
+      "dependencies": ["commitLog"],
+      "fingerprint": "db053c8b2d4e",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionCommits.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { commitLogRef.current = commitLog; }",
+      "id": "E113"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
+      "line": 344,
+      "column": 3,
+      "owner": "useSessionCommits",
+      "hook": "useEffect",
+      "dependencies": ["branch", "dispatch", "paneId", "worktreePath"],
+      "fingerprint": "ac3fd5e9899a",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionCommits.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { dispatch({ type: \"reset\" }); commitSnapshotRef.current = null; commitLogRef.current = null; if (commitCopyTimeoutRef.current) { window.clearTimeout(commitCopyTimeoutRef.cur",
+      "id": "E114"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
+      "line": 356,
+      "column": 3,
+      "owner": "useSessionCommits",
+      "hook": "useEffect",
+      "dependencies": ["loadCommitLog"],
+      "fingerprint": "6e529c21830b",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionCommits.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // react-doctor-disable-next-line no-pass-data-to-parent void loadCommitLog({ force: true }); }",
+      "id": "E115"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
+      "line": 361,
+      "column": 3,
+      "owner": "useSessionCommits",
+      "hook": "useEffect",
+      "dependencies": [],
+      "fingerprint": "b96fa47d4655",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionCommits.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { return () => { if (commitCopyTimeoutRef.current) { window.clearTimeout(commitCopyTimeoutRef.current); } }; }",
+      "id": "E116"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionControls.ts",
+      "line": 108,
+      "column": 3,
+      "owner": "useSessionControls",
+      "hook": "useEffect",
+      "dependencies": [
+        "paneId",
+        "setAllowDangerKeys",
+        "setAutoEnter",
+        "setCtrlHeld",
+        "setRawMode",
+        "setShiftHeld"
+      ],
+      "fingerprint": "894561abeee9",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionControls.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { setAutoEnter(true); setShiftHeld(false); setCtrlHeld(false); setRawMode(false); setAllowDangerKeys(false); }",
+      "id": "E117"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDetailSectionTabs.ts",
+      "line": 86,
+      "column": 3,
+      "owner": "useSessionDetailSectionTabs",
+      "hook": "useEffect",
+      "dependencies": ["sectionTabStorageKey", "selectedSectionTabValue"],
+      "fingerprint": "5846f3a7adf5",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof window === \"undefined\") { return; } window.localStorage.setItem(sectionTabStorageKey, selectedSectionTabValue); }",
+      "id": "E118"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDetailSectionTabs.ts",
+      "line": 93,
+      "column": 3,
+      "owner": "useSessionDetailSectionTabs",
+      "hook": "useEffect",
+      "dependencies": ["sectionTabsListElement"],
+      "fingerprint": "087d9f29555e",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const tabListElement = sectionTabsListElement; if (!tabListElement) { return; } const evaluateTabLabelVisibility = () => { const nextIconOnly = tabListElement.clientWidth <",
+      "id": "E119"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDetailTimelineLogsActions.ts",
+      "line": 121,
+      "column": 3,
+      "owner": "useSessionDetailTimelineLogsActions",
+      "hook": "useEffect",
+      "dependencies": ["sessions"],
+      "fingerprint": "88096c9c6c5e",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { sessionsRef.current = sessions; }",
+      "id": "E120"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
+      "line": 193,
+      "column": 3,
+      "owner": "useSessionDiffs",
+      "hook": "useLayoutEffect",
+      "dependencies": ["requestScopeKey"],
+      "fingerprint": "1c976834aba4",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { diffScopeGenerationRef.current += 1; diffSnapshotRef.current = null; diffSummaryRevRef.current = null; }",
+      "id": "E121"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
+      "line": 388,
+      "column": 3,
+      "owner": "useSessionDiffs",
+      "hook": "useLayoutEffect",
+      "dependencies": ["loadDiffSummary", "onReconnectRef", "pollDiffSummaryTick", "pollTickRef"],
+      "fingerprint": "ea501012ebea",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onReconnectRef.current = () => { void loadDiffSummary(); }; pollTickRef.current = pollDiffSummaryTick; }",
+      "id": "E122"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
+      "line": 485,
+      "column": 3,
+      "owner": "useSessionDiffs",
+      "hook": "useEffect",
+      "dependencies": ["loadDiffSummary"],
+      "fingerprint": "453daefb092b",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // react-doctor-disable-next-line no-pass-data-to-parent void loadDiffSummary(); }",
+      "id": "E123"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
+      "line": 490,
+      "column": 3,
+      "owner": "useSessionDiffs",
+      "hook": "useEffect",
+      "dependencies": [
+        "branch",
+        "diffMode",
+        "paneId",
+        "setDiffError",
+        "setDiffFiles",
+        "setDiffLoadingFiles",
+        "setDiffOpen",
+        "setDiffSummary",
+        "worktreePath"
+      ],
+      "fingerprint": "0e12d80a85a7",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { setDiffSummary(null); setDiffFiles({}); setDiffOpen({}); setDiffLoadingFiles({}); setDiffError(null); return () => { clearDiffFileCacheForPane(paneId, worktreePath, branch,",
+      "id": "E124"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
+      "line": 511,
+      "column": 3,
+      "owner": "useSessionDiffs",
+      "hook": "useEffect",
+      "dependencies": ["diffOpen"],
+      "fingerprint": "c5cc34a77de6",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { diffOpenRef.current = diffOpen; }",
+      "id": "E125"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDoneAcknowledgement.ts",
+      "line": 22,
+      "column": 3,
+      "owner": "useSessionDoneAcknowledgement",
+      "hook": "useEffect",
+      "dependencies": [
+        "acknowledgeSessionView",
+        "acknowledgedSeq",
+        "completedSeq",
+        "epoch",
+        "paneId"
+      ],
+      "fingerprint": "d71b92eb73c7",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionDoneAcknowledgement.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { let cancelled = false; let inFlight = false; let retryIndex = 0; let retryTimer: ReturnType<typeof setTimeout> | null = null; const clearRetry = () => { if (retryTimer != n",
+      "id": "E126"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-context-reset-effect.ts",
+      "line": 36,
+      "column": 3,
+      "owner": "useSessionFilesContextResetEffect",
+      "hook": "useEffect",
+      "dependencies": [
+        "activeFileContentRequestIdRef",
+        "activeLogResolveRequestIdRef",
+        "activeSearchRequestIdRef",
+        "cancelFileModalCopyTimeout",
+        "contextVersionRef",
+        "dispatch",
+        "fileContentRequestMapRef",
+        "loadTree",
+        "logReferenceLinkableCacheRef",
+        "logReferenceLinkableRequestMapRef",
+        "paneId",
+        "repoRoot",
+        "worktreePath",
+        "searchRequestMapRef",
+        "treePageRequestMapRef",
+        "treePagesRef"
+      ],
+      "fingerprint": "3823565bd805",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { resetSessionFilesRefs({ treePageRequestMapRef, searchRequestMapRef, fileContentRequestMapRef, logReferenceLinkableCacheRef, logReferenceLinkableRequestMapRef, activeSearchR",
+      "id": "E127"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
+      "line": 72,
+      "column": 3,
+      "owner": "useSessionFilesFileModalActions",
+      "hook": "useEffect",
+      "dependencies": ["paneId", "revokePreview", "state.fileModalFile", "state.fileModalOpen"],
+      "fingerprint": "498f072fe365",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!state.fileModalOpen || !state.fileModalFile?.preview?.token) { return; } const file = state.fileModalFile; return () => revokePreview(paneId, file); }",
+      "id": "E128"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
+      "line": 80,
+      "column": 3,
+      "owner": "useSessionFilesFileModalActions",
+      "hook": "useEffect",
+      "dependencies": ["activeFileContentRequestIdRef"],
+      "fingerprint": "2c1e1c2cb570",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => () => { activeFileContentRequestIdRef.current += 1; }",
+      "id": "E129"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-search-effects.ts",
+      "line": 43,
+      "column": 3,
+      "owner": "useSessionFilesSearchEffects",
+      "hook": "useEffect",
+      "dependencies": [
+        "activeSearchRequestIdRef",
+        "debounce",
+        "dispatch",
+        "fetchSearchPage",
+        "repoRoot",
+        "resolveSearchErrorMessage",
+        "searchDebounceMs",
+        "searchQuery"
+      ],
+      "fingerprint": "08bd638307a8",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!repoRoot) { return; } const normalized = searchQuery.trim(); const requestId = createNextSearchRequestId(activeSearchRequestIdRef); resetSearchExpandOverrides(dispatch",
+      "id": "E130"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-search-effects.ts",
+      "line": 78,
+      "column": 3,
+      "owner": "useSessionFilesSearchEffects",
+      "hook": "useEffect",
+      "dependencies": ["dispatch", "searchResult"],
+      "fingerprint": "6828bf310020",
+      "category": "derived-state",
+      "disposition": "render-or-reducer",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!searchResult) { return; } if (searchResult.items.length === 0) { setUiState(dispatch, \"searchActiveIndex\", 0); return; } setUiState(dispatch, \"searchActiveIndex\", (pre",
+      "id": "E131"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts",
+      "line": 113,
+      "column": 3,
+      "owner": "useSessionFiles",
+      "hook": "useEffect",
+      "dependencies": ["state.treePages"],
+      "fingerprint": "9fc3f1878009",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionFiles.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { treePagesRef.current = state.treePages; }",
+      "id": "E132"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
+      "line": 150,
+      "column": 3,
+      "owner": "useSessionRepoNotes",
+      "hook": "useLayoutEffect",
+      "dependencies": ["paneId", "repoRoot"],
+      "fingerprint": "5519bc3b8cfd",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (activeScopeRef.current.paneId === paneId && activeScopeRef.current.repoRoot === repoRoot) { return; } const generation = activeScopeRef.current.generation + 1; activeSc",
+      "id": "E133"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
+      "line": 211,
+      "column": 3,
+      "owner": "useSessionRepoNotes",
+      "hook": "useEffect",
+      "dependencies": ["loadNotes", "paneId", "repoRoot"],
+      "fingerprint": "0cae477dc569",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { pendingInteractiveLoadsRef.current = { generation: activeScopeRef.current.generation, count: 0, }; dispatch({ type: \"reset\" }); // react-doctor-disable-next-line no-event-h",
+      "id": "E134"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
+      "line": 223,
+      "column": 3,
+      "owner": "useSessionRepoNotes",
+      "hook": "useEffect",
+      "dependencies": ["connected", "loadNotes", "repoRoot"],
+      "fingerprint": "bffd15f6ee3e",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (previousConnectedRef.current === false && connected && repoRoot) { void loadNotes({ silent: true }); } previousConnectedRef.current = connected; }",
+      "id": "E135"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
+      "line": 192,
+      "column": 3,
+      "owner": "useSessionScreen",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "paneId",
+        "setImageBase64",
+        "setScreen",
+        "setScreenContentContextKey",
+        "setScreenError",
+        "setScreenFallbackReason",
+        "setScreenLoadingState"
+      ],
+      "fingerprint": "fd0e98efeaf4",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionScreen.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { setScreenLoadingState(initialScreenLoadingState); modeSwitchRef.current = null; screenRef.current = \"\"; imageRef.current = null; cursorRef.current = null; screenLinesRef.cu",
+      "id": "E136"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
+      "line": 215,
+      "column": 3,
+      "owner": "useSessionScreen",
+      "hook": "useEffect",
+      "dependencies": ["connected", "connectionIssue", "setScreenError"],
+      "fingerprint": "ecf30f99492b",
+      "category": "derived-state",
+      "disposition": "render-or-reducer",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionScreen.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (connected) { setScreenError(null); return; } setScreenError(connectionIssue ?? DISCONNECTED_MESSAGE); }",
+      "id": "E137"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
+      "line": 139,
+      "column": 3,
+      "owner": "useSessionTimeline",
+      "hook": "useLayoutEffect",
+      "dependencies": ["paneId"],
+      "fingerprint": "333d45ccc731",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { activePaneIdRef.current = paneId; }",
+      "id": "E138"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
+      "line": 190,
+      "column": 3,
+      "owner": "useSessionTimeline",
+      "hook": "useEffect",
+      "dependencies": ["loadTimeline"],
+      "fingerprint": "a7d1185048b8",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { void loadTimeline(); }",
+      "id": "E139"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
+      "line": 194,
+      "column": 3,
+      "owner": "useSessionTimeline",
+      "hook": "useEffect",
+      "dependencies": ["connected", "loadTimeline"],
+      "fingerprint": "3d31067cccc7",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (previousConnectedRef.current === false && connected) { void loadTimeline({ silent: true }); } previousConnectedRef.current = connected; }",
+      "id": "E140"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
+      "line": 201,
+      "column": 3,
+      "owner": "useSessionTimeline",
+      "hook": "useEffect",
+      "dependencies": ["mobileDefaultCollapsed", "paneId"],
+      "fingerprint": "9c38ec10e314",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { pendingInteractiveLoadsRef.current = 0; dispatch({ type: \"resetPane\", expanded: !mobileDefaultCollapsed }); }",
+      "id": "E141"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
+      "line": 100,
+      "column": 3,
+      "owner": "useSessionVirtualBranch",
+      "hook": "useEffect",
+      "dependencies": ["branchList", "branchNames", "defaultBranch", "paneId", "repoRoot"],
+      "fingerprint": "68821a0ce2a8",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!branchList || !repoRoot) { return; } // react-doctor-disable-next-line no-event-handler const stored = readStoredSelection(paneId); if (!stored) { return; } if (stored",
+      "id": "E142"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
+      "line": 127,
+      "column": 3,
+      "owner": "useSessionVirtualBranch",
+      "hook": "useEffect",
+      "dependencies": ["branchNames", "paneId", "storedVirtualBranch"],
+      "fingerprint": "cfedbaac1736",
+      "category": "derived-state",
+      "disposition": "render-or-reducer",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!storedVirtualBranch) { return; } if (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) { clearStoredSelection(paneId); /* oxlint-disable react/set-state-i",
+      "id": "E143"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
+      "line": 143,
+      "column": 3,
+      "owner": "useSessionVirtualBranch",
+      "hook": "useEffect",
+      "dependencies": ["paneId", "repoRoot", "virtualBranch"],
+      "fingerprint": "2df50698dd4c",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!virtualBranch || !repoRoot) { return; } writeStoredSelection(paneId, { repoRoot, branch: virtualBranch, updatedAt: new Date().toISOString(), }); }",
+      "id": "E144"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
+      "line": 173,
+      "column": 3,
+      "owner": "useSessionVirtualWorktree",
+      "hook": "useEffect",
+      "dependencies": ["paneId"],
+      "fingerprint": "c429405b754d",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { latestRequestIdRef.current += 1; hasLoadedWorktreeListRef.current = false; dispatch({ type: \"resetPane\", paneId }); }",
+      "id": "E145"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
+      "line": 220,
+      "column": 3,
+      "owner": "useSessionVirtualWorktree",
+      "hook": "useEffect",
+      "dependencies": ["fetchWorktrees", "session?.repoRoot"],
+      "fingerprint": "d290c3f56a20",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { void fetchWorktrees({ resetEntries: true }); }",
+      "id": "E146"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
+      "line": 233,
+      "column": 3,
+      "owner": "useSessionVirtualWorktree",
+      "hook": "useEffect",
+      "dependencies": [
+        "actualWorktreePath",
+        "entries.length",
+        "normalizedRepoRoot",
+        "paneId",
+        "pathSet",
+        "worktreeList"
+      ],
+      "fingerprint": "473714e313cc",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!worktreeList || !normalizedRepoRoot) { return; } // react-doctor-disable-next-line no-event-handler const stored = readStoredSelection(paneId); if (!stored) { return; ",
+      "id": "E147"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
+      "line": 264,
+      "column": 3,
+      "owner": "useSessionVirtualWorktree",
+      "hook": "useEffect",
+      "dependencies": ["actualWorktreePath", "paneId", "pathSet", "virtualWorktreePath"],
+      "fingerprint": "9b36df59b8d7",
+      "category": "derived-state",
+      "disposition": "render-or-reducer",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!virtualWorktreePath) { return; } if (virtualWorktreePath === actualWorktreePath) { clearStoredSelection(paneId); dispatch({ type: \"setVirtualWorktreePath\", path: null ",
+      "id": "E148"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
+      "line": 284,
+      "column": 3,
+      "owner": "useSessionVirtualWorktree",
+      "hook": "useEffect",
+      "dependencies": ["normalizedRepoRoot", "paneId", "selectedVirtualEntry"],
+      "fingerprint": "3d9096146aab",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [
+          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
+        ],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!selectedVirtualEntry || !normalizedRepoRoot) { return; } writeStoredSelection(paneId, { repoRoot: normalizedRepoRoot, worktreePath: selectedVirtualEntry.path, branch: ",
+      "id": "E149"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/SessionDetailView.tsx",
+      "line": 136,
+      "column": 3,
+      "owner": "useMissingSessionGrace",
+      "hook": "useEffect",
+      "dependencies": ["missingSessionGraceTimer", "shouldDelayMissingState"],
+      "fingerprint": "a1f87630f780",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/SessionDetailView.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!shouldDelayMissingState) { return; } missingSessionGraceTimer.set(() => { setGraceState((current) => (current.shouldDelay ? { ...current, elapsed: true } : current)); ",
+      "id": "E150"
+    },
+    {
+      "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
+      "line": 59,
+      "column": 3,
+      "owner": "SessionListSearchInput",
+      "hook": "useEffect",
+      "dependencies": ["initialSearchQuery"],
+      "fingerprint": "7b3e63f988b9",
+      "category": "ref-mirror",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "no",
+        "callbackIdentityIsNotSubscriptionContract": "no",
+        "effectEventIsNotExported": "no"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { publishedSearchQueryRef.current = initialSearchQuery; }",
+      "id": "E151"
+    },
+    {
+      "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
+      "line": 74,
+      "column": 3,
+      "owner": "SessionListSearchInput",
+      "hook": "useEffect",
+      "dependencies": ["draftSearchQuery", "initialSearchQuery", "isFocused", "publishSearchQuery"],
+      "fingerprint": "27775dac2407",
+      "category": "dom-layout",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!isFocused) { return; } if (suppressNextDebounceRef.current) { suppressNextDebounceRef.current = false; return; } if (draftSearchQuery === initialSearchQuery) { return;",
+      "id": "E152"
+    },
+    {
+      "file": "apps/web/src/pages/SessionList/SessionListView.tsx",
+      "line": 655,
+      "column": 3,
+      "owner": "SessionListView",
+      "hook": "useEffect",
+      "dependencies": ["reorderScrollFrameRef"],
+      "fingerprint": "1a27dd1f1351",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionList/SessionListView.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { return () => { if (reorderScrollFrameRef.current != null) { window.cancelAnimationFrame(reorderScrollFrameRef.current); reorderScrollFrameRef.current = null; } }; }",
+      "id": "E153"
+    },
+    {
+      "file": "apps/web/src/pages/SessionList/useSessionListVM.ts",
+      "line": 70,
+      "column": 3,
+      "owner": "useSessionListVM",
+      "hook": "useEffect",
+      "dependencies": ["filter"],
+      "fingerprint": "856c5c339c73",
+      "category": "event-migration",
+      "disposition": "event-handler",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionList/useSessionListVM.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { storeSessionListFilter(filter); }",
+      "id": "E154"
+    },
+    {
+      "file": "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts",
+      "line": 82,
+      "column": 3,
+      "owner": "useRepositoryActivityData",
+      "hook": "useEffect",
+      "dependencies": ["load", "range"],
+      "fingerprint": "aa6b86e68fd4",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/UsageDashboard/useRepositoryActivityData.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
+      "id": "E155"
+    },
+    {
+      "file": "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts",
+      "line": 153,
+      "column": 3,
+      "owner": "useUsageDashboardData",
+      "hook": "useEffect",
+      "dependencies": ["loadDashboard"],
+      "fingerprint": "3bb65cbc9349",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // oxlint-disable-next-line react/set-state-in-effect -- This effect owns initial loading and request guards. void loadDashboard(); }",
+      "id": "E156"
+    },
+    {
+      "file": "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts",
+      "line": 76,
+      "column": 3,
+      "owner": "useUsageTimelineData",
+      "hook": "useEffect",
+      "dependencies": ["loadTimeline", "timelineRange"],
+      "fingerprint": "5e0909d43bf2",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
+      "id": "E157"
+    },
+    {
+      "file": "apps/web/src/state/session-context.tsx",
+      "line": 373,
+      "column": 3,
+      "owner": "SessionRuntime",
+      "hook": "useEffect",
+      "dependencies": [
+        "setCapabilities",
+        "setFileNavigatorConfig",
+        "setLaunchConfig",
+        "setWorkspaceTabsDisplayMode",
+        "token"
+      ],
+      "fingerprint": "2001f977f776",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/session-context.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { setFileNavigatorConfig({ autoExpandMatchLimit: 100 }); setWorkspaceTabsDisplayMode(\"all\"); setLaunchConfig(defaultLaunchConfig); setCapabilities({ screenImage: false, launc",
+      "id": "E158"
+    },
+    {
+      "file": "apps/web/src/state/session-context.tsx",
+      "line": 386,
+      "column": 3,
+      "owner": "SessionRuntime",
+      "hook": "useEffect",
+      "dependencies": ["hasToken", "sessions"],
+      "fingerprint": "e55164567bbb",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/session-context.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!hasToken) { notificationTitleFingerprintRef.current = \"\"; return; } const nextEntries = toNotificationSessionTitleEntries(sessions); const nextFingerprint = buildNotif",
+      "id": "E159"
+    },
+    {
+      "file": "apps/web/src/state/theme-context.tsx",
+      "line": 44,
+      "column": 3,
+      "owner": "ThemeProvider",
+      "hook": "useLayoutEffect",
+      "dependencies": ["preference"],
+      "fingerprint": "872c0dc15c2c",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (typeof window === \"undefined\") return; const applyTheme = (nextTheme: Theme) => { document.documentElement.dataset.theme = nextTheme; setResolvedTheme(nextTheme); }; co",
+      "id": "E160"
+    },
+    {
+      "file": "apps/web/src/state/use-session-polling.ts",
+      "line": 22,
+      "column": 3,
+      "owner": "useSessionPolling",
+      "hook": "useEffect",
+      "dependencies": ["enabled", "refreshSessions"],
+      "fingerprint": "cc037ef9dc2a",
+      "category": "request-bridge",
+      "disposition": "query",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": [],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled) { return; } void refreshSessions(); }",
+      "id": "E161"
+    },
+    {
+      "file": "apps/web/src/state/use-session-token.ts",
+      "line": 104,
+      "column": 3,
+      "owner": "useSessionToken",
+      "hook": "useEffect",
+      "dependencies": ["initialAccess"],
+      "fingerprint": "f7e5f0a4b8c3",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-session-token.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!initialAccess.hasAccessDirective) { return; } if (initialAccess.token) { localStorage.setItem(TOKEN_KEY, initialAccess.token); } else { localStorage.removeItem(TOKEN_K",
+      "id": "E162"
+    },
+    {
+      "file": "apps/web/src/state/use-sessions-stream.ts",
+      "line": 44,
+      "column": 3,
+      "owner": "useSessionsStream",
+      "hook": "useEffect",
+      "dependencies": ["onSnapshot"],
+      "fingerprint": "8ebfa7493710",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onSnapshotRef.current = onSnapshot; }",
+      "id": "E163"
+    },
+    {
+      "file": "apps/web/src/state/use-sessions-stream.ts",
+      "line": 47,
+      "column": 3,
+      "owner": "useSessionsStream",
+      "hook": "useEffect",
+      "dependencies": ["onUpsert"],
+      "fingerprint": "10c0d27a3cf0",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onUpsertRef.current = onUpsert; }",
+      "id": "E164"
+    },
+    {
+      "file": "apps/web/src/state/use-sessions-stream.ts",
+      "line": 50,
+      "column": 3,
+      "owner": "useSessionsStream",
+      "hook": "useEffect",
+      "dependencies": ["onRemove"],
+      "fingerprint": "5787ca9d430f",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onRemoveRef.current = onRemove; }",
+      "id": "E165"
+    },
+    {
+      "file": "apps/web/src/state/use-sessions-stream.ts",
+      "line": 53,
+      "column": 3,
+      "owner": "useSessionsStream",
+      "hook": "useEffect",
+      "dependencies": ["onAuthError"],
+      "fingerprint": "971c94985112",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onAuthErrorRef.current = onAuthError; }",
+      "id": "E166"
+    },
+    {
+      "file": "apps/web/src/state/use-sessions-stream.ts",
+      "line": 56,
+      "column": 3,
+      "owner": "useSessionsStream",
+      "hook": "useEffect",
+      "dependencies": ["onTransportChange"],
+      "fingerprint": "4ffa8e6d6624",
+      "category": "ref-mirror",
+      "disposition": "delete-or-useEffectEvent",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "yes",
+        "callbackIdentityIsNotSubscriptionContract": "yes",
+        "effectEventIsNotExported": "yes"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { onTransportChangeRef.current = onTransportChange; }",
+      "id": "E167"
+    },
+    {
+      "file": "apps/web/src/state/use-sessions-stream.ts",
+      "line": 68,
+      "column": 3,
+      "owner": "useSessionsStream",
+      "hook": "useEffect",
+      "dependencies": ["enabled", "token", "apiBaseUrl"],
+      "fingerprint": "50e36f40993d",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled || !token) { transportRef.current = \"polling\"; onTransportChangeRef.current(\"polling\"); return; } const normalized = apiBaseUrl?.trim(); const basePath = norma",
+      "id": "E168"
+    },
+    {
+      "file": "apps/web/src/state/use-sessions-stream.ts",
+      "line": 145,
+      "column": 3,
+      "owner": "useSessionsStream",
+      "hook": "useEffect",
+      "dependencies": ["enabled"],
+      "fingerprint": "ca473e96971b",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { if (!enabled || typeof window === \"undefined\") return; const handleResume = () => { // If SSE is already open, nothing to do. if (transportRef.current === \"sse\") return; re",
+      "id": "E169"
+    }
+  ]
+}

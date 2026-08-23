@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "measurementCommit": "cc348914db614375038664ccff03888db50b7030",
+  "measuredAt": "2026-08-23",
+  "environment": {
+    "node": "v24.18.0",
+    "pnpm": "10.28.2",
+    "platform": "darwin-arm64",
+    "vite": "8.1.4",
+    "reactTransform": "@vitejs/plugin-react-swc 4.3.1"
+  },
+  "reproduce": "pnpm --silent run react:performance -- --runs 5",
+  "build": {
+    "command": "pnpm build",
+    "samplesMs": [1492, 1300, 1308, 1308, 1256],
+    "medianMs": 1308,
+    "productionJs": {
+      "root": "apps/web/dist",
+      "fileCount": 303,
+      "gzipLevel": 6,
+      "gzipImplementation": "node:zlib gzipSync",
+      "samplesBytes": [2236793, 2236793, 2236793, 2236793, 2236793],
+      "medianBytes": 2236793
+    }
+  },
+  "vite": {
+    "command": "pnpm --filter @vde-monitor/web exec vite --host 127.0.0.1 --port <ephemeral> --strictPort",
+    "coldStart": {
+      "definition": "spawn to first HTTP 200 response",
+      "samplesMs": [248, 252, 242, 249, 252],
+      "medianMs": 249
+    },
+    "hmr": {
+      "target": "/src/pages/SessionDetail/SessionDetailView.tsx",
+      "definition": "mtime update to Vite websocket update message",
+      "samplesMs": [21, 12, 21, 20, 19],
+      "medianMs": 20,
+      "messageType": "update"
+    }
+  }
+}
