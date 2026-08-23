@@ -4,7 +4,7 @@ import type {
   SessionStateTimelineRange,
   SessionStateTimelineScope,
 } from "@vde-monitor/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDeferred } from "../test-helpers";
 import { useSessionTimeline } from "./useSessionTimeline";
@@ -34,6 +34,12 @@ const buildTimelineRequest = (
 });
 
 describe("useSessionTimeline", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+  });
+
   it("loads timeline on mount", async () => {
     const requestStateTimeline = vi.fn().mockResolvedValue(buildTimeline("1h"));
 
@@ -294,5 +300,135 @@ describe("useSessionTimeline", () => {
     await waitFor(() => {
       expect(result.current.timelineLoading).toBe(false);
     });
+  });
+
+  it("requests once on mount and once when visibility resumes", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const requestStateTimeline = vi.fn().mockResolvedValue(buildTimeline("1h"));
+
+    renderHook(() =>
+      useSessionTimeline({
+        paneId: "pane-1",
+        connected: true,
+        requestStateTimeline,
+        hasRepoTimeline: true,
+        mobileDefaultCollapsed: false,
+      }),
+    );
+
+    expect(requestStateTimeline).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(requestStateTimeline).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops interval requests after going offline", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const requestStateTimeline = vi.fn().mockResolvedValue(buildTimeline("1h"));
+
+    renderHook(() =>
+      useSessionTimeline({
+        paneId: "pane-1",
+        connected: true,
+        requestStateTimeline,
+        hasRepoTimeline: true,
+        mobileDefaultCollapsed: false,
+      }),
+    );
+
+    expect(requestStateTimeline).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(requestStateTimeline).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(requestStateTimeline).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears the previous timeline without showing loading while revisiting a pane", async () => {
+    const paneBLoad = createDeferred<SessionStateTimeline>();
+    const paneARevisitLoad = createDeferred<SessionStateTimeline>();
+    const requestStateTimeline = vi
+      .fn()
+      .mockResolvedValueOnce({ ...buildTimeline("1h"), paneId: "pane-a" })
+      .mockImplementationOnce(() => paneBLoad.promise)
+      .mockImplementationOnce(() => paneARevisitLoad.promise);
+
+    const { result, rerender } = renderHook(
+      ({ paneId }) =>
+        useSessionTimeline({
+          paneId,
+          connected: true,
+          requestStateTimeline,
+          hasRepoTimeline: true,
+          mobileDefaultCollapsed: false,
+        }),
+      { initialProps: { paneId: "pane-a" } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.timeline?.paneId).toBe("pane-a");
+    });
+
+    rerender({ paneId: "pane-b" });
+    await waitFor(() => {
+      expect(requestStateTimeline).toHaveBeenCalledTimes(2);
+    });
+    act(() => {
+      paneBLoad.resolve({ ...buildTimeline("1h"), paneId: "pane-b" });
+    });
+    await waitFor(() => {
+      expect(result.current.timeline?.paneId).toBe("pane-b");
+    });
+
+    rerender({ paneId: "pane-a" });
+    await waitFor(() => {
+      expect(requestStateTimeline).toHaveBeenCalledTimes(3);
+    });
+
+    expect(result.current.timeline).toBeNull();
+    expect(result.current.timelineLoading).toBe(false);
+
+    act(() => {
+      paneARevisitLoad.resolve({ ...buildTimeline("1h"), paneId: "pane-a" });
+    });
+    await waitFor(() => {
+      expect(result.current.timeline?.paneId).toBe("pane-a");
+    });
+  });
+
+  it("stores a load request rejection as the timeline error", async () => {
+    const requestStateTimeline = vi.fn().mockRejectedValue(new Error("timeline unavailable"));
+
+    const { result } = renderHook(() =>
+      useSessionTimeline({
+        paneId: "pane-1",
+        connected: true,
+        requestStateTimeline,
+        hasRepoTimeline: true,
+        mobileDefaultCollapsed: false,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.timelineError).toBe("timeline unavailable");
+    });
+    expect(result.current.timeline).toBeNull();
+    expect(result.current.timelineLoading).toBe(false);
   });
 });

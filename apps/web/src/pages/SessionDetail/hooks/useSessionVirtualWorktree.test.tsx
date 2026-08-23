@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { WorktreeList } from "@vde-monitor/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createSessionDetail } from "../test-helpers";
 import { useSessionVirtualWorktree } from "./useSessionVirtualWorktree";
@@ -54,6 +54,102 @@ const createDeferred = <T,>(): Deferred<T> => {
 };
 
 describe("useSessionVirtualWorktree", () => {
+  afterEach(() => {
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+  });
+
+  it("ignores an older response after revisiting a pane and loads the latest response", async () => {
+    const repoRootA = "/tmp/repo-a";
+    const repoRootB = "/tmp/repo-b";
+    const firstADeferred = createDeferred<WorktreeList>();
+    const revisitADeferred = createDeferred<WorktreeList>();
+    let paneACalls = 0;
+    const requestWorktrees = vi.fn((paneId: string) => {
+      if (paneId === "pane-a") {
+        paneACalls += 1;
+        return paneACalls === 1 ? firstADeferred.promise : revisitADeferred.promise;
+      }
+      return Promise.resolve(createWorktreeList(repoRootB));
+    });
+    const { result, rerender } = renderHook(
+      ({ paneId, repoRoot }: { paneId: string; repoRoot: string }) =>
+        useSessionVirtualWorktree({
+          paneId,
+          session: createSessionDetail({
+            paneId,
+            repoRoot,
+            worktreePath: `${repoRoot}/main`,
+            branch: "main",
+          }),
+          requestWorktrees,
+        }),
+      { initialProps: { paneId: "pane-a", repoRoot: repoRootA } },
+    );
+
+    await waitFor(() => {
+      expect(requestWorktrees).toHaveBeenCalledTimes(1);
+      expect(result.current.loading).toBe(true);
+    });
+    rerender({ paneId: "pane-b", repoRoot: repoRootB });
+    await waitFor(() => {
+      expect(result.current.repoRoot).toBe(repoRootB);
+    });
+    rerender({ paneId: "pane-a", repoRoot: repoRootA });
+
+    await waitFor(() => {
+      expect(requestWorktrees).toHaveBeenCalledTimes(3);
+      expect(result.current.loading).toBe(true);
+    });
+    expect(result.current.entries).toEqual([]);
+    expect(result.current.repoRoot).toBeNull();
+
+    await act(async () => {
+      firstADeferred.resolve(createWorktreeList("/tmp/stale-a"));
+      await firstADeferred.promise;
+    });
+    expect(result.current.entries).toEqual([]);
+    expect(result.current.repoRoot).toBeNull();
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      revisitADeferred.resolve(createWorktreeList(repoRootA));
+      await revisitADeferred.promise;
+    });
+    await waitFor(() => {
+      expect(result.current.repoRoot).toBe(repoRootA);
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it("requests on offline mount and manual refresh", async () => {
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    const repoRoot = "/tmp/repo-offline";
+    const paneId = "pane-offline";
+    const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
+    const { result } = renderHook(() =>
+      useSessionVirtualWorktree({
+        paneId,
+        session: createSessionDetail({
+          paneId,
+          repoRoot,
+          worktreePath: `${repoRoot}/main`,
+          branch: "main",
+        }),
+        requestWorktrees,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(requestWorktrees).toHaveBeenCalledTimes(1);
+      expect(result.current.loading).toBe(false);
+    });
+    await act(async () => {
+      await result.current.refreshWorktrees();
+    });
+
+    expect(requestWorktrees).toHaveBeenCalledTimes(2);
+  });
+
   it("hydrates virtual selection from pane-scoped storage on initial load", async () => {
     const repoRoot = "/tmp/repo-a";
     const paneId = "pane-1";

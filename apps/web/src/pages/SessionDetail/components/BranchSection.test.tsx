@@ -132,6 +132,18 @@ describe("BranchSection", () => {
     expect(screen.getByText("3m ago")).toBeTruthy();
   });
 
+  it("shows a branch load error instead of stale entries", () => {
+    render(
+      <BranchSection
+        state={buildState({ branchesError: "Branches unavailable" })}
+        actions={buildActions()}
+      />,
+    );
+
+    expect(screen.getByText("Branches unavailable")).toBeTruthy();
+    expect(screen.queryByText("feature/plain-branch")).toBeNull();
+  });
+
   it("hides diff metrics on the default branch entry only", () => {
     const state = buildState();
     const actions = buildActions();

@@ -6,6 +6,8 @@ import { useNotesPolling } from "./useNotesPolling";
 describe("useNotesPolling", () => {
   afterEach(() => {
     vi.useRealTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
   });
 
   it("refreshes silently on mount and every 10 seconds while a repo root is set", async () => {
@@ -83,5 +85,24 @@ describe("useNotesPolling", () => {
       vi.advanceTimersByTime(5_000);
     });
     expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps requesting on its interval while hidden and offline", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    const onRefresh = vi.fn();
+
+    renderHook(() => useNotesPolling({ repoRoot: "/repo", onRefresh }));
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(20_000);
+    });
+
+    expect(onRefresh).toHaveBeenCalledTimes(3);
+    expect(onRefresh).toHaveBeenNthCalledWith(1, { silent: true });
+    expect(onRefresh).toHaveBeenNthCalledWith(2, { silent: true });
+    expect(onRefresh).toHaveBeenNthCalledWith(3, { silent: true });
   });
 });

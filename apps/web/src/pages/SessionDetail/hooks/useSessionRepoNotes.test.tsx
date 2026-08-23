@@ -308,4 +308,83 @@ describe("useSessionRepoNotes", () => {
     expect(result.current.deletingNoteId).toBeNull();
     expect(result.current.notesError).toBeNull();
   });
+
+  it("clears notes and shows loading while revisiting a repository", async () => {
+    const repoBLoad = createDeferred<RepoNote[]>();
+    const repoARevisitLoad = createDeferred<RepoNote[]>();
+    const requestRepoNotes = vi
+      .fn()
+      .mockResolvedValueOnce([buildNote({ id: "repo-a-note", repoRoot: "/repo-a" })])
+      .mockImplementationOnce(() => repoBLoad.promise)
+      .mockImplementationOnce(() => repoARevisitLoad.promise);
+    const { createRepoNote, updateRepoNote, deleteRepoNote } = createDefaultActions();
+
+    const { result, rerender } = renderHook(
+      ({ repoRoot }) =>
+        useSessionRepoNotes({
+          paneId: "pane-1",
+          repoRoot,
+          connected: true,
+          requestRepoNotes,
+          createRepoNote,
+          updateRepoNote,
+          deleteRepoNote,
+        }),
+      { initialProps: { repoRoot: "/repo-a" } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.notes.map((note) => note.id)).toEqual(["repo-a-note"]);
+    });
+
+    rerender({ repoRoot: "/repo-b" });
+    await waitFor(() => {
+      expect(requestRepoNotes).toHaveBeenCalledTimes(2);
+    });
+    act(() => {
+      repoBLoad.resolve([buildNote({ id: "repo-b-note", repoRoot: "/repo-b" })]);
+    });
+    await waitFor(() => {
+      expect(result.current.notes.map((note) => note.id)).toEqual(["repo-b-note"]);
+    });
+
+    rerender({ repoRoot: "/repo-a" });
+    await waitFor(() => {
+      expect(requestRepoNotes).toHaveBeenCalledTimes(3);
+    });
+
+    expect(result.current.notes).toEqual([]);
+    expect(result.current.notesLoading).toBe(true);
+
+    act(() => {
+      repoARevisitLoad.resolve([buildNote({ id: "repo-a-note", repoRoot: "/repo-a" })]);
+    });
+    await waitFor(() => {
+      expect(result.current.notes.map((note) => note.id)).toEqual(["repo-a-note"]);
+      expect(result.current.notesLoading).toBe(false);
+    });
+  });
+
+  it("stores a list request rejection as the notes error", async () => {
+    const requestRepoNotes = vi.fn().mockRejectedValue(new Error("notes unavailable"));
+    const { createRepoNote, updateRepoNote, deleteRepoNote } = createDefaultActions();
+
+    const { result } = renderHook(() =>
+      useSessionRepoNotes({
+        paneId: "pane-1",
+        repoRoot: "/repo",
+        connected: true,
+        requestRepoNotes,
+        createRepoNote,
+        updateRepoNote,
+        deleteRepoNote,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.notesError).toBe("notes unavailable");
+    });
+    expect(result.current.notes).toEqual([]);
+    expect(result.current.notesLoading).toBe(false);
+  });
 });

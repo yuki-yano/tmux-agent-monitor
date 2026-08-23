@@ -70,6 +70,19 @@ const buildProps = (overrides?: { timelineExpanded?: boolean; isMobile?: boolean
 });
 
 describe("StateTimelineSection", () => {
+  it("shows a timeline load error", () => {
+    const props = buildProps();
+
+    render(
+      <StateTimelineSection
+        {...props}
+        state={{ ...props.state, timelineError: "Timeline unavailable" }}
+      />,
+    );
+
+    expect(screen.getByText("Timeline unavailable")).toBeTruthy();
+  });
+
   it("shows only one history row when collapsed", () => {
     const props = buildProps({ timelineExpanded: false, isMobile: false });
     render(<StateTimelineSection {...props} />);

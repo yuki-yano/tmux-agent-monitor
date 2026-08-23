@@ -134,6 +134,17 @@ describe("NotesSection", () => {
     expect(screen.queryByText("No notes yet")).toBeNull();
   });
 
+  it("shows a notes list error", () => {
+    render(
+      <NotesSection
+        state={buildState({ notes: [], notesError: "Notes unavailable" })}
+        actions={buildActions()}
+      />,
+    );
+
+    expect(screen.getByText("Notes unavailable")).toBeTruthy();
+  });
+
   it("asks for confirmation dialog before deleting a note", async () => {
     const onDelete = vi.fn(async () => true);
     render(<NotesSection state={buildState()} actions={buildActions({ onDelete })} />);

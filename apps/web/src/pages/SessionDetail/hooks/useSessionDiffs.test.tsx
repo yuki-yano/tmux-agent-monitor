@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   diffErrorAtom,
@@ -16,6 +16,13 @@ import { createDeferred, createDiffFile, createDiffSummary } from "../test-helpe
 import { useSessionDiffs } from "./useSessionDiffs";
 
 describe("useSessionDiffs", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+  });
+
   const createWrapper = () => {
     const store = createStore();
     store.set(diffSummaryAtom, null);
@@ -189,6 +196,151 @@ describe("useSessionDiffs", () => {
     expect(requestDiffSummary).toHaveBeenLastCalledWith("pane-1", {
       force: true,
       mode: "total",
+    });
+  });
+
+  it("resumes summary polling after visibility returns without an immediate request", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
+    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
+
+    const wrapper = createWrapper();
+    renderHook(
+      () =>
+        useSessionDiffs({
+          paneId: "pane-1",
+          connected: true,
+          requestDiffSummary,
+          requestDiffFile,
+        }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS);
+    });
+    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops summary polling while offline", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
+    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
+
+    const wrapper = createWrapper();
+    renderHook(
+      () =>
+        useSessionDiffs({
+          paneId: "pane-1",
+          connected: true,
+          requestDiffSummary,
+          requestDiffFile,
+        }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS);
+    });
+    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
+
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS * 2);
+    });
+
+    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it("discards the previous summary and reloads when revisiting a pane", async () => {
+    const paneAInitial = createDiffSummary({ rev: "rev-a-initial" });
+    const paneARevisit = createDiffSummary({ rev: "rev-a-revisit" });
+    const paneBSummary = createDiffSummary({ rev: "rev-b" });
+    const paneARevisitDeferred = createDeferred<typeof paneARevisit>();
+    let paneACalls = 0;
+    const requestDiffSummary = vi.fn((paneId: string) => {
+      if (paneId === "pane-a") {
+        paneACalls += 1;
+        return paneACalls === 1 ? Promise.resolve(paneAInitial) : paneARevisitDeferred.promise;
+      }
+      return Promise.resolve(paneBSummary);
+    });
+    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
+
+    const wrapper = createWrapper();
+    const { result, rerender } = renderHook(
+      ({ paneId }) =>
+        useSessionDiffs({
+          paneId,
+          connected: true,
+          requestDiffSummary,
+          requestDiffFile,
+        }),
+      { wrapper, initialProps: { paneId: "pane-a" } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.diffSummary?.rev).toBe("rev-a-initial");
+    });
+    rerender({ paneId: "pane-b" });
+    await waitFor(() => {
+      expect(result.current.diffSummary?.rev).toBe("rev-b");
+    });
+
+    rerender({ paneId: "pane-a" });
+
+    expect(result.current.diffSummary).toBeNull();
+    expect(result.current.diffLoading).toBe(true);
+    expect(requestDiffSummary).toHaveBeenCalledTimes(3);
+
+    await act(async () => {
+      paneARevisitDeferred.resolve(paneARevisit);
+      await paneARevisitDeferred.promise;
+    });
+    await waitFor(() => {
+      expect(result.current.diffSummary?.rev).toBe("rev-a-revisit");
+      expect(result.current.diffLoading).toBe(false);
+    });
+  });
+
+  it("exposes a rejected summary request through diffError", async () => {
+    const requestDiffSummary = vi.fn().mockRejectedValue(new Error("summary unavailable"));
+    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
+
+    const wrapper = createWrapper();
+    const { result } = renderHook(
+      () =>
+        useSessionDiffs({
+          paneId: "pane-1",
+          connected: true,
+          requestDiffSummary,
+          requestDiffFile,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.diffError).toBe("summary unavailable");
+      expect(result.current.diffLoading).toBe(false);
     });
   });
 
