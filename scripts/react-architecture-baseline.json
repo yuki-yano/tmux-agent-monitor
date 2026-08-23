@@ -7,29 +7,29 @@
   },
   "metrics": {
     "productionFiles": 335,
-    "useEffect": 134,
-    "useLayoutEffect": 35,
-    "effectTotal": 169,
-    "sessionDetailEffects": 84,
+    "useEffect": 109,
+    "useLayoutEffect": 33,
+    "effectTotal": 142,
+    "sessionDetailEffects": 75,
     "useMemo": 164,
-    "useCallback": 396,
+    "useCallback": 391,
     "memo": 43,
     "sessionDetailAndLibUseMemo": 75,
     "sessionDetailAndLibUseCallback": 192,
     "visibilityPollingCallerFiles": 10,
     "sessionDetailOwnershipLines": 1882,
-    "reactOxlintDisable": 11,
-    "reactDoctorDisable": 53,
+    "reactOxlintDisable": 10,
+    "reactDoctorDisable": 52,
     "exhaustiveDepsSuppression": 0,
     "useNoMemoDirective": 0
   },
   "classificationSummary": {
-    "derived-state": 7,
+    "derived-state": 4,
     "dom-layout": 23,
-    "event-migration": 12,
+    "event-migration": 5,
     "external-sync": 42,
-    "identity-reset": 30,
-    "ref-mirror": 32,
+    "identity-reset": 29,
+    "ref-mirror": 16,
     "request-bridge": 23
   },
   "inventory": [
@@ -239,29 +239,6 @@
       "column": 3,
       "owner": "PullToRefreshContainer",
       "hook": "useEffect",
-      "dependencies": ["onRefresh"],
-      "fingerprint": "b3d236225390",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/features/pull-to-refresh/PullToRefreshContainer.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onRefreshRef.current = onRefresh; }",
-      "id": "E009"
-    },
-    {
-      "file": "apps/web/src/features/pull-to-refresh/PullToRefreshContainer.tsx",
-      "line": 44,
-      "column": 3,
-      "owner": "PullToRefreshContainer",
-      "hook": "useEffect",
       "dependencies": [],
       "fingerprint": "e9d7ab33ffca",
       "category": "external-sync",
@@ -277,16 +254,16 @@
         "behaviorVerified": false
       },
       "preview": "() => { document.documentElement.classList.add(\"pull-to-refresh-enabled\"); return () => { document.documentElement.classList.remove(\"pull-to-refresh-enabled\"); }; }",
-      "id": "E010"
+      "id": "E009"
     },
     {
       "file": "apps/web/src/features/pull-to-refresh/PullToRefreshContainer.tsx",
-      "line": 51,
+      "line": 47,
       "column": 3,
       "owner": "PullToRefreshContainer",
       "hook": "useEffect",
       "dependencies": ["config"],
-      "fingerprint": "bf260e95d855",
+      "fingerprint": "ad79360742fb",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -300,7 +277,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const content = contentRef.current; if (content == null) { return; } const tracker = createPullGestureTracker(config); let pulling = false; const setTranslate = (px: number",
-      "id": "E011"
+      "id": "E010"
     },
     {
       "file": "apps/web/src/features/pwa-tabs/components/PwaWorkspaceTabs.tsx",
@@ -323,7 +300,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const currentGroupKeys = orderedTabGroups.map((group) => group.key); const focusedGroupKey = focusedGroupControlKeyRef.current; const focusedGroupWasRemoved = focusedGroupK",
-      "id": "E012"
+      "id": "E011"
     },
     {
       "file": "apps/web/src/features/pwa-tabs/components/PwaWorkspaceTabs.tsx",
@@ -346,7 +323,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof document === \"undefined\") { return; } if (!enabled) { document.documentElement.style.removeProperty(PWA_TABS_OFFSET_CSS_VAR); return; } const element = rootRef.c",
-      "id": "E013"
+      "id": "E012"
     },
     {
       "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
@@ -377,11 +354,11 @@
         "behaviorVerified": false
       },
       "preview": "() => { const missingSince = missingPaneSinceRef.current; if (!enabled || !connected) { missingSince.clear(); return; } const missingPaneIds = tabs .filter( (tab): tab is Workspace",
-      "id": "E014"
+      "id": "E013"
     },
     {
       "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
-      "line": 334,
+      "line": 338,
       "column": 3,
       "owner": "WorkspaceTabsProvider",
       "hook": "useEffect",
@@ -400,11 +377,11 @@
         "behaviorVerified": false
       },
       "preview": "() => { const update = () => bumpDisplayEnvironmentVersion(); return subscribeToDisplayEnvironment(update); }",
-      "id": "E015"
+      "id": "E014"
     },
     {
       "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
-      "line": 339,
+      "line": 343,
       "column": 3,
       "owner": "WorkspaceTabsProvider",
       "hook": "useEffect",
@@ -423,30 +400,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled) { return; } applyTabsTransition((previous) => withoutNavigation(syncWorkspaceTabsWithPathname(previous, pathname, Date.now())), ); }",
-      "id": "E016"
-    },
-    {
-      "file": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx",
-      "line": 352,
-      "column": 3,
-      "owner": "WorkspaceTabsProvider",
-      "hook": "useEffect",
-      "dependencies": ["enabled", "tabsState"],
-      "fingerprint": "17ed7cb77c75",
-      "category": "event-migration",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/features/pwa-tabs/context/workspace-tabs-context.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!enabled) { return; } window.localStorage.setItem(WORKSPACE_TABS_STORAGE_KEY, serializeWorkspaceTabsState(tabsState)); }",
-      "id": "E017"
+      "id": "E015"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
@@ -471,7 +425,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { committedVirtualLinesRef.current = { scrollContextKey, state: virtualLinesState }; }",
-      "id": "E018"
+      "id": "E016"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
@@ -496,7 +450,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { onAtBottomChangeRef.current = onAtBottomChange; onRangeChangedRef.current = onRangeChanged; }",
-      "id": "E019"
+      "id": "E017"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
@@ -528,7 +482,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { publishVirtualState(virtualizer); const previousEdges = previousEdgesRef.current; const nextEdges = { scrollContextKey, count: virtualLines.length, firstId: virtualLines[0]",
-      "id": "E020"
+      "id": "E018"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx",
@@ -553,7 +507,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const list = listRef.current; const scroller = scrollerRef.current; if (!list || !scroller) { return; } const contextChanged = widthContextKeyRef.current !== scrollContextK",
-      "id": "E021"
+      "id": "E019"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/LogModal.tsx",
@@ -576,7 +530,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!open || !paneId) { activeContextRef.current = null; pendingSnapshotRef.current = null; pendingSnapRef.current = null; isUserScrollingRef.current = false; // oxlint-dis",
-      "id": "E022"
+      "id": "E020"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/LogModal.tsx",
@@ -599,7 +553,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if ( !open || displayLines.length === 0 || !matchesContext(pendingSnapRef.current, paneId, snapVersion) ) { return; } scrollToBottom(\"auto\"); pendingSnapRef.current = null;",
-      "id": "E023"
+      "id": "E021"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/PaneTextComposer.tsx",
@@ -624,7 +578,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!visible || window.innerWidth >= 768) { return; } let frame = 0; const revealCompletion = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { con",
-      "id": "E024"
+      "id": "E022"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/PaneTextComposer.tsx",
@@ -649,7 +603,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (textInputRef.current) { syncPromptHeight(textInputRef.current); } }",
-      "id": "E025"
+      "id": "E023"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/PaneTextComposer.tsx",
@@ -674,7 +628,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (draftStorageKey == null || !textInputRef.current) { return; } textInputRef.current.value = readStoredPromptDraft(draftStorageKey); syncPromptHeight(textInputRef.current",
-      "id": "E026"
+      "id": "E024"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/prompt-completion/usePromptCompletion.ts",
@@ -705,7 +659,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const requestId = requestIdRef.current + 1; requestIdRef.current = requestId; if ( !enabled || !paneId || !requestPromptCompletions || !requestRepoFileSearch || !tokenTrigg",
-      "id": "E027"
+      "id": "E025"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx",
@@ -728,7 +682,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (panelPhase !== \"closing\") { return; } // Animations never fire inside display:none subtrees (e.g. the md:hidden // wrapper on desktop), so force-unmount if animationend",
-      "id": "E028"
+      "id": "E026"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx",
@@ -751,7 +705,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!open) { return; } const handlePointerDown = (event: PointerEvent) => { const target = event.target; if (!(target instanceof Element)) { return; } if (target.closest(\"[",
-      "id": "E029"
+      "id": "E027"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx",
@@ -774,7 +728,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const target = scrollRef.current; if (!target) return; const handleWheel = (event: WheelEvent) => { const { scrollHeight, clientHeight, scrollTop } = target; if (scrollHeig",
-      "id": "E030"
+      "id": "E028"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useMultiPaneScreenFeed.ts",
@@ -799,7 +753,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!fetchOnMount || !canPoll() || normalizedPaneIds.length === 0) { return; } void pollNow(); }",
-      "id": "E031"
+      "id": "E029"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useMultiPaneScreenFeed.ts",
@@ -824,7 +778,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const activePaneIds = new Set(normalizedRetainedPaneIds); const stalePaneIds = findStalePaneIds( { ...cache, ...loading, ...error, }, activePaneIds, ); stalePaneIds.forEach",
-      "id": "E032"
+      "id": "E030"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/usePaneSendText.ts",
@@ -847,7 +801,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (activePaneRef.current.paneId !== paneId) { activePaneRef.current = { paneId, generation: activePaneRef.current.generation + 1, }; sendTextInFlightRef.current = false; l",
-      "id": "E033"
+      "id": "E031"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts",
@@ -870,7 +824,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { allowDangerRef.current = allowDangerKeys; }",
-      "id": "E034"
+      "id": "E032"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts",
@@ -893,7 +847,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // react-doctor-disable-next-line no-event-handler if (!rawMode) { rawQueueRef.current = []; if (rawFlushTimerRef.current != null) { window.clearTimeout(rawFlushTimerRef.cu",
-      "id": "E035"
+      "id": "E033"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts",
@@ -916,7 +870,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // Drop any pending flush on unmount so queued input is not sent to the // pane after the user has navigated away. return () => { if (rawFlushTimerRef.current != null) { wi",
-      "id": "E036"
+      "id": "E034"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useScreenCache.ts",
@@ -939,32 +893,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { cacheRef.current = cache; }",
-      "id": "E037"
-    },
-    {
-      "file": "apps/web/src/features/shared-session-ui/hooks/useSessionListPins.ts",
-      "line": 18,
-      "column": 3,
-      "owner": "useSessionListPins",
-      "hook": "useEffect",
-      "dependencies": ["pins"],
-      "fingerprint": "84cb69ef4f82",
-      "category": "event-migration",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [
-          "apps/web/src/features/shared-session-ui/hooks/useSessionListPins.test.tsx"
-        ],
-        "behaviorVerified": false
-      },
-      "preview": "() => { storeSessionListPins(pins); }",
-      "id": "E038"
+      "id": "E035"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useSessionLogs.ts",
@@ -987,7 +916,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!logModalOpen || !selectedPaneId) { return; } void fetchLog(selectedPaneId); }",
-      "id": "E039"
+      "id": "E036"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useSessionLogs.ts",
@@ -1010,7 +939,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!quickPanelOpen && !logModalOpen) { return; } const handleKeyDown = (event: KeyboardEvent) => { if (event.key !== \"Escape\") return; if (logModalOpen) { closeLogModal();",
-      "id": "E040"
+      "id": "E037"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreview.ts",
@@ -1033,7 +962,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const activePaneIds = new Set(sessionIndex.keys()); const stalePaneIds = findStalePaneIds(previewCache, activePaneIds); stalePaneIds.forEach((paneId) => { clearPreviewCache",
-      "id": "E041"
+      "id": "E038"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewHoverController.ts",
@@ -1056,7 +985,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!hoveredPaneId) { pendingPreviewPaneRef.current = null; setPreviewFrame(null); return; } // The hook publishes geometry to the owning overlay after the hovered DOM node",
-      "id": "E042"
+      "id": "E039"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewHoverController.ts",
@@ -1079,7 +1008,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!hoveredPaneId) { return; } const handleUpdate = () => schedulePreviewPosition(hoveredPaneId); window.addEventListener(\"resize\", handleUpdate); window.addEventListener(",
-      "id": "E043"
+      "id": "E040"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewHoverController.ts",
@@ -1102,30 +1031,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { return () => { clearHoverTimer(); if (typeof window !== \"undefined\" && rafIdRef.current != null) { window.cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }",
-      "id": "E044"
-    },
-    {
-      "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache.ts",
-      "line": 104,
-      "column": 3,
-      "owner": "useSidebarPreviewTimelineCache",
-      "hook": "useEffect",
-      "dependencies": ["timelineCache"],
-      "fingerprint": "bd41704daafc",
-      "category": "ref-mirror",
-      "disposition": "maintain",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "no",
-        "callbackIdentityIsNotSubscriptionContract": "no",
-        "effectEventIsNotExported": "no"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { timelineCacheRef.current = timelineCache; }",
-      "id": "E045"
+      "id": "E041"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache.ts",
@@ -1134,7 +1040,7 @@
       "owner": "useSidebarPreviewTimelineCache",
       "hook": "useEffect",
       "dependencies": ["sessionIndex"],
-      "fingerprint": "5acc826090a5",
+      "fingerprint": "568e7ec3f4e5",
       "category": "event-migration",
       "disposition": "event-handler",
       "confidence": "high",
@@ -1147,49 +1053,17 @@
         "adjacentFiles": [],
         "behaviorVerified": false
       },
-      "preview": "() => { const activePaneIds = new Set(sessionIndex.keys()); dispatch({ type: \"prune\", activePaneIds }); }",
-      "id": "E046"
+      "preview": "() => { const activePaneIds = new Set(sessionIndex.keys()); timelineCacheRef.current = prunePaneRecord(timelineCacheRef.current, activePaneIds); dispatch({ type: \"prune\", activePan",
+      "id": "E042"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/hooks/useUserScrollState.ts",
-      "line": 32,
+      "line": 34,
       "column": 3,
       "owner": "useUserScrollState",
       "hook": "useLayoutEffect",
-      "dependencies": ["onUserScrollStateChange"],
-      "fingerprint": "8f264547ef6c",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": [
-          "apps/web/src/features/shared-session-ui/hooks/useUserScrollState.test.tsx"
-        ],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onUserScrollStateChangeRef.current = onUserScrollStateChange; }",
-      "id": "E047"
-    },
-    {
-      "file": "apps/web/src/features/shared-session-ui/hooks/useUserScrollState.ts",
-      "line": 74,
-      "column": 3,
-      "owner": "useUserScrollState",
-      "hook": "useLayoutEffect",
-      "dependencies": [
-        "enabled",
-        "handleKeyDown",
-        "handleScroll",
-        "scrollerRef",
-        "setUserScrolling",
-        "startUserScroll"
-      ],
-      "fingerprint": "a2c96aeb1781",
+      "dependencies": ["enabled", "scrollerRef"],
+      "fingerprint": "c5f545312a42",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -1204,8 +1078,8 @@
         ],
         "behaviorVerified": false
       },
-      "preview": "() => { if (!enabled) { setUserScrolling(false); return undefined; } const scroller = scrollerRef.current; if (!scroller) { return undefined; } scroller.addEventListener(\"scroll\", ",
-      "id": "E048"
+      "preview": "() => { const setUserScrolling = (value: boolean) => { if (isUserScrollingRef.current === value) { return; } isUserScrollingRef.current = value; notifyUserScrollStateChange(value);",
+      "id": "E043"
     },
     {
       "file": "apps/web/src/lib/use-debounced-callback.ts",
@@ -1228,7 +1102,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { callbackRef.current = callback; }",
-      "id": "E049"
+      "id": "E044"
     },
     {
       "file": "apps/web/src/lib/use-now-ms.ts",
@@ -1251,85 +1125,16 @@
         "behaviorVerified": false
       },
       "preview": "() => { const timer = window.setInterval(() => setNowMs(Date.now()), intervalMs); return () => window.clearInterval(timer); }",
-      "id": "E050"
+      "id": "E045"
     },
     {
       "file": "apps/web/src/lib/use-pointer-drag.ts",
-      "line": 16,
-      "column": 3,
-      "owner": "usePointerDrag",
-      "hook": "useEffect",
-      "dependencies": ["onMove"],
-      "fingerprint": "94e980d9852f",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onMoveRef.current = onMove; }",
-      "id": "E051"
-    },
-    {
-      "file": "apps/web/src/lib/use-pointer-drag.ts",
-      "line": 20,
-      "column": 3,
-      "owner": "usePointerDrag",
-      "hook": "useEffect",
-      "dependencies": ["onEnd"],
-      "fingerprint": "eefa17a2a829",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onEndRef.current = onEnd; }",
-      "id": "E052"
-    },
-    {
-      "file": "apps/web/src/lib/use-pointer-drag.ts",
-      "line": 24,
-      "column": 3,
-      "owner": "usePointerDrag",
-      "hook": "useEffect",
-      "dependencies": ["cursor"],
-      "fingerprint": "ba687ecc2fad",
-      "category": "ref-mirror",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "no",
-        "callbackIdentityIsNotSubscriptionContract": "no",
-        "effectEventIsNotExported": "no"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { cursorRef.current = cursor; }",
-      "id": "E053"
-    },
-    {
-      "file": "apps/web/src/lib/use-pointer-drag.ts",
-      "line": 28,
+      "line": 17,
       "column": 3,
       "owner": "usePointerDrag",
       "hook": "useEffect",
       "dependencies": [],
-      "fingerprint": "2a2f791d488d",
+      "fingerprint": "f1722b5df3dd",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -1342,54 +1147,8 @@
         "adjacentFiles": ["apps/web/src/lib/use-pointer-drag.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { if (typeof window === \"undefined\") return; const handlePointerMove = (event: PointerEvent) => { if (!dragContextRef.current) return; onMoveRef.current(event, dragContextRef",
-      "id": "E054"
-    },
-    {
-      "file": "apps/web/src/lib/use-sidebar-width.ts",
-      "line": 21,
-      "column": 3,
-      "owner": "useSidebarWidth",
-      "hook": "useEffect",
-      "dependencies": ["sidebarWidth"],
-      "fingerprint": "eca987873fee",
-      "category": "event-migration",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-sidebar-width.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (typeof window === \"undefined\") return; window.localStorage.setItem(STORAGE_KEY, String(sidebarWidth)); }",
-      "id": "E055"
-    },
-    {
-      "file": "apps/web/src/lib/use-split-ratio.ts",
-      "line": 29,
-      "column": 3,
-      "owner": "useSplitRatio",
-      "hook": "useEffect",
-      "dependencies": ["ratio", "storageKey"],
-      "fingerprint": "4e08c92e0047",
-      "category": "event-migration",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-split-ratio.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (typeof window === \"undefined\") return; window.localStorage.setItem(storageKey, String(ratio)); }",
-      "id": "E056"
+      "preview": "() => { if (typeof window === \"undefined\") return; const handlePointerMove = (event: PointerEvent) => { if (!dragContextRef.current) return; handleMove(event, dragContextRef.curren",
+      "id": "E046"
     },
     {
       "file": "apps/web/src/lib/use-timeout.ts",
@@ -1412,85 +1171,16 @@
         "behaviorVerified": false
       },
       "preview": "() => cancel",
-      "id": "E057"
+      "id": "E047"
     },
     {
       "file": "apps/web/src/lib/use-visibility-polling.ts",
-      "line": 22,
-      "column": 3,
-      "owner": "useVisibilityPolling",
-      "hook": "useEffect",
-      "dependencies": ["onTick"],
-      "fingerprint": "9c3c8fbff45e",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-visibility-polling.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onTickRef.current = onTick; }",
-      "id": "E058"
-    },
-    {
-      "file": "apps/web/src/lib/use-visibility-polling.ts",
-      "line": 26,
-      "column": 3,
-      "owner": "useVisibilityPolling",
-      "hook": "useEffect",
-      "dependencies": ["onResume"],
-      "fingerprint": "c0d526106d8a",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-visibility-polling.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onResumeRef.current = onResume; }",
-      "id": "E059"
-    },
-    {
-      "file": "apps/web/src/lib/use-visibility-polling.ts",
-      "line": 30,
-      "column": 3,
-      "owner": "useVisibilityPolling",
-      "hook": "useEffect",
-      "dependencies": ["shouldPoll"],
-      "fingerprint": "51694123f2e4",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/lib/use-visibility-polling.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { shouldPollRef.current = shouldPoll; }",
-      "id": "E060"
-    },
-    {
-      "file": "apps/web/src/lib/use-visibility-polling.ts",
-      "line": 34,
+      "line": 25,
       "column": 3,
       "owner": "useVisibilityPolling",
       "hook": "useEffect",
       "dependencies": ["enabled", "intervalMs", "shouldPoll"],
-      "fingerprint": "2f04fbcab143",
+      "fingerprint": "82dd2daeac48",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -1504,7 +1194,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || typeof window === \"undefined\") { return; } let intervalId: number | null = null; const canPoll = () => { if (document.hidden) return false; if (navigator.on",
-      "id": "E061"
+      "id": "E048"
     },
     {
       "file": "apps/web/src/pages/ChatGrid/components/ChatGridCandidateModal.tsx",
@@ -1527,7 +1217,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (searchQuery === debouncedSearchQuery) { return; } const debounceMs = searchQuery.length === 0 ? 0 : CHAT_GRID_CANDIDATE_SEARCH_DEBOUNCE_MS; const timeoutId = window.set",
-      "id": "E062"
+      "id": "E049"
     },
     {
       "file": "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx",
@@ -1550,7 +1240,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const snapshot = { paneId, lines: renderedScreenLines }; if (activePaneIdRef.current !== paneId) { activePaneIdRef.current = paneId; pendingSnapshotRef.current = null; isUs",
-      "id": "E063"
+      "id": "E050"
     },
     {
       "file": "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx",
@@ -1573,7 +1263,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (displayLines.length === 0 || snappedPaneIdRef.current === paneId) { return; } viewportRef.current?.scrollToEnd({ behavior: \"auto\" }); snappedPaneIdRef.current = paneId;",
-      "id": "E064"
+      "id": "E051"
     },
     {
       "file": "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx",
@@ -1596,7 +1286,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!titleEditing) { return; } const input = titleInputRef.current; if (!input) { return; } input.focus(); input.select(); }",
-      "id": "E065"
+      "id": "E052"
     },
     {
       "file": "apps/web/src/pages/ChatGrid/useChatGridVM.ts",
@@ -1624,7 +1314,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (paneIdsFromSearch.length > 0 && !effectiveHasResolvedGridSelection) { return; } const availablePaneParam = serializeChatGridPaneParam(selectedPaneIds); const currentPan",
-      "id": "E066"
+      "id": "E053"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/DiffPatch.tsx",
@@ -1651,7 +1341,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!onResolveFileReferenceCandidates || referenceCandidateTokens.length === 0) { return; } const requestId = activeResolveCandidatesRequestIdRef.current + 1; activeResolve",
-      "id": "E067"
+      "id": "E054"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/DiffSection.tsx",
@@ -1674,7 +1364,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { syncExpandedDiffs(diffSummary, setExpandedDiffs); }",
-      "id": "E068"
+      "id": "E055"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/FileContentModal.tsx",
@@ -1697,7 +1387,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!open) { return; } const previousBodyOverflow = document.body.style.overflow; const previousBodyPaddingRight = document.body.style.paddingRight; const previousBodyOvers",
-      "id": "E069"
+      "id": "E056"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/FileContentModal.tsx",
@@ -1731,7 +1421,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!open || markdownViewMode !== \"diff\") { return; } if (!diffAvailable) { onMarkdownViewModeChange(\"code\"); return; } if (!activePath || diffPatch != null || diffBinary |",
-      "id": "E070"
+      "id": "E057"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/LogFileCandidateModal.tsx",
@@ -1756,7 +1446,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!open) { return; } const rafId = window.requestAnimationFrame(() => { searchInputRef.current?.focus(); }); return () => { window.cancelAnimationFrame(rafId); }; }",
-      "id": "E071"
+      "id": "E058"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/SessionHeader.tsx",
@@ -1779,7 +1469,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const input = titleInputRef.current; if (!input) { return; } input.focus(); input.select(); }",
-      "id": "E072"
+      "id": "E059"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
@@ -1802,7 +1492,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { horizontalScrollRef.current = 0; verticalScrollRef.current = 0; const scroller = scrollerRef.current; if (scroller) { scroller.scrollLeft = 0; scroller.scrollTop = 0; } // ",
-      "id": "E073"
+      "id": "E060"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
@@ -1825,7 +1515,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { let alive = true; void highlightCode({ code: normalizedCode, lang: language, theme, }) .then((result) => { if (!alive) { return; } setHtml(result.html); }) .catch(() => { i",
-      "id": "E074"
+      "id": "E061"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
@@ -1848,7 +1538,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const scroller = scrollerRef.current; if (!scroller) { return; } if (horizontalScrollRef.current > 0) { scroller.scrollLeft = horizontalScrollRef.current; } if (verticalScr",
-      "id": "E075"
+      "id": "E062"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx",
@@ -1871,7 +1561,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (highlightLine == null || highlightLine <= 0) { return; } const scroller = scrollerRef.current; if (!scroller) { return; } const target = scroller.querySelector<HTMLElem",
-      "id": "E076"
+      "id": "E063"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
@@ -1896,7 +1586,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (lines.length === 0) { return; } onRangeChanged({ startIndex: 0, endIndex: lines.length - 1 }); }",
-      "id": "E077"
+      "id": "E064"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
@@ -1921,7 +1611,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!shouldFollowOutput) { return; } const node = scrollerRef.current; if (!node) { return; } // Writing scrollTop cancels in-flight scroll momentum (including // horizonta",
-      "id": "E078"
+      "id": "E065"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
@@ -1946,7 +1636,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const node = scrollerRef.current; if (!node) { return; } // react-doctor-disable-next-line no-pass-data-to-parent, no-prop-callback-in-effect onAtBottomChange(resolveIsAtBo",
-      "id": "E079"
+      "id": "E066"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
@@ -1971,7 +1661,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (previousScrollContextKeyRef.current === scrollContextKey) { return; } previousScrollContextKeyRef.current = scrollContextKey; resetUserScroll(); }",
-      "id": "E080"
+      "id": "E067"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx",
@@ -1996,7 +1686,7 @@
         "behaviorVerified": false
       },
       "preview": "() => () => resetUserScroll()",
-      "id": "E081"
+      "id": "E068"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoFocus.ts",
@@ -2019,7 +1709,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!editingNoteId) { return; } const textarea = editingTextareaRef.current; if (!textarea) { return; } const rafId = window.requestAnimationFrame(() => { const end = texta",
-      "id": "E082"
+      "id": "E069"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts",
@@ -2042,7 +1732,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { editingNoteIdRef.current = editingNoteId; }",
-      "id": "E083"
+      "id": "E070"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts",
@@ -2065,7 +1755,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { editingBodyRef.current = editingBody; }",
-      "id": "E084"
+      "id": "E071"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts",
@@ -2088,7 +1778,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!editingNoteId) { debouncedSave.cancel(); return; } if (editingBody === lastSavedBodyRef.current) { debouncedSave.cancel(); return; } debouncedSave.run(editingNoteId, e",
-      "id": "E085"
+      "id": "E072"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useNotesPolling.ts",
@@ -2111,7 +1801,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!repoRoot) { return; } onRefresh({ silent: true }); const intervalId = window.setInterval(() => { onRefresh({ silent: true }); }, intervalMs); return () => { window.cle",
-      "id": "E086"
+      "id": "E073"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/usePromptContextLayout.ts",
@@ -2140,7 +1830,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { evaluateBranchLabelPlacement(); if (typeof window === \"undefined\") { return; } const rowNode = promptGitContextRowRef.current; const leftNode = promptGitContextLeftRef.curr",
-      "id": "E087"
+      "id": "E074"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScopeGuard.ts",
@@ -2163,7 +1853,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { activeScopeRef.current = scopeKey; }",
-      "id": "E088"
+      "id": "E075"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScopeGuard.ts",
@@ -2186,7 +1876,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (prevConnectedRef.current === false && connected) { onReconnectRef.current(); } prevConnectedRef.current = connected; }",
-      "id": "E089"
+      "id": "E076"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
@@ -2209,7 +1899,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { currentContextRef.current = { key: screenContextKey, paneId, mode }; }",
-      "id": "E090"
+      "id": "E077"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
@@ -2232,7 +1922,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const prev = prevTransportRef.current; prevTransportRef.current = transport; if (prev === \"sse\" && transport !== \"sse\") { cursorRef.current = null; } }",
-      "id": "E091"
+      "id": "E078"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
@@ -2255,7 +1945,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // Text screens arrive through the stream. REST is reserved for image mode // and for polling fallback after the stream fails to connect. if (transport !== \"polling\") { ret",
-      "id": "E092"
+      "id": "E079"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts",
@@ -2278,7 +1968,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // react-doctor-disable-next-line no-event-handler, no-pass-data-to-parent if (!connected) { // react-doctor-disable-next-line no-pass-data-to-parent resetDisconnectedState",
-      "id": "E093"
+      "id": "E080"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenMode.ts",
@@ -2301,7 +1991,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { modeLoadedRef.current = modeLoaded; }",
-      "id": "E094"
+      "id": "E081"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenMode.ts",
@@ -2324,7 +2014,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { modeLoadedRef.current = initialModeLoaded; setMode(\"text\"); setModeLoaded(initialModeLoaded); }",
-      "id": "E095"
+      "id": "E082"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelLogReferenceLinking.ts",
@@ -2357,7 +2047,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const resolveContext: ResolveContext = { paneId, sourceRepoRoot, agent, effectiveWrapMode, referenceCandidateTokens, resolver: onResolveFileReferenceCandidates, }; const pr",
-      "id": "E096"
+      "id": "E083"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts",
@@ -2382,7 +2072,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled) { return; } if (!isOpen) { lastClosedAtRef.current = Date.now(); return; } const elapsedSinceCloseMs = Date.now() - lastClosedAtRef.current; if (elapsedSinceC",
-      "id": "E097"
+      "id": "E084"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts",
@@ -2407,7 +2097,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof document === \"undefined\") { return; } const { body } = document; if (isOpen) { body.dataset[WORKTREE_SELECTOR_OPEN_BODY_DATASET_KEY] = \"true\"; } else { delete bo",
-      "id": "E098"
+      "id": "E085"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts",
@@ -2432,7 +2122,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!isOpen || typeof document === \"undefined\") { return; } const handlePointerDown = (event: PointerEvent) => { const containerNode = containerRef.current; if (!containerN",
-      "id": "E099"
+      "id": "E086"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenPollingPauseReason.ts",
@@ -2457,39 +2147,16 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof window === \"undefined\") { return; } const targetDocument = typeof document !== \"undefined\" ? document : null; const updatePauseReason = () => bumpBrowserStateVer",
-      "id": "E100"
+      "id": "E087"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
-      "line": 79,
+      "line": 131,
       "column": 3,
       "owner": "useScreenScroll",
       "hook": "useLayoutEffect",
-      "dependencies": ["onClearPending"],
-      "fingerprint": "12e7f61cf8e9",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenScroll.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onClearPendingRef.current = onClearPending; }",
-      "id": "E101"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
-      "line": 134,
-      "column": 3,
-      "owner": "useScreenScroll",
-      "hook": "useLayoutEffect",
-      "dependencies": ["isUserScrollingRef", "mode", "onClearPending", "paneId"],
-      "fingerprint": "5e7bbe17d087",
+      "dependencies": ["isUserScrollingRef", "mode", "paneId"],
+      "fingerprint": "3657ff2e2eda",
       "category": "identity-reset",
       "disposition": "key-reset",
       "confidence": "high",
@@ -2503,11 +2170,11 @@
         "behaviorVerified": false
       },
       "preview": "() => { const isInitialContext = !didInitializeContextRef.current; const modeChanged = prevModeRef.current !== mode; const paneChanged = prevPaneIdRef.current !== paneId; if (!isIn",
-      "id": "E102"
+      "id": "E088"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
-      "line": 151,
+      "line": 148,
       "column": 3,
       "owner": "useScreenScroll",
       "hook": "useLayoutEffect",
@@ -2526,16 +2193,16 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!snapToBottomRef.current || mode !== \"text\" || screenLinesLength === 0) { return; } const didSnap = scrollToBottom(\"auto\"); if (didSnap) { snapToBottomRef.current = fal",
-      "id": "E103"
+      "id": "E089"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts",
-      "line": 161,
+      "line": 158,
       "column": 3,
       "owner": "useScreenScroll",
       "hook": "useEffect",
       "dependencies": ["isUserScrollingRef"],
-      "fingerprint": "3b4c5582ebea",
+      "fingerprint": "da35a6d38388",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -2548,35 +2215,12 @@
         "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenScroll.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { return () => { isUserScrollingRef.current = false; onClearPendingRef.current(); }; }",
-      "id": "E104"
+      "preview": "() => { return () => { isUserScrollingRef.current = false; clearPending(); }; }",
+      "id": "E090"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts",
       "line": 43,
-      "column": 3,
-      "owner": "useScreenStream",
-      "hook": "useEffect",
-      "dependencies": ["onScreenEvent"],
-      "fingerprint": "9a2f25ff64af",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useScreenStream.test.ts"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onScreenEventRef.current = onScreenEvent; }",
-      "id": "E105"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts",
-      "line": 47,
       "column": 3,
       "owner": "useScreenStream",
       "hook": "useEffect",
@@ -2595,16 +2239,16 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (streamKey == null || screenEventKey === streamKey) { return; } const fallbackTimer = setTimeout(() => { setFallbackKey(streamKey); }, fallbackDelayMs); return () => cle",
-      "id": "E106"
+      "id": "E091"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts",
-      "line": 57,
+      "line": 53,
       "column": 3,
       "owner": "useScreenStream",
       "hook": "useEffect",
       "dependencies": ["apiBasePath", "paneId", "streamKey", "token"],
-      "fingerprint": "e50d2dcbba6b",
+      "fingerprint": "16abc7861c1c",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -2618,7 +2262,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (streamKey == null || !token) { return; } const url = `${apiBasePath}/streams/sessions/${encodeURIComponent(paneId)}/screen`; const sub = createSseSubscription({ url, ge",
-      "id": "E107"
+      "id": "E092"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useScreenWrapMode.ts",
@@ -2641,7 +2285,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (loadedRef.current) { return; } loadedRef.current = true; const stored = readStoredWrapMode(); if (stored && stored !== wrapMode) { setWrapModeAtom(stored); } }",
-      "id": "E108"
+      "id": "E093"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts",
@@ -2664,7 +2308,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (activePaneRef.current.paneId === paneId) { return; } activePaneRef.current = { paneId, generation: activePaneRef.current.generation + 1, }; }",
-      "id": "E109"
+      "id": "E094"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts",
@@ -2687,7 +2331,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { latestRequestIdRef.current += 1; hasLoadedRef.current = false; dispatch({ type: \"resetPane\", paneId }); }",
-      "id": "E110"
+      "id": "E095"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts",
@@ -2710,7 +2354,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { void fetchBranches({ resetEntries: true }); }",
-      "id": "E111"
+      "id": "E096"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
@@ -2733,7 +2377,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { onReconnectRef.current = () => { void loadCommitLog({ force: true }); }; pollTickRef.current = pollCommitLogTick; }",
-      "id": "E112"
+      "id": "E097"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
@@ -2756,7 +2400,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { commitLogRef.current = commitLog; }",
-      "id": "E113"
+      "id": "E098"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
@@ -2779,7 +2423,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { dispatch({ type: \"reset\" }); commitSnapshotRef.current = null; commitLogRef.current = null; if (commitCopyTimeoutRef.current) { window.clearTimeout(commitCopyTimeoutRef.cur",
-      "id": "E114"
+      "id": "E099"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
@@ -2802,7 +2446,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // react-doctor-disable-next-line no-pass-data-to-parent void loadCommitLog({ force: true }); }",
-      "id": "E115"
+      "id": "E100"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts",
@@ -2825,7 +2469,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { return () => { if (commitCopyTimeoutRef.current) { window.clearTimeout(commitCopyTimeoutRef.current); } }; }",
-      "id": "E116"
+      "id": "E101"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionControls.ts",
@@ -2855,34 +2499,11 @@
         "behaviorVerified": false
       },
       "preview": "() => { setAutoEnter(true); setShiftHeld(false); setCtrlHeld(false); setRawMode(false); setAllowDangerKeys(false); }",
-      "id": "E117"
+      "id": "E102"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDetailSectionTabs.ts",
-      "line": 86,
-      "column": 3,
-      "owner": "useSessionDetailSectionTabs",
-      "hook": "useEffect",
-      "dependencies": ["sectionTabStorageKey", "selectedSectionTabValue"],
-      "fingerprint": "5846f3a7adf5",
-      "category": "event-migration",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (typeof window === \"undefined\") { return; } window.localStorage.setItem(sectionTabStorageKey, selectedSectionTabValue); }",
-      "id": "E118"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDetailSectionTabs.ts",
-      "line": 93,
+      "line": 90,
       "column": 3,
       "owner": "useSessionDetailSectionTabs",
       "hook": "useEffect",
@@ -2901,7 +2522,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { const tabListElement = sectionTabsListElement; if (!tabListElement) { return; } const evaluateTabLabelVisibility = () => { const nextIconOnly = tabListElement.clientWidth <",
-      "id": "E119"
+      "id": "E103"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDetailTimelineLogsActions.ts",
@@ -2924,7 +2545,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { sessionsRef.current = sessions; }",
-      "id": "E120"
+      "id": "E104"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
@@ -2947,7 +2568,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { diffScopeGenerationRef.current += 1; diffSnapshotRef.current = null; diffSummaryRevRef.current = null; }",
-      "id": "E121"
+      "id": "E105"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
@@ -2970,7 +2591,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { onReconnectRef.current = () => { void loadDiffSummary(); }; pollTickRef.current = pollDiffSummaryTick; }",
-      "id": "E122"
+      "id": "E106"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
@@ -2993,7 +2614,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // react-doctor-disable-next-line no-pass-data-to-parent void loadDiffSummary(); }",
-      "id": "E123"
+      "id": "E107"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
@@ -3026,7 +2647,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setDiffSummary(null); setDiffFiles({}); setDiffOpen({}); setDiffLoadingFiles({}); setDiffError(null); return () => { clearDiffFileCacheForPane(paneId, worktreePath, branch,",
-      "id": "E124"
+      "id": "E108"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
@@ -3049,7 +2670,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { diffOpenRef.current = diffOpen; }",
-      "id": "E125"
+      "id": "E109"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDoneAcknowledgement.ts",
@@ -3080,7 +2701,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { let cancelled = false; let inFlight = false; let retryIndex = 0; let retryTimer: ReturnType<typeof setTimeout> | null = null; const clearRetry = () => { if (retryTimer != n",
-      "id": "E126"
+      "id": "E110"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-context-reset-effect.ts",
@@ -3120,7 +2741,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { resetSessionFilesRefs({ treePageRequestMapRef, searchRequestMapRef, fileContentRequestMapRef, logReferenceLinkableCacheRef, logReferenceLinkableRequestMapRef, activeSearchR",
-      "id": "E127"
+      "id": "E111"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
@@ -3143,7 +2764,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!state.fileModalOpen || !state.fileModalFile?.preview?.token) { return; } const file = state.fileModalFile; return () => revokePreview(paneId, file); }",
-      "id": "E128"
+      "id": "E112"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
@@ -3166,11 +2787,11 @@
         "behaviorVerified": false
       },
       "preview": "() => () => { activeFileContentRequestIdRef.current += 1; }",
-      "id": "E129"
+      "id": "E113"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-search-effects.ts",
-      "line": 43,
+      "line": 42,
       "column": 3,
       "owner": "useSessionFilesSearchEffects",
       "hook": "useEffect",
@@ -3198,30 +2819,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!repoRoot) { return; } const normalized = searchQuery.trim(); const requestId = createNextSearchRequestId(activeSearchRequestIdRef); resetSearchExpandOverrides(dispatch",
-      "id": "E130"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-search-effects.ts",
-      "line": 78,
-      "column": 3,
-      "owner": "useSessionFilesSearchEffects",
-      "hook": "useEffect",
-      "dependencies": ["dispatch", "searchResult"],
-      "fingerprint": "6828bf310020",
-      "category": "derived-state",
-      "disposition": "render-or-reducer",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!searchResult) { return; } if (searchResult.items.length === 0) { setUiState(dispatch, \"searchActiveIndex\", 0); return; } setUiState(dispatch, \"searchActiveIndex\", (pre",
-      "id": "E131"
+      "id": "E114"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts",
@@ -3244,7 +2842,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { treePagesRef.current = state.treePages; }",
-      "id": "E132"
+      "id": "E115"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
@@ -3267,7 +2865,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (activeScopeRef.current.paneId === paneId && activeScopeRef.current.repoRoot === repoRoot) { return; } const generation = activeScopeRef.current.generation + 1; activeSc",
-      "id": "E133"
+      "id": "E116"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
@@ -3290,7 +2888,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { pendingInteractiveLoadsRef.current = { generation: activeScopeRef.current.generation, count: 0, }; dispatch({ type: \"reset\" }); // react-doctor-disable-next-line no-event-h",
-      "id": "E134"
+      "id": "E117"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
@@ -3313,7 +2911,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (previousConnectedRef.current === false && connected && repoRoot) { void loadNotes({ silent: true }); } previousConnectedRef.current = connected; }",
-      "id": "E135"
+      "id": "E118"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
@@ -3344,7 +2942,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setScreenLoadingState(initialScreenLoadingState); modeSwitchRef.current = null; screenRef.current = \"\"; imageRef.current = null; cursorRef.current = null; screenLinesRef.cu",
-      "id": "E136"
+      "id": "E119"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
@@ -3367,7 +2965,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (connected) { setScreenError(null); return; } setScreenError(connectionIssue ?? DISCONNECTED_MESSAGE); }",
-      "id": "E137"
+      "id": "E120"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
@@ -3390,7 +2988,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { activePaneIdRef.current = paneId; }",
-      "id": "E138"
+      "id": "E121"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
@@ -3413,7 +3011,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { void loadTimeline(); }",
-      "id": "E139"
+      "id": "E122"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
@@ -3436,7 +3034,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (previousConnectedRef.current === false && connected) { void loadTimeline({ silent: true }); } previousConnectedRef.current = connected; }",
-      "id": "E140"
+      "id": "E123"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
@@ -3459,16 +3057,23 @@
         "behaviorVerified": false
       },
       "preview": "() => { pendingInteractiveLoadsRef.current = 0; dispatch({ type: \"resetPane\", expanded: !mobileDefaultCollapsed }); }",
-      "id": "E141"
+      "id": "E124"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
-      "line": 100,
+      "line": 101,
       "column": 3,
       "owner": "useSessionVirtualBranch",
       "hook": "useEffect",
-      "dependencies": ["branchList", "branchNames", "defaultBranch", "paneId", "repoRoot"],
-      "fingerprint": "68821a0ce2a8",
+      "dependencies": [
+        "branchList",
+        "branchNames",
+        "defaultBranch",
+        "paneId",
+        "repoRoot",
+        "storedVirtualBranch"
+      ],
+      "fingerprint": "9492d1082083",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -3483,92 +3088,17 @@
         ],
         "behaviorVerified": false
       },
-      "preview": "() => { if (!branchList || !repoRoot) { return; } // react-doctor-disable-next-line no-event-handler const stored = readStoredSelection(paneId); if (!stored) { return; } if (stored",
-      "id": "E142"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
-      "line": 127,
-      "column": 3,
-      "owner": "useSessionVirtualBranch",
-      "hook": "useEffect",
-      "dependencies": ["branchNames", "paneId", "storedVirtualBranch"],
-      "fingerprint": "cfedbaac1736",
-      "category": "derived-state",
-      "disposition": "render-or-reducer",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [
-          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.test.tsx"
-        ],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!storedVirtualBranch) { return; } if (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) { clearStoredSelection(paneId); /* oxlint-disable react/set-state-i",
-      "id": "E143"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
-      "line": 143,
-      "column": 3,
-      "owner": "useSessionVirtualBranch",
-      "hook": "useEffect",
-      "dependencies": ["paneId", "repoRoot", "virtualBranch"],
-      "fingerprint": "2df50698dd4c",
-      "category": "event-migration",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [
-          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.test.tsx"
-        ],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!virtualBranch || !repoRoot) { return; } writeStoredSelection(paneId, { repoRoot, branch: virtualBranch, updatedAt: new Date().toISOString(), }); }",
-      "id": "E144"
+      "preview": "() => { if (!branchList || !repoRoot) { return; } if (storedVirtualBranch) { if ( (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) || storedVirtualBranch === default",
+      "id": "E125"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
-      "line": 173,
+      "line": 215,
       "column": 3,
       "owner": "useSessionVirtualWorktree",
       "hook": "useEffect",
-      "dependencies": ["paneId"],
-      "fingerprint": "c429405b754d",
-      "category": "identity-reset",
-      "disposition": "key-reset",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [
-          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
-        ],
-        "behaviorVerified": false
-      },
-      "preview": "() => { latestRequestIdRef.current += 1; hasLoadedWorktreeListRef.current = false; dispatch({ type: \"resetPane\", paneId }); }",
-      "id": "E145"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
-      "line": 220,
-      "column": 3,
-      "owner": "useSessionVirtualWorktree",
-      "hook": "useEffect",
-      "dependencies": ["fetchWorktrees", "session?.repoRoot"],
-      "fingerprint": "d290c3f56a20",
+      "dependencies": ["fetchWorktrees", "paneId", "session?.repoRoot"],
+      "fingerprint": "31260a5153eb",
       "category": "request-bridge",
       "disposition": "query",
       "confidence": "high",
@@ -3583,24 +3113,25 @@
         ],
         "behaviorVerified": false
       },
-      "preview": "() => { void fetchWorktrees({ resetEntries: true }); }",
-      "id": "E146"
+      "preview": "() => { if (activePaneIdRef.current !== paneId) { activePaneIdRef.current = paneId; latestRequestIdRef.current += 1; hasLoadedWorktreeListRef.current = false; dispatch({ type: \"res",
+      "id": "E126"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
-      "line": 233,
+      "line": 235,
       "column": 3,
       "owner": "useSessionVirtualWorktree",
       "hook": "useEffect",
       "dependencies": [
         "actualWorktreePath",
-        "entries.length",
+        "entries",
         "normalizedRepoRoot",
         "paneId",
         "pathSet",
+        "virtualWorktreePath",
         "worktreeList"
       ],
-      "fingerprint": "473714e313cc",
+      "fingerprint": "144c139a3cd1",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -3615,58 +3146,8 @@
         ],
         "behaviorVerified": false
       },
-      "preview": "() => { if (!worktreeList || !normalizedRepoRoot) { return; } // react-doctor-disable-next-line no-event-handler const stored = readStoredSelection(paneId); if (!stored) { return; ",
-      "id": "E147"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
-      "line": 264,
-      "column": 3,
-      "owner": "useSessionVirtualWorktree",
-      "hook": "useEffect",
-      "dependencies": ["actualWorktreePath", "paneId", "pathSet", "virtualWorktreePath"],
-      "fingerprint": "9b36df59b8d7",
-      "category": "derived-state",
-      "disposition": "render-or-reducer",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [
-          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
-        ],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!virtualWorktreePath) { return; } if (virtualWorktreePath === actualWorktreePath) { clearStoredSelection(paneId); dispatch({ type: \"setVirtualWorktreePath\", path: null ",
-      "id": "E148"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
-      "line": 284,
-      "column": 3,
-      "owner": "useSessionVirtualWorktree",
-      "hook": "useEffect",
-      "dependencies": ["normalizedRepoRoot", "paneId", "selectedVirtualEntry"],
-      "fingerprint": "3d9096146aab",
-      "category": "event-migration",
-      "disposition": "event-handler",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [
-          "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.test.tsx"
-        ],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!selectedVirtualEntry || !normalizedRepoRoot) { return; } writeStoredSelection(paneId, { repoRoot: normalizedRepoRoot, worktreePath: selectedVirtualEntry.path, branch: ",
-      "id": "E149"
+      "preview": "() => { if (!worktreeList || !normalizedRepoRoot) { return; } if (virtualWorktreePath) { if (virtualWorktreePath === actualWorktreePath) { clearStoredSelection(paneId); dispatch({ ",
+      "id": "E127"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/SessionDetailView.tsx",
@@ -3689,7 +3170,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!shouldDelayMissingState) { return; } missingSessionGraceTimer.set(() => { setGraceState((current) => (current.shouldDelay ? { ...current, elapsed: true } : current)); ",
-      "id": "E150"
+      "id": "E128"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -3712,7 +3193,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { publishedSearchQueryRef.current = initialSearchQuery; }",
-      "id": "E151"
+      "id": "E129"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -3735,7 +3216,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!isFocused) { return; } if (suppressNextDebounceRef.current) { suppressNextDebounceRef.current = false; return; } if (draftSearchQuery === initialSearchQuery) { return;",
-      "id": "E152"
+      "id": "E130"
     },
     {
       "file": "apps/web/src/pages/SessionList/SessionListView.tsx",
@@ -3758,7 +3239,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { return () => { if (reorderScrollFrameRef.current != null) { window.cancelAnimationFrame(reorderScrollFrameRef.current); reorderScrollFrameRef.current = null; } }; }",
-      "id": "E153"
+      "id": "E131"
     },
     {
       "file": "apps/web/src/pages/SessionList/useSessionListVM.ts",
@@ -3781,7 +3262,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { storeSessionListFilter(filter); }",
-      "id": "E154"
+      "id": "E132"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts",
@@ -3804,7 +3285,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E155"
+      "id": "E133"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts",
@@ -3827,7 +3308,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // oxlint-disable-next-line react/set-state-in-effect -- This effect owns initial loading and request guards. void loadDashboard(); }",
-      "id": "E156"
+      "id": "E134"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts",
@@ -3850,7 +3331,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E157"
+      "id": "E135"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -3879,7 +3360,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setFileNavigatorConfig({ autoExpandMatchLimit: 100 }); setWorkspaceTabsDisplayMode(\"all\"); setLaunchConfig(defaultLaunchConfig); setCapabilities({ screenImage: false, launc",
-      "id": "E158"
+      "id": "E136"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -3902,7 +3383,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!hasToken) { notificationTitleFingerprintRef.current = \"\"; return; } const nextEntries = toNotificationSessionTitleEntries(sessions); const nextFingerprint = buildNotif",
-      "id": "E159"
+      "id": "E137"
     },
     {
       "file": "apps/web/src/state/theme-context.tsx",
@@ -3925,7 +3406,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof window === \"undefined\") return; const applyTheme = (nextTheme: Theme) => { document.documentElement.dataset.theme = nextTheme; setResolvedTheme(nextTheme); }; co",
-      "id": "E160"
+      "id": "E138"
     },
     {
       "file": "apps/web/src/state/use-session-polling.ts",
@@ -3948,7 +3429,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled) { return; } void refreshSessions(); }",
-      "id": "E161"
+      "id": "E139"
     },
     {
       "file": "apps/web/src/state/use-session-token.ts",
@@ -3971,131 +3452,16 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!initialAccess.hasAccessDirective) { return; } if (initialAccess.token) { localStorage.setItem(TOKEN_KEY, initialAccess.token); } else { localStorage.removeItem(TOKEN_K",
-      "id": "E162"
+      "id": "E140"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
-      "line": 44,
-      "column": 3,
-      "owner": "useSessionsStream",
-      "hook": "useEffect",
-      "dependencies": ["onSnapshot"],
-      "fingerprint": "8ebfa7493710",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onSnapshotRef.current = onSnapshot; }",
-      "id": "E163"
-    },
-    {
-      "file": "apps/web/src/state/use-sessions-stream.ts",
-      "line": 47,
-      "column": 3,
-      "owner": "useSessionsStream",
-      "hook": "useEffect",
-      "dependencies": ["onUpsert"],
-      "fingerprint": "10c0d27a3cf0",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onUpsertRef.current = onUpsert; }",
-      "id": "E164"
-    },
-    {
-      "file": "apps/web/src/state/use-sessions-stream.ts",
-      "line": 50,
-      "column": 3,
-      "owner": "useSessionsStream",
-      "hook": "useEffect",
-      "dependencies": ["onRemove"],
-      "fingerprint": "5787ca9d430f",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onRemoveRef.current = onRemove; }",
-      "id": "E165"
-    },
-    {
-      "file": "apps/web/src/state/use-sessions-stream.ts",
-      "line": 53,
-      "column": 3,
-      "owner": "useSessionsStream",
-      "hook": "useEffect",
-      "dependencies": ["onAuthError"],
-      "fingerprint": "971c94985112",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onAuthErrorRef.current = onAuthError; }",
-      "id": "E166"
-    },
-    {
-      "file": "apps/web/src/state/use-sessions-stream.ts",
-      "line": 56,
-      "column": 3,
-      "owner": "useSessionsStream",
-      "hook": "useEffect",
-      "dependencies": ["onTransportChange"],
-      "fingerprint": "4ffa8e6d6624",
-      "category": "ref-mirror",
-      "disposition": "delete-or-useEffectEvent",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "yes",
-        "callbackIdentityIsNotSubscriptionContract": "yes",
-        "effectEventIsNotExported": "yes"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { onTransportChangeRef.current = onTransportChange; }",
-      "id": "E167"
-    },
-    {
-      "file": "apps/web/src/state/use-sessions-stream.ts",
-      "line": 68,
+      "line": 52,
       "column": 3,
       "owner": "useSessionsStream",
       "hook": "useEffect",
       "dependencies": ["enabled", "token", "apiBaseUrl"],
-      "fingerprint": "50e36f40993d",
+      "fingerprint": "66aa80896083",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -4108,12 +3474,12 @@
         "adjacentFiles": ["apps/web/src/state/use-sessions-stream.test.ts"],
         "behaviorVerified": false
       },
-      "preview": "() => { if (!enabled || !token) { transportRef.current = \"polling\"; onTransportChangeRef.current(\"polling\"); return; } const normalized = apiBaseUrl?.trim(); const basePath = norma",
-      "id": "E168"
+      "preview": "() => { if (!enabled || !token) { transportRef.current = \"polling\"; handleTransportChange(\"polling\"); return; } const normalized = apiBaseUrl?.trim(); const basePath = normalized &",
+      "id": "E141"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
-      "line": 145,
+      "line": 125,
       "column": 3,
       "owner": "useSessionsStream",
       "hook": "useEffect",
@@ -4132,7 +3498,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || typeof window === \"undefined\") return; const handleResume = () => { // If SSE is already open, nothing to do. if (transportRef.current === \"sse\") return; re",
-      "id": "E169"
+      "id": "E142"
     }
   ]
 }

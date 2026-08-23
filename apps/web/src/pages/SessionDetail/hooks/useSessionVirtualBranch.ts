@@ -96,9 +96,35 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
       ? storedVirtualBranch
       : null;
 
-  // Restore stored selection once the branch list is available.
+  // Reconcile the in-memory selection with the matching repository once its branch list arrives.
+  // react-doctor-disable-next-line no-derived-state-effect -- Branch-list and localStorage updates invalidate persisted selections.
   useEffect(() => {
     if (!branchList || !repoRoot) {
+      return;
+    }
+    if (storedVirtualBranch) {
+      if (
+        (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) ||
+        storedVirtualBranch === defaultBranch
+      ) {
+        clearStoredSelection(paneId);
+        /* oxlint-disable react/set-state-in-effect -- An external branch-list update invalidated the selection. */
+        // react-doctor-disable-next-line no-derived-state
+        setVirtualBranchState((previous) => ({
+          ...previous,
+          invalidatedBranch: storedVirtualBranch,
+        }));
+        /* oxlint-enable react/set-state-in-effect */
+        return;
+      }
+      const stored = readStoredSelection(paneId);
+      if (stored?.repoRoot !== repoRoot || stored.branch !== storedVirtualBranch) {
+        writeStoredSelection(paneId, {
+          repoRoot,
+          branch: storedVirtualBranch,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       return;
     }
     // react-doctor-disable-next-line no-event-handler
@@ -114,42 +140,12 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
       clearStoredSelection(paneId);
       return;
     }
-    // oxlint-disable-next-line react/set-state-in-effect -- Storage is restored only after the matching branch list arrives.
     setVirtualBranchState((prev) =>
       prev.paneId === paneId && prev.branch === stored.branch
         ? prev
         : { paneId, branch: stored.branch, invalidatedBranch: null },
     );
-  }, [branchList, branchNames, defaultBranch, paneId, repoRoot]);
-
-  // Drop the selection when the branch disappears (e.g. deleted).
-  // react-doctor-disable-next-line no-derived-state-effect
-  useEffect(() => {
-    if (!storedVirtualBranch) {
-      return;
-    }
-    if (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) {
-      clearStoredSelection(paneId);
-      /* oxlint-disable react/set-state-in-effect -- Removed branches must invalidate the restored selection. */
-      // react-doctor-disable-next-line no-derived-state
-      setVirtualBranchState((previous) => ({
-        ...previous,
-        invalidatedBranch: storedVirtualBranch,
-      }));
-      /* oxlint-enable react/set-state-in-effect */
-    }
-  }, [branchNames, paneId, storedVirtualBranch]);
-
-  useEffect(() => {
-    if (!virtualBranch || !repoRoot) {
-      return;
-    }
-    writeStoredSelection(paneId, {
-      repoRoot,
-      branch: virtualBranch,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [paneId, repoRoot, virtualBranch]);
+  }, [branchList, branchNames, defaultBranch, paneId, repoRoot, storedVirtualBranch]);
 
   const selectVirtualBranch = useCallback(
     (name: string) => {
@@ -158,9 +154,16 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
         setVirtualBranchState({ paneId, branch: null, invalidatedBranch: null });
         return;
       }
+      if (repoRoot && (branchNames.size === 0 || branchNames.has(name))) {
+        writeStoredSelection(paneId, {
+          repoRoot,
+          branch: name,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       setVirtualBranchState({ paneId, branch: name, invalidatedBranch: null });
     },
-    [defaultBranch, paneId],
+    [branchNames, defaultBranch, paneId, repoRoot],
   );
 
   const clearVirtualBranch = useCallback(() => {

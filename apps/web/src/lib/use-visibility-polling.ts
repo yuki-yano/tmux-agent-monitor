@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 
 type UseVisibilityPollingParams = {
   enabled: boolean;
@@ -15,22 +15,13 @@ export const useVisibilityPolling = ({
   onResume,
   shouldPoll,
 }: UseVisibilityPollingParams) => {
-  const onTickRef = useRef(onTick);
-  const onResumeRef = useRef(onResume);
-  const shouldPollRef = useRef(shouldPoll);
+  const handleTick = useEffectEvent(onTick);
+  const handleResumeCallback = useEffectEvent(() => {
+    onResume?.();
+  });
+  const checkShouldPoll = useEffectEvent(() => shouldPoll?.() ?? true);
 
-  useEffect(() => {
-    onTickRef.current = onTick;
-  }, [onTick]);
-
-  useEffect(() => {
-    onResumeRef.current = onResume;
-  }, [onResume]);
-
-  useEffect(() => {
-    shouldPollRef.current = shouldPoll;
-  }, [shouldPoll]);
-
+  // Keep the historical contract: changing the poll predicate restarts the interval.
   useEffect(() => {
     if (!enabled || typeof window === "undefined") {
       return;
@@ -40,8 +31,7 @@ export const useVisibilityPolling = ({
     const canPoll = () => {
       if (document.hidden) return false;
       if (navigator.onLine === false) return false;
-      const shouldPollNow = shouldPollRef.current;
-      if (shouldPollNow && !shouldPollNow()) return false;
+      if (!checkShouldPoll()) return false;
       return true;
     };
     const stop = () => {
@@ -56,7 +46,7 @@ export const useVisibilityPolling = ({
           stop();
           return;
         }
-        onTickRef.current();
+        handleTick();
       }, intervalMs);
     };
     const handleResume = () => {
@@ -64,10 +54,7 @@ export const useVisibilityPolling = ({
         stop();
         return;
       }
-      const resumeCallback = onResumeRef.current;
-      if (resumeCallback) {
-        resumeCallback();
-      }
+      handleResumeCallback();
       start();
     };
     const handlePageShow = (event: PageTransitionEvent) => {

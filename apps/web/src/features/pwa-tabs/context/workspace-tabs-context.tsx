@@ -323,6 +323,10 @@ export const WorkspaceTabsProvider = ({ children }: PropsWithChildren) => {
       if (result.state !== previous) {
         tabsStateRef.current = result.state;
         setTabsState(result.state);
+        window.localStorage.setItem(
+          WORKSPACE_TABS_STORAGE_KEY,
+          serializeWorkspaceTabsState(result.state),
+        );
       }
       if (result.navigationTarget != null) {
         navigateToWorkspaceTab(result.navigationTarget);
@@ -344,17 +348,6 @@ export const WorkspaceTabsProvider = ({ children }: PropsWithChildren) => {
       withoutNavigation(syncWorkspaceTabsWithPathname(previous, pathname, Date.now())),
     );
   }, [applyTabsTransition, enabled, pathname]);
-
-  // False positive: this effect persists the tab state to localStorage, an
-  // external system. Moving it into setState updaters would risk duplicate
-  // writes under StrictMode and spread persistence across every tab action.
-  // react-doctor-disable-next-line no-effect-chain
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    window.localStorage.setItem(WORKSPACE_TABS_STORAGE_KEY, serializeWorkspaceTabsState(tabsState));
-  }, [enabled, tabsState]);
 
   const dismissSessionTabsByPaneIds = useCallback(
     (paneIds: string[]) => {

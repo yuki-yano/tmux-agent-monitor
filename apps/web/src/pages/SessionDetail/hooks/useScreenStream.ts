@@ -1,6 +1,6 @@
 import { screenResponseSchema } from "@vde-monitor/shared";
 import type { ScreenResponse } from "@vde-monitor/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { createSseSubscription } from "@/lib/sse/sse-subscription";
 import type { SseState } from "@/lib/sse/sse-subscription";
@@ -38,11 +38,7 @@ export const useScreenStream = ({
   });
   const [screenEventKey, setScreenEventKey] = useState<string | null>(null);
   const [fallbackKey, setFallbackKey] = useState<string | null>(null);
-  const onScreenEventRef = useRef(onScreenEvent);
-
-  useEffect(() => {
-    onScreenEventRef.current = onScreenEvent;
-  }, [onScreenEvent]);
+  const handleScreenEvent = useEffectEvent(onScreenEvent);
 
   useEffect(() => {
     if (streamKey == null || screenEventKey === streamKey) {
@@ -81,7 +77,7 @@ export const useScreenStream = ({
         if (!parsed.success) return;
         setScreenEventKey(streamKey);
         setFallbackKey((current) => (current === streamKey ? null : current));
-        onScreenEventRef.current(parsed.data);
+        handleScreenEvent(parsed.data);
       },
     });
 

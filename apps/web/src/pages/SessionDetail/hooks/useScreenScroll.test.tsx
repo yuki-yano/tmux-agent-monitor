@@ -1,4 +1,5 @@
 import { act, render, renderHook } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ScreenMode } from "@/lib/screen-loading";
@@ -397,5 +398,60 @@ describe("useScreenScroll", () => {
 
     expect(isUserScrollingRef.current).toBe(false);
     expect(onClearPending).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the latest clear callback on unmount without resetting the same context", () => {
+    const isUserScrollingRef = { current: false };
+    const firstOnClearPending = vi.fn();
+    const latestOnClearPending = vi.fn();
+
+    const { rerender, unmount } = renderHook(
+      ({ onClearPending }: { onClearPending: () => void }) =>
+        useScreenScroll({
+          paneId: "pane-1",
+          mode: "text",
+          screenLinesLength: 0,
+          isUserScrollingRef,
+          onFlushPending: vi.fn(),
+          onClearPending,
+        }),
+      { initialProps: { onClearPending: firstOnClearPending } },
+    );
+
+    expect(firstOnClearPending).toHaveBeenCalledTimes(1);
+    rerender({ onClearPending: latestOnClearPending });
+    expect(firstOnClearPending).toHaveBeenCalledTimes(1);
+    expect(latestOnClearPending).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(firstOnClearPending).toHaveBeenCalledTimes(1);
+    expect(latestOnClearPending).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs each transient cleanup once during StrictMode replay and final unmount", () => {
+    const isUserScrollingRef = { current: false };
+    const onClearPending = vi.fn();
+
+    const { unmount } = renderHook(
+      () =>
+        useScreenScroll({
+          paneId: "pane-1",
+          mode: "text",
+          screenLinesLength: 0,
+          isUserScrollingRef,
+          onFlushPending: vi.fn(),
+          onClearPending,
+        }),
+      { wrapper: StrictMode },
+    );
+
+    expect(onClearPending).toHaveBeenCalledTimes(2);
+    isUserScrollingRef.current = true;
+
+    unmount();
+
+    expect(isUserScrollingRef.current).toBe(false);
+    expect(onClearPending).toHaveBeenCalledTimes(3);
   });
 });

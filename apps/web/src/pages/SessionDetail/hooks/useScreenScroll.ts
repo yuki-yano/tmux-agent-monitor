@@ -2,6 +2,7 @@ import {
   type MutableRefObject,
   useCallback,
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useReducer,
   useRef,
@@ -69,16 +70,12 @@ export const useScreenScroll = ({
 
   const viewportRef = useRef<VirtualizedViewportHandle | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const onClearPendingRef = useRef(onClearPending);
+  const clearPending = useEffectEvent(onClearPending);
   // react-doctor-disable-next-line no-event-handler
   const prevModeRef = useRef<ScreenMode>(mode);
   const prevPaneIdRef = useRef<string>(paneId);
   const didInitializeContextRef = useRef(false);
   const snapToBottomRef = useRef(mode === "text");
-
-  useLayoutEffect(() => {
-    onClearPendingRef.current = onClearPending;
-  }, [onClearPending]);
 
   const stopFollowingOutput = useCallback(() => {
     dispatchScrollState({ type: "pause-following" });
@@ -141,12 +138,12 @@ export const useScreenScroll = ({
 
     isUserScrollingRef.current = false;
     dispatchScrollState({ type: "reset-context" });
-    onClearPending();
+    clearPending();
     snapToBottomRef.current = mode === "text";
     prevModeRef.current = mode;
     prevPaneIdRef.current = paneId;
     didInitializeContextRef.current = true;
-  }, [isUserScrollingRef, mode, onClearPending, paneId]);
+  }, [isUserScrollingRef, mode, paneId]);
 
   useLayoutEffect(() => {
     if (!snapToBottomRef.current || mode !== "text" || screenLinesLength === 0) {
@@ -161,7 +158,7 @@ export const useScreenScroll = ({
   useEffect(() => {
     return () => {
       isUserScrollingRef.current = false;
-      onClearPendingRef.current();
+      clearPending();
     };
   }, [isUserScrollingRef]);
 

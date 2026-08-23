@@ -58,6 +58,7 @@ describe("useSplitRatio", () => {
     });
 
     expect(result.current.ratio).toBeCloseTo(0.6, 3);
+    expect(window.localStorage.getItem("test.split")).toBe("0.6");
   });
 
   it("clamps ratio to max", () => {
@@ -88,5 +89,6 @@ describe("useSplitRatio", () => {
     });
 
     expect(result.current.ratio).toBeCloseTo(0.65, 3);
+    expect(window.localStorage.getItem("test.split")).toBe("0.65");
   });
 });

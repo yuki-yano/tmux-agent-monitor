@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ScreenResponse } from "@vde-monitor/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -203,6 +203,56 @@ describe("useScreenStream", () => {
 
     expect(received).toHaveLength(1);
     expect(received[0]?.screen).toBe("world");
+  });
+
+  it("uses the latest event callback without recreating the stream", async () => {
+    let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+    let requestCount = 0;
+    server.use(
+      http.get(SCREEN_URL, () => {
+        requestCount++;
+        return new HttpResponse(
+          new ReadableStream({
+            start(controller) {
+              streamController = controller;
+            },
+            cancel() {},
+          }),
+          { headers: { "Content-Type": "text/event-stream" } },
+        );
+      }),
+    );
+    const firstCallback = vi.fn();
+    const latestCallback = vi.fn();
+
+    const { rerender, unmount } = renderHook(
+      ({ onScreenEvent }) =>
+        useScreenStream({
+          enabled: true,
+          paneId: "pane-1",
+          apiBasePath: "/api",
+          token: "tok",
+          onScreenEvent,
+        }),
+      { initialProps: { onScreenEvent: firstCallback } },
+    );
+
+    await waitFor(() => {
+      expect(streamController).not.toBeNull();
+    });
+    rerender({ onScreenEvent: latestCallback });
+    await act(async () => {
+      streamController?.enqueue(enc.encode(buildScreenEvent({ screen: "latest" })));
+    });
+
+    await waitFor(() => {
+      expect(latestCallback).toHaveBeenCalledOnce();
+    });
+    expect(firstCallback).not.toHaveBeenCalled();
+    expect(latestCallback.mock.calls[0]?.[0].screen).toBe("latest");
+    expect(requestCount).toBe(1);
+
+    unmount();
   });
 
   it("ignores non-screen events", async () => {

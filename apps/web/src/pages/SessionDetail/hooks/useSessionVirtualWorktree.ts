@@ -160,6 +160,7 @@ export const useSessionVirtualWorktree = ({
   );
   const latestRequestIdRef = useRef(0);
   const hasLoadedWorktreeListRef = useRef(false);
+  const activePaneIdRef = useRef(paneId);
   const currentState = state.paneId === paneId ? state : createInitialVirtualWorktreeState(paneId);
   const { worktreeList, loading, error, virtualWorktreePath } = currentState;
 
@@ -169,12 +170,6 @@ export const useSessionVirtualWorktree = ({
     [session?.worktreePath],
   );
   const actualBranch = session?.branch ?? null;
-
-  useEffect(() => {
-    latestRequestIdRef.current += 1;
-    hasLoadedWorktreeListRef.current = false;
-    dispatch({ type: "resetPane", paneId });
-  }, [paneId]);
 
   const fetchWorktrees = useCallback(
     async (options?: { resetEntries?: boolean }) => {
@@ -218,8 +213,14 @@ export const useSessionVirtualWorktree = ({
   );
 
   useEffect(() => {
+    if (activePaneIdRef.current !== paneId) {
+      activePaneIdRef.current = paneId;
+      latestRequestIdRef.current += 1;
+      hasLoadedWorktreeListRef.current = false;
+      dispatch({ type: "resetPane", paneId });
+    }
     void fetchWorktrees({ resetEntries: true });
-  }, [fetchWorktrees, session?.repoRoot]);
+  }, [fetchWorktrees, paneId, session?.repoRoot]);
 
   const refreshWorktrees = useCallback(async () => {
     await fetchWorktrees();
@@ -230,8 +231,38 @@ export const useSessionVirtualWorktree = ({
   const baseBranch = worktreeList?.baseBranch ?? null;
   const pathSet = useMemo(() => new Set(entries.map((entry) => entry.path)), [entries]);
 
+  // Reconcile the in-memory selection with the matching repository once its worktrees arrive.
   useEffect(() => {
     if (!worktreeList || !normalizedRepoRoot) {
+      return;
+    }
+    if (virtualWorktreePath) {
+      if (virtualWorktreePath === actualWorktreePath) {
+        clearStoredSelection(paneId);
+        dispatch({ type: "setVirtualWorktreePath", path: null });
+        return;
+      }
+      const selectedEntry = entries.find((entry) => entry.path === virtualWorktreePath);
+      if (!selectedEntry) {
+        if (entries.length > 0) {
+          clearStoredSelection(paneId);
+          dispatch({ type: "setVirtualWorktreePath", path: null });
+        }
+        return;
+      }
+      const stored = readStoredSelection(paneId);
+      if (
+        normalizePath(stored?.repoRoot) !== normalizedRepoRoot ||
+        normalizePath(stored?.worktreePath) !== selectedEntry.path ||
+        stored?.branch !== selectedEntry.branch
+      ) {
+        writeStoredSelection(paneId, {
+          repoRoot: normalizedRepoRoot,
+          worktreePath: selectedEntry.path,
+          branch: selectedEntry.branch,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       return;
     }
     // react-doctor-disable-next-line no-event-handler
@@ -259,39 +290,20 @@ export const useSessionVirtualWorktree = ({
       return;
     }
     dispatch({ type: "setVirtualWorktreePath", path: normalizedStoredPath });
-  }, [actualWorktreePath, entries.length, normalizedRepoRoot, paneId, pathSet, worktreeList]);
-
-  useEffect(() => {
-    if (!virtualWorktreePath) {
-      return;
-    }
-    if (virtualWorktreePath === actualWorktreePath) {
-      clearStoredSelection(paneId);
-      dispatch({ type: "setVirtualWorktreePath", path: null });
-      return;
-    }
-    if (pathSet.size > 0 && !pathSet.has(virtualWorktreePath)) {
-      clearStoredSelection(paneId);
-      dispatch({ type: "setVirtualWorktreePath", path: null });
-    }
-  }, [actualWorktreePath, paneId, pathSet, virtualWorktreePath]);
+  }, [
+    actualWorktreePath,
+    entries,
+    normalizedRepoRoot,
+    paneId,
+    pathSet,
+    virtualWorktreePath,
+    worktreeList,
+  ]);
 
   const selectedVirtualEntry = useMemo(
     () => entries.find((entry) => entry.path === virtualWorktreePath) ?? null,
     [entries, virtualWorktreePath],
   );
-
-  useEffect(() => {
-    if (!selectedVirtualEntry || !normalizedRepoRoot) {
-      return;
-    }
-    writeStoredSelection(paneId, {
-      repoRoot: normalizedRepoRoot,
-      worktreePath: selectedVirtualEntry.path,
-      branch: selectedVirtualEntry.branch,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [normalizedRepoRoot, paneId, selectedVirtualEntry]);
 
   const selectVirtualWorktree = useCallback(
     (nextPath: string) => {
@@ -304,9 +316,18 @@ export const useSessionVirtualWorktree = ({
         dispatch({ type: "setVirtualWorktreePath", path: null });
         return;
       }
+      const selectedEntry = entries.find((entry) => entry.path === normalizedNextPath);
+      if (selectedEntry && normalizedRepoRoot) {
+        writeStoredSelection(paneId, {
+          repoRoot: normalizedRepoRoot,
+          worktreePath: selectedEntry.path,
+          branch: selectedEntry.branch,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       dispatch({ type: "setVirtualWorktreePath", path: normalizedNextPath });
     },
-    [actualWorktreePath, paneId],
+    [actualWorktreePath, entries, normalizedRepoRoot, paneId],
   );
 
   const clearVirtualWorktree = useCallback(() => {

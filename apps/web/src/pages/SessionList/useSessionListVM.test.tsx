@@ -413,10 +413,7 @@ describe("useSessionListVM", () => {
       expect(moveSessionToTop).toHaveBeenCalledWith("pane-test");
     });
 
-    await waitFor(() => {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      expect(stored).toBe(JSON.stringify({ repos: {} }));
-    });
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
   it("launches agent session with worktree options and refreshes sessions", async () => {

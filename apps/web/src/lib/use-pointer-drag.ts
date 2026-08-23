@@ -1,5 +1,5 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef } from "react";
 
 type PointerDragOptions<T> = {
   cursor?: string;
@@ -9,27 +9,16 @@ type PointerDragOptions<T> = {
 
 export const usePointerDrag = <T>({ cursor, onMove, onEnd }: PointerDragOptions<T>) => {
   const dragContextRef = useRef<T | null>(null);
-  const onMoveRef = useRef(onMove);
-  const onEndRef = useRef(onEnd);
-  const cursorRef = useRef(cursor);
-
-  useEffect(() => {
-    onMoveRef.current = onMove;
-  }, [onMove]);
-
-  useEffect(() => {
-    onEndRef.current = onEnd;
-  }, [onEnd]);
-
-  useEffect(() => {
-    cursorRef.current = cursor;
-  }, [cursor]);
+  const handleMove = useEffectEvent(onMove);
+  const handleEnd = useEffectEvent((context: T) => {
+    onEnd?.(context);
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handlePointerMove = (event: PointerEvent) => {
       if (!dragContextRef.current) return;
-      onMoveRef.current(event, dragContextRef.current);
+      handleMove(event, dragContextRef.current);
     };
 
     const stopDrag = () => {
@@ -38,7 +27,7 @@ export const usePointerDrag = <T>({ cursor, onMove, onEnd }: PointerDragOptions<
       dragContextRef.current = null;
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
-      onEndRef.current?.(context);
+      handleEnd(context);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -53,11 +42,14 @@ export const usePointerDrag = <T>({ cursor, onMove, onEnd }: PointerDragOptions<
     };
   }, []);
 
-  const startDrag = useCallback((_event: ReactPointerEvent<HTMLElement>, context: T) => {
-    dragContextRef.current = context;
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = cursorRef.current ?? "col-resize";
-  }, []);
+  const startDrag = useCallback(
+    (_event: ReactPointerEvent<HTMLElement>, context: T) => {
+      dragContextRef.current = context;
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = cursor ?? "col-resize";
+    },
+    [cursor],
+  );
 
   return { startDrag };
 };

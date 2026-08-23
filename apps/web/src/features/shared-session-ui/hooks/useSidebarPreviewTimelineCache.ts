@@ -101,10 +101,6 @@ export const useSidebarPreviewTimelineCache = ({
   const timelineCacheRef = useRef<Record<string, SessionStateTimeline>>({});
   const timelineInflightRef = useLazyRef(() => new Set<string>());
 
-  useEffect(() => {
-    timelineCacheRef.current = timelineCache;
-  }, [timelineCache]);
-
   const fetchTimeline = useCallback(
     async (paneId: string) => {
       if (!requestStateTimeline || !paneId) {
@@ -120,6 +116,10 @@ export const useSidebarPreviewTimelineCache = ({
           range: TIMELINE_RANGE,
           limit: TIMELINE_LIMIT,
         });
+        timelineCacheRef.current = {
+          ...timelineCacheRef.current,
+          [paneId]: timeline,
+        };
         dispatch({ type: "success", paneId, timeline });
       } catch (err) {
         dispatch({ type: "failure", paneId, error: resolveTimelineError(err) });
@@ -133,6 +133,7 @@ export const useSidebarPreviewTimelineCache = ({
 
   useEffect(() => {
     const activePaneIds = new Set(sessionIndex.keys());
+    timelineCacheRef.current = prunePaneRecord(timelineCacheRef.current, activePaneIds);
     dispatch({ type: "prune", activePaneIds });
   }, [sessionIndex]);
 

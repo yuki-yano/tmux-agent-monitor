@@ -32,6 +32,7 @@ describe("useSidebarWidth", () => {
     });
 
     expect(result.current.sidebarWidth).toBe(450);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("450");
   });
 
   it("clamps width within bounds", () => {
@@ -51,5 +52,6 @@ describe("useSidebarWidth", () => {
     });
 
     expect(result.current.sidebarWidth).toBe(560);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("560");
   });
 });

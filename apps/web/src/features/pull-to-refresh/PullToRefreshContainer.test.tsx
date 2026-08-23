@@ -120,4 +120,36 @@ describe("PullToRefreshContainer", () => {
     expect(onRefresh).not.toHaveBeenCalled();
     scrollYSpy.mockRestore();
   });
+
+  it("uses the latest refresh callback after rerender", () => {
+    const firstOnRefresh = vi.fn(() => Promise.resolve());
+    const latestOnRefresh = vi.fn(() => Promise.resolve());
+    const { rerender } = render(
+      <PullToRefreshContainer
+        onRefresh={firstOnRefresh}
+        refreshingContent={<div data-testid="refreshing-overlay" />}
+      >
+        <button type="button">tap me</button>
+      </PullToRefreshContainer>,
+    );
+
+    rerender(
+      <PullToRefreshContainer
+        onRefresh={latestOnRefresh}
+        refreshingContent={<div data-testid="refreshing-overlay" />}
+      >
+        <button type="button">tap me</button>
+      </PullToRefreshContainer>,
+    );
+    const button = screen.getByRole("button", { name: "tap me" });
+
+    act(() => {
+      dispatchTouchEvent(button, "touchstart", { x: 100, y: 100 });
+      dispatchTouchEvent(button, "touchmove", { x: 100, y: 260 });
+      dispatchTouchEvent(button, "touchend", { x: 100, y: 260 });
+    });
+
+    expect(firstOnRefresh).not.toHaveBeenCalled();
+    expect(latestOnRefresh).toHaveBeenCalledTimes(1);
+  });
 });

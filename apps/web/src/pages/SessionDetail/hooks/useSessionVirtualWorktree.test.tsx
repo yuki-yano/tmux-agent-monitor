@@ -40,6 +40,22 @@ const createEmptyWorktreeList = (repoRoot: string): WorktreeList => ({
   entries: [],
 });
 
+const createMainOnlyWorktreeList = (repoRoot: string): WorktreeList => ({
+  repoRoot,
+  currentPath: `${repoRoot}/main`,
+  entries: [
+    {
+      path: `${repoRoot}/main`,
+      branch: "main",
+      dirty: false,
+      locked: false,
+      lockOwner: null,
+      lockReason: null,
+      merged: false,
+    },
+  ],
+});
+
 type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T) => void;
@@ -385,6 +401,90 @@ describe("useSessionVirtualWorktree", () => {
     });
     expect(result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
     expect(window.localStorage.getItem(buildStorageKey(paneId))).toContain(`${repoRoot}/feature-a`);
+  });
+
+  it("clears a virtual selection that disappears from a non-empty worktree list", async () => {
+    const repoRoot = "/tmp/repo-invalidated";
+    const paneId = "pane-invalidated";
+    window.localStorage.setItem(
+      buildStorageKey(paneId),
+      JSON.stringify({
+        repoRoot,
+        worktreePath: `${repoRoot}/feature-a`,
+        branch: "feature/a",
+        updatedAt: new Date(0).toISOString(),
+      }),
+    );
+    const requestWorktreesReady = vi.fn(async () => createWorktreeList(repoRoot));
+    const requestWorktreesWithoutSelection = vi.fn(async () =>
+      createMainOnlyWorktreeList(repoRoot),
+    );
+    const { result, rerender } = renderHook(
+      ({ requestWorktrees }: { requestWorktrees: (paneId: string) => Promise<WorktreeList> }) =>
+        useSessionVirtualWorktree({
+          paneId,
+          session: createSessionDetail({
+            paneId,
+            repoRoot,
+            worktreePath: `${repoRoot}/main`,
+            branch: "main",
+          }),
+          requestWorktrees,
+        }),
+      { initialProps: { requestWorktrees: requestWorktreesReady } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
+    });
+
+    rerender({ requestWorktrees: requestWorktreesWithoutSelection });
+
+    await waitFor(() => {
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.virtualWorktreePath).toBeNull();
+    });
+    expect(window.localStorage.getItem(buildStorageKey(paneId))).toBeNull();
+  });
+
+  it("clears a virtual selection when the actual worktree catches up", async () => {
+    const repoRoot = "/tmp/repo-caught-up";
+    const paneId = "pane-caught-up";
+    window.localStorage.setItem(
+      buildStorageKey(paneId),
+      JSON.stringify({
+        repoRoot,
+        worktreePath: `${repoRoot}/feature-a`,
+        branch: "feature/a",
+        updatedAt: new Date(0).toISOString(),
+      }),
+    );
+    const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
+    const { result, rerender } = renderHook(
+      ({ worktreePath, branch }: { worktreePath: string; branch: string }) =>
+        useSessionVirtualWorktree({
+          paneId,
+          session: createSessionDetail({ paneId, repoRoot, worktreePath, branch }),
+          requestWorktrees,
+        }),
+      {
+        initialProps: {
+          worktreePath: `${repoRoot}/main`,
+          branch: "main",
+        },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
+    });
+
+    rerender({ worktreePath: `${repoRoot}/feature-a`, branch: "feature/a" });
+
+    await waitFor(() => {
+      expect(result.current.virtualWorktreePath).toBeNull();
+    });
+    expect(window.localStorage.getItem(buildStorageKey(paneId))).toBeNull();
   });
 
   it("refreshes worktrees when refreshWorktrees is called", async () => {

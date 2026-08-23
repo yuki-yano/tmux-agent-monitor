@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   createRepoPinKey,
@@ -13,11 +13,8 @@ type UseSessionListPinsArgs = {
 
 export const useSessionListPins = ({ onTouchPane }: UseSessionListPinsArgs) => {
   const [pins, setPins] = useState(() => readStoredSessionListPins());
+  const pinsRef = useRef(pins);
   const repoPinValues = pins.repos;
-
-  useEffect(() => {
-    storeSessionListPins(pins);
-  }, [pins]);
 
   const getRepoSortAnchorAt = useCallback(
     (repoRoot: string | null) => repoPinValues[createRepoPinKey(repoRoot)] ?? null,
@@ -25,7 +22,10 @@ export const useSessionListPins = ({ onTouchPane }: UseSessionListPinsArgs) => {
   );
 
   const touchRepoPin = useCallback((repoRoot: string | null) => {
-    setPins((prev) => touchSessionListPin(prev, "repos", createRepoPinKey(repoRoot)));
+    const nextPins = touchSessionListPin(pinsRef.current, "repos", createRepoPinKey(repoRoot));
+    pinsRef.current = nextPins;
+    setPins(nextPins);
+    storeSessionListPins(nextPins);
   }, []);
 
   const touchPanePin = useCallback(

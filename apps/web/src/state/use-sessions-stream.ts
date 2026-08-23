@@ -1,6 +1,6 @@
 import type { SessionSummary } from "@vde-monitor/shared";
 import { sessionsStreamEventSchema } from "@vde-monitor/shared";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import { createSseSubscription } from "@/lib/sse/sse-subscription";
 import type { SseSubscription } from "@/lib/sse/sse-subscription";
@@ -32,30 +32,14 @@ export const useSessionsStream = ({
   onAuthError,
   onTransportChange,
 }: UseSessionsStreamParams): void => {
-  // Stable refs so subscription callbacks always call the latest version
-  // without needing to re-create the subscription on each render.
-  const onSnapshotRef = useRef(onSnapshot);
-  const onUpsertRef = useRef(onUpsert);
-  const onRemoveRef = useRef(onRemove);
-  const onAuthErrorRef = useRef(onAuthError);
-  const onTransportChangeRef = useRef(onTransportChange);
+  const handleSnapshot = useEffectEvent(onSnapshot);
+  const handleUpsert = useEffectEvent(onUpsert);
+  const handleRemove = useEffectEvent(onRemove);
+  const handleAuthError = useEffectEvent(() => {
+    onAuthError?.();
+  });
+  const handleTransportChange = useEffectEvent(onTransportChange);
   const transportRef = useRef<SessionsStreamTransport>("polling");
-
-  useEffect(() => {
-    onSnapshotRef.current = onSnapshot;
-  }, [onSnapshot]);
-  useEffect(() => {
-    onUpsertRef.current = onUpsert;
-  }, [onUpsert]);
-  useEffect(() => {
-    onRemoveRef.current = onRemove;
-  }, [onRemove]);
-  useEffect(() => {
-    onAuthErrorRef.current = onAuthError;
-  }, [onAuthError]);
-  useEffect(() => {
-    onTransportChangeRef.current = onTransportChange;
-  }, [onTransportChange]);
 
   // Ref to the current subscription for force-reconnect from visibility handlers.
   const subRef = useRef<SseSubscription | null>(null);
@@ -68,7 +52,7 @@ export const useSessionsStream = ({
   useEffect(() => {
     if (!enabled || !token) {
       transportRef.current = "polling";
-      onTransportChangeRef.current("polling");
+      handleTransportChange("polling");
       return;
     }
 
@@ -90,22 +74,18 @@ export const useSessionsStream = ({
       if (!parsed.success) return;
       const data = parsed.data;
       if (data.type === "snapshot") {
-        onSnapshotRef.current(data.sessions);
+        handleSnapshot(data.sessions);
       } else if (data.type === "upsert") {
-        onUpsertRef.current(data.session);
+        handleUpsert(data.session);
       } else if (data.type === "remove") {
-        onRemoveRef.current(data.paneId);
+        handleRemove(data.paneId);
       }
     };
 
     const handleStateChange = (state: string) => {
       const next: SessionsStreamTransport = state === "open" ? "sse" : "polling";
       transportRef.current = next;
-      onTransportChangeRef.current(next);
-    };
-
-    const handleAuthError = () => {
-      onAuthErrorRef.current?.();
+      handleTransportChange(next);
     };
 
     const createSub = (): SseSubscription =>
@@ -134,7 +114,7 @@ export const useSessionsStream = ({
         reconnectRef.current = null;
       }
       transportRef.current = "polling";
-      onTransportChangeRef.current("polling");
+      handleTransportChange("polling");
     };
   }, [enabled, token, apiBaseUrl]);
 

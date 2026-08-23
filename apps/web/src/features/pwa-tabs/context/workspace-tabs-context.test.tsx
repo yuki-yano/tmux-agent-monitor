@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { navigateMock, routerLocation, sessionStreamState } = vi.hoisted(() => ({
@@ -44,6 +45,9 @@ const Probe = () => {
       <div data-testid="tab-order">{workspaceTabs.tabs.map((tab) => tab.id).join(",")}</div>
       <button type="button" onClick={() => workspaceTabs.closeTab("session:pane-a")}>
         Close active tab
+      </button>
+      <button type="button" onClick={() => workspaceTabs.closeTab("session:missing")}>
+        Close missing tab
       </button>
       <button type="button" onClick={workspaceTabs.closeAllTabs}>
         Close all tabs
@@ -167,6 +171,30 @@ describe("WorkspaceTabsProvider", () => {
     expect(navigateMock).toHaveBeenCalledWith({ href: "/" });
   });
 
+  it("persists a StrictMode transition once and skips no-op transition writes", async () => {
+    const setItemSpy = vi.spyOn(window.localStorage, "setItem");
+
+    render(
+      <StrictMode>
+        <WorkspaceTabsProvider>
+          <Probe />
+        </WorkspaceTabsProvider>
+      </StrictMode>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("active-tab").textContent).toBe("session:pane-a");
+    });
+    expect(
+      setItemSpy.mock.calls.filter(([key]) => key === WORKSPACE_TABS_STORAGE_KEY),
+    ).toHaveLength(1);
+
+    setItemSpy.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Close missing tab" }));
+
+    expect(setItemSpy).not.toHaveBeenCalled();
+  });
+
   it("composes consecutive close transitions from the latest state", async () => {
     seedSessionTabs();
     render(
@@ -182,6 +210,10 @@ describe("WorkspaceTabsProvider", () => {
 
     expect(screen.getByTestId("tab-order").textContent).toBe("system:sessions,session:pane-c");
     expect(screen.getByTestId("active-tab").textContent).toBe("session:pane-c");
+    expect(JSON.parse(localStorage.getItem(WORKSPACE_TABS_STORAGE_KEY) ?? "{}")).toMatchObject({
+      activeTabId: "session:pane-c",
+      tabs: [{ id: "system:sessions" }, { id: "session:pane-c" }],
+    });
     expect(navigateMock).toHaveBeenLastCalledWith({
       to: "/sessions/$paneId",
       params: { paneId: "pane-c" },

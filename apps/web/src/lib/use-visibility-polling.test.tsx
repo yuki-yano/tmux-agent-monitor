@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useVisibilityPolling } from "./use-visibility-polling";
@@ -199,5 +200,83 @@ describe("useVisibilityPolling", () => {
       vi.advanceTimersByTime(1000);
     });
     expect(onTick).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the latest callbacks without restarting an active interval", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
+    const firstOnTick = vi.fn();
+    const firstOnResume = vi.fn();
+    const latestOnTick = vi.fn();
+    const latestOnResume = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ onTick, onResume }: { onTick: () => void; onResume: () => void }) =>
+        useVisibilityPolling({
+          enabled: true,
+          intervalMs: 1000,
+          onTick,
+          onResume,
+        }),
+      { initialProps: { onTick: firstOnTick, onResume: firstOnResume } },
+    );
+
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+    rerender({ onTick: latestOnTick, onResume: latestOnResume });
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(firstOnResume).not.toHaveBeenCalled();
+    expect(firstOnTick).not.toHaveBeenCalled();
+    expect(latestOnResume).toHaveBeenCalledTimes(1);
+    expect(latestOnTick).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps one active interval through the StrictMode effect replay", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
+    const clearIntervalSpy = vi.spyOn(window, "clearInterval");
+    const onTick = vi.fn();
+    const onResume = vi.fn();
+
+    const { unmount } = renderHook(
+      () =>
+        useVisibilityPolling({
+          enabled: true,
+          intervalMs: 1000,
+          onTick,
+          onResume,
+        }),
+      { wrapper: StrictMode },
+    );
+
+    expect(setIntervalSpy).toHaveBeenCalledTimes(2);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onResume).toHaveBeenCalledOnce();
+    expect(setIntervalSpy).toHaveBeenCalledTimes(2);
+    expect(onTick).toHaveBeenCalledOnce();
+
+    unmount();
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(2);
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onResume).toHaveBeenCalledOnce();
+    expect(setIntervalSpy).toHaveBeenCalledTimes(2);
+    expect(onTick).toHaveBeenCalledOnce();
   });
 });

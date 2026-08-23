@@ -124,6 +124,46 @@ describe("useSessionVirtualBranch", () => {
     expect(result.current.virtualBranch).toBeNull();
   });
 
+  it("keeps the selection while the branch list is temporarily empty", async () => {
+    const paneId = "pane-1";
+    const repoRoot = "/tmp/repo-a";
+    const { result, rerender } = renderHook(
+      ({ branchList }: { branchList: BranchList }) =>
+        useSessionVirtualBranch({ paneId, branchList }),
+      { initialProps: { branchList: createBranchList({ repoRoot }) } },
+    );
+
+    act(() => {
+      result.current.selectVirtualBranch("feature/a");
+    });
+    expect(window.localStorage.getItem(buildStorageKey(paneId))).toContain("feature/a");
+
+    rerender({ branchList: createBranchList({ repoRoot, entries: [] }) });
+
+    expect(result.current.virtualBranch).toBe("feature/a");
+    expect(window.localStorage.getItem(buildStorageKey(paneId))).toContain("feature/a");
+  });
+
+  it("invalidates the selection when it becomes the default branch", async () => {
+    const paneId = "pane-1";
+    const repoRoot = "/tmp/repo-a";
+    const { result, rerender } = renderHook(
+      ({ branchList }: { branchList: BranchList }) =>
+        useSessionVirtualBranch({ paneId, branchList }),
+      { initialProps: { branchList: createBranchList({ repoRoot }) } },
+    );
+
+    act(() => {
+      result.current.selectVirtualBranch("feature/a");
+    });
+    rerender({ branchList: createBranchList({ repoRoot, defaultBranch: "feature/a" }) });
+
+    await waitFor(() => {
+      expect(result.current.virtualBranch).toBeNull();
+    });
+    expect(window.localStorage.getItem(buildStorageKey(paneId))).toBeNull();
+  });
+
   it("discards stored selection when repoRoot differs from the current branch list", async () => {
     const paneId = "pane-1";
     const staleRepoRoot = "/tmp/repo-old";

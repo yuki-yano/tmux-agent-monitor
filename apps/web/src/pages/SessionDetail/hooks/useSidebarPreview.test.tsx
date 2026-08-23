@@ -11,6 +11,7 @@ import {
   sidebarPreviewFrameAtom,
 } from "@/features/shared-session-ui/atoms/sidebarPreviewAtoms";
 import { useSidebarPreview } from "@/features/shared-session-ui/hooks/useSidebarPreview";
+import { useSidebarPreviewTimelineCache } from "@/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache";
 
 const prefetchPreview = vi.fn();
 const previewCache: Record<
@@ -293,5 +294,40 @@ describe("useSidebarPreview", () => {
     });
 
     expect(result.current.preview?.frame.height).toBeGreaterThan(760);
+  });
+
+  it("deduplicates cached timelines and refetches after the pane is pruned", async () => {
+    const session = createSession();
+    const requestStateTimeline = vi.fn((paneId: string) => Promise.resolve(createTimeline(paneId)));
+    const { result, rerender } = renderHook(
+      ({ sessionIndex }: { sessionIndex: Map<string, SessionSummary> }) =>
+        useSidebarPreviewTimelineCache({
+          hoveredPaneId: session.paneId,
+          sessionIndex,
+          requestStateTimeline,
+        }),
+      {
+        initialProps: {
+          sessionIndex: new Map([[session.paneId, session]]),
+        },
+      },
+    );
+
+    await act(async () => {
+      await result.current.fetchTimeline(session.paneId);
+      await result.current.fetchTimeline(session.paneId);
+    });
+    expect(requestStateTimeline).toHaveBeenCalledTimes(1);
+
+    rerender({ sessionIndex: new Map() });
+    await waitFor(() => {
+      expect(result.current.hoveredTimeline).toBeNull();
+    });
+
+    rerender({ sessionIndex: new Map([[session.paneId, session]]) });
+    await act(async () => {
+      await result.current.fetchTimeline(session.paneId);
+    });
+    expect(requestStateTimeline).toHaveBeenCalledTimes(2);
   });
 });

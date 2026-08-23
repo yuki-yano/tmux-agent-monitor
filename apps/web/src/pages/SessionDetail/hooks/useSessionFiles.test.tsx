@@ -179,26 +179,37 @@ describe("useSessionFiles", () => {
 
   it("applies search results to tree nodes and confirms active selection", async () => {
     const requestRepoFileTree = vi.fn(async () => createTreePage({ basePath: ".", entries: [] }));
-    const requestRepoFileSearch = vi.fn(async () =>
+    const requestRepoFileSearch = vi.fn(async (_paneId: string, query: string) =>
       createSearchPage({
-        query: "index",
-        items: [
-          {
-            path: "src/app/index.ts",
-            name: "index.ts",
-            kind: "file",
-            score: 0.8,
-            highlights: [0, 1],
-          },
-          {
-            path: "src/lib/index.test.ts",
-            name: "index.test.ts",
-            kind: "file",
-            score: 0.6,
-            highlights: [0, 1],
-          },
-        ],
-        totalMatchedCount: 2,
+        query,
+        items:
+          query === "index"
+            ? [
+                {
+                  path: "src/app/index.ts",
+                  name: "index.ts",
+                  kind: "file" as const,
+                  score: 0.8,
+                  highlights: [0, 1],
+                },
+                {
+                  path: "src/lib/index.test.ts",
+                  name: "index.test.ts",
+                  kind: "file" as const,
+                  score: 0.6,
+                  highlights: [0, 1],
+                },
+              ]
+            : [
+                {
+                  path: `src/${query}.ts`,
+                  name: `${query}.ts`,
+                  kind: "file" as const,
+                  score: 1,
+                  highlights: [0],
+                },
+              ],
+        totalMatchedCount: query === "index" ? 2 : 1,
       }),
     );
 
@@ -233,6 +244,14 @@ describe("useSessionFiles", () => {
     });
 
     expect(result.current.selectedFilePath).toBe("src/lib/index.test.ts");
+
+    act(() => {
+      result.current.onSearchQueryChange("other");
+    });
+    await waitFor(() => {
+      expect(result.current.searchResult?.query).toBe("other");
+    });
+    expect(result.current.searchActiveIndex).toBe(0);
   });
 
   it("on search confirm does not open file modal for directory matches", async () => {

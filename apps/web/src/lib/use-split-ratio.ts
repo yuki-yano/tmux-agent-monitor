@@ -1,5 +1,5 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { usePointerDrag } from "./use-pointer-drag";
 
@@ -26,11 +26,6 @@ export const useSplitRatio = ({
   });
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(storageKey, String(ratio));
-  }, [ratio, storageKey]);
-
   const { startDrag } = usePointerDrag<{ startX: number; startRatio: number; width: number }>({
     onMove: (event, context) => {
       const { startX, startRatio, width } = context;
@@ -38,6 +33,7 @@ export const useSplitRatio = ({
       const delta = event.clientX - startX;
       const next = clamp((startRatio * width + delta) / width, minRatio, maxRatio);
       setRatio(next);
+      window.localStorage.setItem(storageKey, String(next));
     },
   });
 

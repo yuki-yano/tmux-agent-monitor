@@ -81,14 +81,11 @@ export const useSessionDetailSectionTabs = ({ scope }: UseSessionDetailSectionTa
       storageKey: sectionTabStorageKey,
       value,
     });
-  };
-
-  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-    window.localStorage.setItem(sectionTabStorageKey, selectedSectionTabValue);
-  }, [sectionTabStorageKey, selectedSectionTabValue]);
+    window.localStorage.setItem(sectionTabStorageKey, value);
+  };
 
   useEffect(() => {
     const tabListElement = sectionTabsListElement;

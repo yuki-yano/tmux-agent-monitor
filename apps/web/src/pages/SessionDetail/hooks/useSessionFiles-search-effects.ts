@@ -12,7 +12,6 @@ import {
 import {
   type SessionFilesUiDispatch,
   type SessionFilesUiState,
-  setUiState,
 } from "./useSessionFiles-ui-state-machine";
 
 type UseSessionFilesSearchEffectsState = Pick<SessionFilesUiState, "searchQuery" | "searchResult">;
@@ -38,7 +37,7 @@ export const useSessionFilesSearchEffects = (
 ) => {
   const debounce = useTimeout();
   // react-doctor-disable-next-line no-event-handler
-  const { searchQuery, searchResult } = state;
+  const { searchQuery } = state;
 
   useEffect(() => {
     if (!repoRoot) {
@@ -74,23 +73,4 @@ export const useSessionFilesSearchEffects = (
     searchDebounceMs,
     searchQuery,
   ]);
-
-  useEffect(() => {
-    if (!searchResult) {
-      return;
-    }
-    if (searchResult.items.length === 0) {
-      setUiState(dispatch, "searchActiveIndex", 0);
-      return;
-    }
-    setUiState(dispatch, "searchActiveIndex", (prev) => {
-      if (prev < 0) {
-        return 0;
-      }
-      if (prev >= searchResult.items.length) {
-        return searchResult.items.length - 1;
-      }
-      return prev;
-    });
-  }, [dispatch, searchResult]);
 };

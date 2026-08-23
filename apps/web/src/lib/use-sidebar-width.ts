@@ -1,5 +1,5 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { usePointerDrag } from "./use-pointer-drag";
 
@@ -18,15 +18,12 @@ export const useSidebarWidth = () => {
     return clamp(stored);
   });
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, String(sidebarWidth));
-  }, [sidebarWidth]);
-
   const { startDrag } = usePointerDrag<{ startX: number; startWidth: number }>({
     onMove: (event, context) => {
       const delta = event.clientX - context.startX;
-      setSidebarWidth(clamp(context.startWidth + delta));
+      const nextSidebarWidth = clamp(context.startWidth + delta);
+      setSidebarWidth(nextSidebarWidth);
+      window.localStorage.setItem(STORAGE_KEY, String(nextSidebarWidth));
     },
   });
 

@@ -67,4 +67,24 @@ describe("useUserScrollState", () => {
 
     expect(onUserScrollStateChange).toHaveBeenLastCalledWith(false);
   });
+
+  it("uses the latest callback without interrupting active scrolling", () => {
+    vi.useFakeTimers();
+    const firstCallback = vi.fn();
+    const latestCallback = vi.fn();
+    const { getByTestId, rerender } = render(<Harness onUserScrollStateChange={firstCallback} />);
+
+    fireEvent.wheel(getByTestId("scroller"));
+    expect(firstCallback).toHaveBeenCalledWith(true);
+
+    rerender(<Harness onUserScrollStateChange={latestCallback} />);
+    expect(latestCallback).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(120);
+    });
+
+    expect(firstCallback).toHaveBeenCalledTimes(1);
+    expect(latestCallback).toHaveBeenCalledWith(false);
+  });
 });

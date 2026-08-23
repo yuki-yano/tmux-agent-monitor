@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
   DEFAULT_PULL_GESTURE_CONFIG,
@@ -35,11 +35,7 @@ export const PullToRefreshContainer = ({
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const refreshingRef = useRef(false);
-  const onRefreshRef = useRef(onRefresh);
-
-  useEffect(() => {
-    onRefreshRef.current = onRefresh;
-  }, [onRefresh]);
+  const handleRefresh = useEffectEvent(onRefresh);
 
   useEffect(() => {
     document.documentElement.classList.add("pull-to-refresh-enabled");
@@ -121,7 +117,7 @@ export const PullToRefreshContainer = ({
         setRefreshing(false);
       };
       try {
-        void Promise.resolve(onRefreshRef.current())
+        void Promise.resolve(handleRefresh())
           .catch(() => undefined)
           .finally(finishRefreshing);
       } catch {

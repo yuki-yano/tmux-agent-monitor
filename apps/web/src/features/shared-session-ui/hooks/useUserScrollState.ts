@@ -1,4 +1,4 @@
-import { type RefObject, useCallback, useLayoutEffect, useRef } from "react";
+import { type RefObject, useEffectEvent, useLayoutEffect, useRef } from "react";
 
 const SCROLL_KEYS = new Set([
   "ArrowDown",
@@ -27,51 +27,42 @@ export const useUserScrollState = ({
   const scrollerRef = scrollerRefProp ?? internalScrollerRef;
   const isUserScrollingRef = useRef(false);
   const scrollEndTimerRef = useRef<number | null>(null);
-  const onUserScrollStateChangeRef = useRef(onUserScrollStateChange);
+  const notifyUserScrollStateChange = useEffectEvent((value: boolean) => {
+    onUserScrollStateChange?.(value);
+  });
 
   useLayoutEffect(() => {
-    onUserScrollStateChangeRef.current = onUserScrollStateChange;
-  }, [onUserScrollStateChange]);
-
-  const setUserScrolling = useCallback((value: boolean) => {
-    if (isUserScrollingRef.current === value) {
-      return;
-    }
-    isUserScrollingRef.current = value;
-    onUserScrollStateChangeRef.current?.(value);
-  }, []);
-
-  const scheduleScrollEnd = useCallback(() => {
-    if (scrollEndTimerRef.current != null) {
-      window.clearTimeout(scrollEndTimerRef.current);
-    }
-    scrollEndTimerRef.current = window.setTimeout(() => {
-      scrollEndTimerRef.current = null;
-      setUserScrolling(false);
-    }, 120);
-  }, [setUserScrolling]);
-
-  const startUserScroll = useCallback(() => {
-    setUserScrolling(true);
-    scheduleScrollEnd();
-  }, [scheduleScrollEnd, setUserScrolling]);
-
-  const handleScroll = useCallback(() => {
-    if (isUserScrollingRef.current) {
+    const setUserScrolling = (value: boolean) => {
+      if (isUserScrollingRef.current === value) {
+        return;
+      }
+      isUserScrollingRef.current = value;
+      notifyUserScrollStateChange(value);
+    };
+    const scheduleScrollEnd = () => {
+      if (scrollEndTimerRef.current != null) {
+        window.clearTimeout(scrollEndTimerRef.current);
+      }
+      scrollEndTimerRef.current = window.setTimeout(() => {
+        scrollEndTimerRef.current = null;
+        setUserScrolling(false);
+      }, 120);
+    };
+    const startUserScroll = () => {
+      setUserScrolling(true);
       scheduleScrollEnd();
-    }
-  }, [scheduleScrollEnd]);
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
+    };
+    const handleScroll = () => {
+      if (isUserScrollingRef.current) {
+        scheduleScrollEnd();
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (SCROLL_KEYS.has(event.key)) {
         startUserScroll();
       }
-    },
-    [startUserScroll],
-  );
+    };
 
-  useLayoutEffect(() => {
     if (!enabled) {
       setUserScrolling(false);
       return undefined;
@@ -97,7 +88,7 @@ export const useUserScrollState = ({
       }
       setUserScrolling(false);
     };
-  }, [enabled, handleKeyDown, handleScroll, scrollerRef, setUserScrolling, startUserScroll]);
+  }, [enabled, scrollerRef]);
 
   return { scrollerRef };
 };

@@ -45,6 +45,20 @@ describe("useSessionListPins", () => {
     expect(parsed.repos?.["repo:/repo/a"]).toBeTypeOf("number");
   });
 
+  it("composes consecutive repo pin updates before a rerender", () => {
+    const { result } = renderHook(() => useSessionListPins({}));
+
+    act(() => {
+      result.current.touchRepoPin("/repo/a");
+      result.current.touchRepoPin("/repo/b");
+    });
+
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const parsed = JSON.parse(stored ?? "{}") as { repos?: Record<string, number> };
+    expect(parsed.repos?.["repo:/repo/a"]).toBeTypeOf("number");
+    expect(parsed.repos?.["repo:/repo/b"]).toBeTypeOf("number");
+  });
+
   it("touches pane pin and triggers onTouchPane callback", async () => {
     const onTouchPane = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() =>
