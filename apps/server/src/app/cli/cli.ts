@@ -126,7 +126,8 @@ export const parsePort = (value: unknown) => {
     return null;
   }
   if (typeof value !== "string" || !/^\d+$/.test(value)) {
-    throw new Error(`port must be an integer between 1 and 65535. (received: ${String(value)})`);
+    const received = typeof value === "string" ? value : `value of type ${typeof value}`;
+    throw new Error(`port must be an integer between 1 and 65535. (received: ${received})`);
   }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 65535) {

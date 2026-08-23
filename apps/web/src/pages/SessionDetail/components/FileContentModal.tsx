@@ -39,6 +39,17 @@ type FileContentModalState = {
   theme: Theme;
 };
 
+const resolveCodeSource = (children: unknown): string => {
+  if (
+    typeof children === "string" ||
+    typeof children === "number" ||
+    typeof children === "bigint"
+  ) {
+    return String(children);
+  }
+  return Array.isArray(children) ? children.map(resolveCodeSource).join("") : "";
+};
+
 type FileContentModalActions = {
   onClose: () => void;
   onToggleLineNumbers: () => void;
@@ -511,7 +522,7 @@ export const FileContentModal = ({ state, actions }: FileContentModalProps) => {
       ),
       hr: (props) => <hr {...props} className="border-latte-lavender/45 my-6" />,
       code: ({ children, className, ...props }) => {
-        const source = String(children ?? "").replace(/\n$/, "");
+        const source = resolveCodeSource(children).replace(/\n$/, "");
         const match = /language-([\w-]+)/.exec(className ?? "");
         if (!match) {
           return (

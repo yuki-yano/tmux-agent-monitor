@@ -34,7 +34,7 @@ vi.mock("execa", () => ({
 }));
 
 const loadModule = async () => {
-  await vi.resetModules();
+  vi.resetModules();
   execaMock.mockReset();
   return import("./vw-worktree");
 };

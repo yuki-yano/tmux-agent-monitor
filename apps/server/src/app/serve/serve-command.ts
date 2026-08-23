@@ -372,11 +372,11 @@ export const cleanupFailedServeSetup = async ({
   disposeRuntime,
   releaseServerRuntime,
 }: {
-  streamCleanups?: Array<() => unknown | Promise<unknown>>;
+  streamCleanups?: Array<() => unknown>;
   closeServer?: (onClosed: () => void) => void;
   stopMonitor?: () => void | Promise<void>;
   disposeRuntime?: () => void | Promise<void>;
-  releaseServerRuntime: () => unknown | Promise<unknown>;
+  releaseServerRuntime: () => unknown;
 }): Promise<void> => {
   await Promise.allSettled(streamCleanups.map((cleanup) => Promise.resolve().then(cleanup)));
   await Promise.allSettled([

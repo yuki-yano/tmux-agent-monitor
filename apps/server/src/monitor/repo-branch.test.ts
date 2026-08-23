@@ -20,7 +20,7 @@ vi.mock("../domain/git/git-utils", () => ({
 }));
 
 const loadModule = async () => {
-  await vi.resetModules();
+  vi.resetModules();
   runGitMock.mockReset();
   return import("./repo-branch");
 };

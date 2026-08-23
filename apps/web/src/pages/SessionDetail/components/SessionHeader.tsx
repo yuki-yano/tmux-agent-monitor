@@ -122,7 +122,7 @@ const SessionTitleInput = ({
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      void onTitleSave();
+      onTitleSave();
       return;
     }
     if (event.key === "Escape") {
@@ -246,7 +246,7 @@ const SessionTitleArea = ({
         {showResetTitle ? (
           <IconButton
             type="button"
-            onClick={() => void onTitleReset()}
+            onClick={onTitleReset}
             disabled={titleSaving}
             variant="dangerOutline"
             size="xs"

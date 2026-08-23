@@ -159,6 +159,7 @@ export const AnsiVirtualizedViewport = ({
     [lines.length],
   );
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual owns mutable measurements internally.
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: virtualLines.length,
     getScrollElement: () => scrollerRef.current,

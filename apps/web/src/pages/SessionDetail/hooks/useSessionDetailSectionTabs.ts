@@ -121,7 +121,7 @@ export const useSessionDetailSectionTabs = ({ scope }: UseSessionDetailSectionTa
       evaluateTabLabelVisibility();
     };
     fontFaceSet?.addEventListener("loadingdone", onFontLoadingDone);
-    fontFaceSet?.ready.then(() => {
+    void fontFaceSet?.ready.then(() => {
       evaluateTabLabelVisibility();
     });
 

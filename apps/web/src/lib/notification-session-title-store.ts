@@ -166,7 +166,12 @@ export const syncLocalNotificationSessionTitles = async (
         if (!cursor) {
           return;
         }
-        const paneId = typeof cursor.key === "string" ? cursor.key : String(cursor.key);
+        if (typeof cursor.key !== "string") {
+          cursor.delete();
+          cursor.continue();
+          return;
+        }
+        const paneId = cursor.key;
         if (!normalized.has(paneId)) {
           cursor.delete();
         }

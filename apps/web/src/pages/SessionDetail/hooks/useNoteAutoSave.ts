@@ -87,7 +87,7 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
       debouncedSave.cancel();
       return;
     }
-    debouncedSave(editingNoteId, editingBody);
+    debouncedSave.run(editingNoteId, editingBody);
     return debouncedSave.cancel;
   }, [debouncedSave, editingBody, editingNoteId]);
 

@@ -1,5 +1,5 @@
 import type { BranchList } from "@vde-monitor/shared";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const VIRTUAL_BRANCH_STORAGE_KEY_PREFIX = "vde-monitor:virtual-branch:v1";
 
@@ -70,12 +70,12 @@ type UseSessionVirtualBranchArgs = {
 };
 
 export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtualBranchArgs) => {
-  const invalidatedSelectionRef = useRef<{ paneId: string; branch: string } | null>(null);
   const [virtualBranchState, setVirtualBranchState] = useState<{
     paneId: string;
     branch: string | null;
+    invalidatedBranch: string | null;
     // react-doctor-disable-next-line no-event-handler
-  }>(() => ({ paneId, branch: null }));
+  }>(() => ({ paneId, branch: null, invalidatedBranch: null }));
 
   const branchNames = useMemo(
     // react-doctor-disable-next-line no-event-handler
@@ -88,10 +88,7 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
   const storedVirtualBranch =
     // react-doctor-disable-next-line no-event-handler
     virtualBranchState.paneId === paneId &&
-    !(
-      invalidatedSelectionRef.current?.paneId === paneId &&
-      invalidatedSelectionRef.current.branch === virtualBranchState.branch
-    )
+    virtualBranchState.invalidatedBranch !== virtualBranchState.branch
       ? virtualBranchState.branch
       : null;
   const virtualBranch =
@@ -117,22 +114,29 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
       clearStoredSelection(paneId);
       return;
     }
-    invalidatedSelectionRef.current = null;
+    // oxlint-disable-next-line react/set-state-in-effect -- Storage is restored only after the matching branch list arrives.
     setVirtualBranchState((prev) =>
       prev.paneId === paneId && prev.branch === stored.branch
         ? prev
-        : { paneId, branch: stored.branch },
+        : { paneId, branch: stored.branch, invalidatedBranch: null },
     );
   }, [branchList, branchNames, defaultBranch, paneId, repoRoot]);
 
   // Drop the selection when the branch disappears (e.g. deleted).
+  // react-doctor-disable-next-line no-derived-state-effect
   useEffect(() => {
     if (!storedVirtualBranch) {
       return;
     }
     if (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) {
       clearStoredSelection(paneId);
-      invalidatedSelectionRef.current = { paneId, branch: storedVirtualBranch };
+      /* oxlint-disable react/set-state-in-effect -- Removed branches must invalidate the restored selection. */
+      // react-doctor-disable-next-line no-derived-state
+      setVirtualBranchState((previous) => ({
+        ...previous,
+        invalidatedBranch: storedVirtualBranch,
+      }));
+      /* oxlint-enable react/set-state-in-effect */
     }
   }, [branchNames, paneId, storedVirtualBranch]);
 
@@ -151,20 +155,17 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
     (name: string) => {
       if (name === defaultBranch) {
         clearStoredSelection(paneId);
-        invalidatedSelectionRef.current = null;
-        setVirtualBranchState({ paneId, branch: null });
+        setVirtualBranchState({ paneId, branch: null, invalidatedBranch: null });
         return;
       }
-      invalidatedSelectionRef.current = null;
-      setVirtualBranchState({ paneId, branch: name });
+      setVirtualBranchState({ paneId, branch: name, invalidatedBranch: null });
     },
     [defaultBranch, paneId],
   );
 
   const clearVirtualBranch = useCallback(() => {
     clearStoredSelection(paneId);
-    invalidatedSelectionRef.current = null;
-    setVirtualBranchState({ paneId, branch: null });
+    setVirtualBranchState({ paneId, branch: null, invalidatedBranch: null });
   }, [paneId]);
 
   return {

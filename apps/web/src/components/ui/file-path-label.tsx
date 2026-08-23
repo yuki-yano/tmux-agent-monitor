@@ -26,12 +26,17 @@ type FilePathLabelProps = HTMLAttributes<HTMLDivElement> & {
 type HintModel = {
   label: string;
   measureText: string;
+};
+
+type PathHint = {
+  hint: HintModel;
   measureRef: RefObject<HTMLSpanElement | null>;
 };
 
 type HintRowProps = {
   displayText: string;
   hint: HintModel;
+  measureRef: RefObject<HTMLSpanElement | null>;
   hintClass: string;
   measureClass: string;
   measureWrapperClass: string;
@@ -122,7 +127,7 @@ const usePathHint = ({
   reservePx: number;
   containerRef: RefObject<HTMLElement | null>;
   measureRef?: RefObject<HTMLElement | null>;
-}): HintModel => {
+}): PathHint => {
   const { ref: overflowRef, truncate } = useOverflowTruncate(overflowMeasureText);
   const segmented = useSegmentTruncate({
     text: fullText,
@@ -139,8 +144,10 @@ const usePathHint = ({
     truncate,
   });
   return {
-    label,
-    measureText: isSegmentTruncateMode(mode) ? fullText : overflowMeasureText,
+    hint: {
+      label,
+      measureText: isSegmentTruncateMode(mode) ? fullText : overflowMeasureText,
+    },
     measureRef: isSegmentTruncateMode(mode) ? segmented.measureRef : overflowRef,
   };
 };
@@ -148,6 +155,7 @@ const usePathHint = ({
 const HintRow = ({
   displayText,
   hint,
+  measureRef,
   hintClass,
   measureClass,
   measureWrapperClass,
@@ -155,7 +163,7 @@ const HintRow = ({
 }: HintRowProps) => (
   <div className="relative min-w-0">
     <span
-      ref={hint.measureRef}
+      ref={measureRef}
       aria-hidden
       className={cn(isSegmentTruncate ? measureClass : hintClass, measureWrapperClass)}
     >
@@ -176,13 +184,17 @@ const buildFromFallback = (renamedFrom: string | null | undefined, tailSegments:
 const PathHintRow = ({
   renamedFrom,
   fromHint,
+  fromMeasureRef,
   dirHint,
+  dirMeasureRef,
   classes,
   isSegmentTruncate,
 }: {
   renamedFrom?: string | null;
   fromHint: HintModel;
+  fromMeasureRef: RefObject<HTMLSpanElement | null>;
   dirHint: HintModel;
+  dirMeasureRef: RefObject<HTMLSpanElement | null>;
   classes: HintClasses;
   isSegmentTruncate: boolean;
 }) => {
@@ -191,6 +203,7 @@ const PathHintRow = ({
       <HintRow
         displayText={`from ${fromHint.label}`}
         hint={fromHint}
+        measureRef={fromMeasureRef}
         hintClass={classes.hintClass}
         measureClass={classes.measureClass}
         measureWrapperClass={classes.measureWrapperClass}
@@ -205,6 +218,7 @@ const PathHintRow = ({
     <HintRow
       displayText={dirHint.label}
       hint={dirHint}
+      measureRef={dirMeasureRef}
       hintClass={classes.hintClass}
       measureClass={classes.measureClass}
       measureWrapperClass={classes.measureWrapperClass}
@@ -237,7 +251,7 @@ const FilePathLabel = ({
     [renamedFrom, tailSegments],
   );
 
-  const dirHint = usePathHint({
+  const { hint: dirHint, measureRef: dirHintMeasureRef } = usePathHint({
     mode: dirTruncate,
     fullText: fullDir,
     segments: dirSegments,
@@ -247,7 +261,7 @@ const FilePathLabel = ({
     containerRef,
     measureRef,
   });
-  const fromHint = usePathHint({
+  const { hint: fromHint, measureRef: fromHintMeasureRef } = usePathHint({
     mode: dirTruncate,
     fullText: fromFullLabel,
     segments: fromSegments,
@@ -274,7 +288,9 @@ const FilePathLabel = ({
       <PathHintRow
         renamedFrom={renamedFrom}
         fromHint={fromHint}
+        fromMeasureRef={fromHintMeasureRef}
         dirHint={dirHint}
+        dirMeasureRef={dirHintMeasureRef}
         classes={classes}
         isSegmentTruncate={segmentTruncate}
       />

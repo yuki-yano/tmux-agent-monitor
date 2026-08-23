@@ -7,7 +7,7 @@ vi.mock("../domain/git/git-utils", () => ({
 }));
 
 const loadModule = async () => {
-  await vi.resetModules();
+  vi.resetModules();
   resolveRepoRootMock.mockReset();
   return import("./repo-root");
 };

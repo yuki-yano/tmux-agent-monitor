@@ -49,17 +49,18 @@ export const useChatGridVM = () => {
   });
 
   const [candidateModalOpen, setCandidateModalOpen] = useState(false);
-  const [selectedCandidatePaneIds, setSelectedCandidatePaneIds] = useState<string[]>([]);
+  const [candidateSelection, setCandidateSelection] = useState<string[]>([]);
   const paneIdsFromSearch = useMemo(() => normalizeChatGridPaneParam(search.panes), [search.panes]);
   const [hasResolvedGridSelection, setHasResolvedGridSelection] = useState(
     () => sessions.length > 0 || connected || connectionStatus === "disconnected",
   );
 
-  useEffect(() => {
-    if (sessions.length > 0 || connected || connectionStatus === "disconnected") {
-      setHasResolvedGridSelection(true);
-    }
-  }, [connected, connectionStatus, sessions.length]);
+  const gridSelectionResolved =
+    sessions.length > 0 || connected || connectionStatus === "disconnected";
+  if (!hasResolvedGridSelection && gridSelectionResolved) {
+    setHasResolvedGridSelection(true);
+  }
+  const effectiveHasResolvedGridSelection = hasResolvedGridSelection || gridSelectionResolved;
 
   const candidateItems = useMemo(
     () =>
@@ -69,11 +70,17 @@ export const useChatGridVM = () => {
       }),
     [getRepoSortAnchorAt, sessions],
   );
-
-  useEffect(() => {
-    const candidatePaneIdSet = new Set(candidateItems.map((session) => session.paneId));
-    setSelectedCandidatePaneIds((prev) => prev.filter((paneId) => candidatePaneIdSet.has(paneId)));
-  }, [candidateItems]);
+  const candidatePaneIdSet = useMemo(
+    () => new Set(candidateItems.map((session) => session.paneId)),
+    [candidateItems],
+  );
+  const selectedCandidatePaneIds = useMemo(
+    () => candidateSelection.filter((paneId) => candidatePaneIdSet.has(paneId)),
+    [candidatePaneIdSet, candidateSelection],
+  );
+  if (selectedCandidatePaneIds.length !== candidateSelection.length) {
+    setCandidateSelection(selectedCandidatePaneIds);
+  }
 
   const sessionByPaneId = useMemo(
     () => new Map(sessions.map((session) => [session.paneId, session] as const)),
@@ -145,10 +152,10 @@ export const useChatGridVM = () => {
     () => resolveChatGridLayout(Math.max(selectedSessions.length, CHAT_GRID_MIN_PANE_COUNT)),
     [selectedSessions.length],
   );
-  const isRestoringSelection = paneIdsFromSearch.length > 0 && !hasResolvedGridSelection;
+  const isRestoringSelection = paneIdsFromSearch.length > 0 && !effectiveHasResolvedGridSelection;
 
   useEffect(() => {
-    if (paneIdsFromSearch.length > 0 && !hasResolvedGridSelection) {
+    if (paneIdsFromSearch.length > 0 && !effectiveHasResolvedGridSelection) {
       return;
     }
     const availablePaneParam = serializeChatGridPaneParam(selectedPaneIds);
@@ -164,10 +171,10 @@ export const useChatGridVM = () => {
       }),
       replace: true,
     });
-  }, [hasResolvedGridSelection, navigate, paneIdsFromSearch, selectedPaneIds]);
+  }, [effectiveHasResolvedGridSelection, navigate, paneIdsFromSearch, selectedPaneIds]);
 
   const handleOpenCandidateModal = useCallback(() => {
-    setSelectedCandidatePaneIds([]);
+    setCandidateSelection([]);
     setCandidateModalOpen(true);
   }, []);
 
@@ -175,20 +182,23 @@ export const useChatGridVM = () => {
     setCandidateModalOpen(false);
   }, []);
 
-  const handleToggleCandidatePane = useCallback((paneId: string) => {
-    setSelectedCandidatePaneIds((prev) => {
-      if (prev.includes(paneId)) {
-        return prev.filter((id) => id !== paneId);
-      }
-      if (prev.length >= CHAT_GRID_MAX_PANE_COUNT) {
-        return prev;
-      }
-      return [...prev, paneId];
-    });
-  }, []);
+  const handleToggleCandidatePane = useCallback(
+    (paneId: string) => {
+      setCandidateSelection((previous) => {
+        const activeSelection = previous.filter((id) => candidatePaneIdSet.has(id));
+        if (activeSelection.includes(paneId)) {
+          return activeSelection.filter((id) => id !== paneId);
+        }
+        if (activeSelection.length >= CHAT_GRID_MAX_PANE_COUNT) {
+          return activeSelection;
+        }
+        return [...activeSelection, paneId];
+      });
+    },
+    [candidatePaneIdSet],
+  );
 
   const handleApplyCandidates = useCallback(() => {
-    const candidatePaneIdSet = new Set(candidateItems.map((session) => session.paneId));
     const nextPaneIds = selectedCandidatePaneIds
       .filter((paneId) => candidatePaneIdSet.has(paneId))
       .slice(0, CHAT_GRID_MAX_PANE_COUNT);
@@ -208,7 +218,7 @@ export const useChatGridVM = () => {
     nextPaneIds.forEach((paneId) => {
       void fetchPane(paneId, { force: true, loading: "always" });
     });
-  }, [candidateItems, fetchPane, navigate, selectedCandidatePaneIds]);
+  }, [candidatePaneIdSet, fetchPane, navigate, selectedCandidatePaneIds]);
 
   const handleRefreshAllTiles = useCallback(() => {
     if (selectedPaneIds.length === 0) {
@@ -247,7 +257,7 @@ export const useChatGridVM = () => {
     [navigate, selectedPaneIds],
   );
   const handleSyncCandidateSelectionFromCurrentGrid = useCallback(() => {
-    setSelectedCandidatePaneIds(currentGridCandidatePaneIds);
+    setCandidateSelection(currentGridCandidatePaneIds);
   }, [currentGridCandidatePaneIds]);
 
   const handleLaunchAgentInSession = useCallback(

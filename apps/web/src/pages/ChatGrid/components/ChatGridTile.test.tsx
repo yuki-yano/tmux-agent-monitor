@@ -146,18 +146,21 @@ describe("ChatGridTile", () => {
       screenError: null,
       onTouchSession: vi.fn(async () => undefined),
     };
-    let updateLines!: (lines: string[]) => void;
     const Harness = () => {
       const [lines, setLines] = useState(["line 1"]);
-      updateLines = setLines;
-      return <ChatGridTile {...props} screenLines={lines} />;
+      return (
+        <>
+          <button type="button" onClick={() => setLines(["line 1", "line 2"])}>
+            Update lines
+          </button>
+          <ChatGridTile {...props} screenLines={lines} />
+        </>
+      );
     };
     renderWithRouter(<Harness />);
 
     fireEvent.wheel(screen.getByTestId("ansi-viewport"), { deltaY: -20 });
-    act(() => {
-      updateLines(["line 1", "line 2"]);
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Update lines" }));
 
     expect(screen.queryByText("line 2")).toBeNull();
 

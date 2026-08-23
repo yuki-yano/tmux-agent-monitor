@@ -50,6 +50,7 @@ export const ShikiCodeBlock = ({
       scroller.scrollLeft = 0;
       scroller.scrollTop = 0;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- Cache and scroll state must switch together before paint.
     setError(null);
     const cached = peekHighlightedCode({
       code: normalizedCode,

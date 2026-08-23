@@ -8,7 +8,7 @@ import {
   List,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Card, IconButton, LastInputPill, SurfaceButton, TagPill } from "@/components/ui";
 import {
@@ -169,6 +169,42 @@ const QuickPanelSessionItem = ({
   );
 };
 
+type QuickPanelPhase = "closed" | "open" | "closing";
+
+const resolveQuickPanelPhase = (open: boolean, previousPhase: QuickPanelPhase): QuickPanelPhase =>
+  open ? "open" : previousPhase === "open" ? "closing" : previousPhase;
+
+const useQuickPanelPhase = (open: boolean) => {
+  const [panelState, setPanelState] = useState<{ open: boolean; phase: QuickPanelPhase }>(() => ({
+    open,
+    phase: open ? "open" : "closed",
+  }));
+  const nextPhase = resolveQuickPanelPhase(open, panelState.phase);
+  if (panelState.open !== open) {
+    setPanelState({ open, phase: nextPhase });
+  }
+  const panelPhase = panelState.open === open ? panelState.phase : nextPhase;
+  const finishClosing = useCallback(() => {
+    setPanelState((previous) =>
+      previous.phase === "closed" ? previous : { ...previous, phase: "closed" },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (panelPhase !== "closing") {
+      return;
+    }
+    // Animations never fire inside display:none subtrees (e.g. the md:hidden
+    // wrapper on desktop), so force-unmount if animationend never arrives.
+    const fallback = window.setTimeout(finishClosing, 400);
+    return () => {
+      window.clearTimeout(fallback);
+    };
+  }, [finishClosing, panelPhase]);
+
+  return { panelPhase, finishClosing };
+};
+
 export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
   const { open, sessionGroups, allSessions, nowMs, currentPaneId } = state;
   const { onOpenLogModal, onOpenSessionLink, onOpenSessionLinkInNewWindow, onClose, onToggle } =
@@ -177,25 +213,7 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
   const touchStartYRef = useRef<number | null>(null);
   const pwaDisplayMode = isPwaDisplayMode();
   // Keep the card mounted while the exit animation plays.
-  const [panelPhase, setPanelPhase] = useState<"closed" | "open" | "closing">(
-    open ? "open" : "closed",
-  );
-
-  useEffect(() => {
-    if (open) {
-      setPanelPhase("open");
-      return;
-    }
-    setPanelPhase((previous) => (previous === "open" ? "closing" : previous));
-    // Animations never fire inside display:none subtrees (e.g. the md:hidden
-    // wrapper on desktop), so force-unmount if animationend never arrives.
-    const fallback = window.setTimeout(() => {
-      setPanelPhase("closed");
-    }, 400);
-    return () => {
-      window.clearTimeout(fallback);
-    };
-  }, [open]);
+  const { panelPhase, finishClosing } = useQuickPanelPhase(open);
 
   useEffect(() => {
     if (!open) {
@@ -316,7 +334,7 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
           data-quick-panel-card
           onAnimationEnd={(event) => {
             if (event.target === event.currentTarget && panelPhase === "closing") {
-              setPanelPhase("closed");
+              finishClosing();
             }
           }}
           className={cn(

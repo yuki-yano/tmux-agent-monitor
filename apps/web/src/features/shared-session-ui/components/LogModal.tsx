@@ -136,6 +136,7 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
       pendingSnapshotRef.current = null;
       pendingSnapRef.current = null;
       isUserScrollingRef.current = false;
+      // oxlint-disable-next-line react/set-state-in-effect -- Closing resets buffered output and follow state atomically.
       setDisplaySnapshot(null);
       dispatchScrollState({ type: "reset" });
       return;

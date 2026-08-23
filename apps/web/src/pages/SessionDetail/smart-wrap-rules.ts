@@ -190,7 +190,7 @@ const resolveClaudeLabelIndent = (text: string): number | null => {
   if (!match) {
     return null;
   }
-  const codePoints = [...text];
+  const codePoints = Array.from(text);
   let anchor = countCh(match[0]);
   const nextChar = codePoints[anchor];
   if (nextChar === "(" || nextChar === " ") {

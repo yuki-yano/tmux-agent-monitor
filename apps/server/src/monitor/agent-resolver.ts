@@ -87,7 +87,7 @@ export const resolvePaneAgent = async (
     currentCommandAgent === "unknown"
       ? buildAgent(pane.paneStartCommand ?? "")
       : currentCommandAgent;
-  const agent = await resolveFallbackAgent({
+  const agent = resolveFallbackAgent({
     agent: hintedAgent,
     processCommand: editorContext.processCommand,
     pane,

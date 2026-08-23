@@ -7,7 +7,7 @@ import { useSessionDetailContext } from "../SessionDetailProvider";
 // (which is ScreenPanel's own dedicated hook) since worktree/branch sections are
 // siblings of ScreenPanel, not something ScreenPanel itself renders.
 export const useSessionDetailViewWorktreeBranchSectionProps = () => {
-  const { scope } = useSessionDetailContext();
+  const { base, scope } = useSessionDetailContext();
   const { virtualWorktree, branches, virtualBranch } = scope;
 
   const onRefreshWorktrees = useCallback(() => {
@@ -50,6 +50,7 @@ export const useSessionDetailViewWorktreeBranchSectionProps = () => {
         branchesError: branches.branchesError,
         mutating: branches.mutating,
         mutationError: branches.mutationError,
+        nowMs: base.nowMs,
       },
       actions: {
         onRefreshBranches,
@@ -63,6 +64,7 @@ export const useSessionDetailViewWorktreeBranchSectionProps = () => {
     }),
     [
       branches,
+      base.nowMs,
       virtualBranch,
       onRefreshBranches,
       scope.selectVirtualBranch,

@@ -121,10 +121,10 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
   const [status, setStatus] = useState<PushUiStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [enabledPaneIds, setEnabledPaneIds] = useState<string[]>(() => readEnabledPaneIds());
-  const subscriptionIdRef = useLazyRef(() => localStorage.getItem(SUBSCRIPTION_ID_STORAGE_KEY));
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(
-    () => subscriptionIdRef.current,
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(() =>
+    localStorage.getItem(SUBSCRIPTION_ID_STORAGE_KEY),
   );
+  const subscriptionIdRef = useRef(subscriptionId);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const deviceIdRef = useLazyRef(() => readOrCreateDeviceId());
   const enabledPaneIdsRef = useRef(enabledPaneIds);

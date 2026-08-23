@@ -1,4 +1,4 @@
-import { type RefObject, type SetStateAction, useCallback, useEffect, useReducer } from "react";
+import { type RefObject, type SetStateAction, useCallback, useEffect, useState } from "react";
 
 import { useLazyRef } from "@/lib/use-lazy-ref";
 
@@ -18,28 +18,25 @@ export const useScreenPanelWorktreeSelector = ({
   onRefreshWorktrees,
   containerRef,
 }: UseScreenPanelWorktreeSelectorArgs) => {
-  const [, forceRender] = useReducer((version: number) => version + 1, 0);
   const lastClosedAtRef = useLazyRef(() => Date.now());
-  const requestedOpenRef = useLazyRef(() => false);
-  if (!enabled && requestedOpenRef.current) {
-    requestedOpenRef.current = false;
+  const [openState, setOpenState] = useState(() => ({ enabled, requested: false }));
+  if (openState.enabled !== enabled) {
+    setOpenState({ enabled, requested: false });
   }
-  const isOpen = enabled && requestedOpenRef.current;
+  const isOpen = enabled && openState.enabled === enabled && openState.requested;
 
   const setRequestedOpen = useCallback(
     (next: SetStateAction<boolean>) => {
-      const nextOpen =
-        typeof next === "function"
-          ? (next as (previous: boolean) => boolean)(requestedOpenRef.current)
-          : next;
-      const normalizedOpen = enabled && nextOpen;
-      if (requestedOpenRef.current === normalizedOpen) {
-        return;
-      }
-      requestedOpenRef.current = normalizedOpen;
-      forceRender();
+      setOpenState((previous) => {
+        const previousOpen = previous.enabled === enabled && previous.requested;
+        const nextOpen = typeof next === "function" ? next(previousOpen) : next;
+        const normalizedOpen = enabled && nextOpen;
+        return previous.enabled === enabled && previous.requested === normalizedOpen
+          ? previous
+          : { enabled, requested: normalizedOpen };
+      });
     },
-    [enabled, requestedOpenRef],
+    [enabled],
   );
 
   const refreshWorktrees = useCallback(() => {

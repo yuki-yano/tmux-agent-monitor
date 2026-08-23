@@ -14,7 +14,7 @@ describe("useDebouncedCallback", () => {
     const { result } = renderHook(() => useDebouncedCallback(callback, 500));
 
     act(() => {
-      result.current();
+      result.current.run();
     });
 
     expect(callback).not.toHaveBeenCalled();
@@ -31,7 +31,7 @@ describe("useDebouncedCallback", () => {
     const { result } = renderHook(() => useDebouncedCallback(callback, 500));
 
     act(() => {
-      result.current();
+      result.current.run();
     });
 
     act(() => {
@@ -51,11 +51,11 @@ describe("useDebouncedCallback", () => {
     const { result } = renderHook(() => useDebouncedCallback(callback, 500));
 
     act(() => {
-      result.current("first");
+      result.current.run("first");
       vi.advanceTimersByTime(300);
-      result.current("second");
+      result.current.run("second");
       vi.advanceTimersByTime(300);
-      result.current("third");
+      result.current.run("third");
     });
 
     expect(callback).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ describe("useDebouncedCallback", () => {
     rerender({ delayMs: 100 });
 
     act(() => {
-      result.current();
+      result.current.run();
     });
 
     act(() => {
@@ -93,7 +93,7 @@ describe("useDebouncedCallback", () => {
     const { result } = renderHook(() => useDebouncedCallback(callback, 500));
 
     act(() => {
-      result.current();
+      result.current.run();
       result.current.cancel();
     });
 
@@ -109,7 +109,7 @@ describe("useDebouncedCallback", () => {
     const { result, unmount } = renderHook(() => useDebouncedCallback(callback, 500));
 
     act(() => {
-      result.current();
+      result.current.run();
     });
     unmount();
 

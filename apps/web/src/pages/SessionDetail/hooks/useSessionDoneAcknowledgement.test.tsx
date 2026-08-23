@@ -110,14 +110,14 @@ describe("useSessionDoneAcknowledgement", () => {
     await act(async () => undefined);
 
     setVisibility("hidden");
-    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await act(() => document.dispatchEvent(new Event("visibilitychange")));
     await act(async () => {
       await vi.runAllTimersAsync();
     });
     expect(acknowledgeSessionView).toHaveBeenCalledTimes(1);
 
     setVisibility("visible");
-    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await act(() => document.dispatchEvent(new Event("visibilitychange")));
     expect(acknowledgeSessionView).toHaveBeenNthCalledWith(2, "%1", "epoch-1", 1);
   });
 
@@ -215,7 +215,7 @@ describe("useSessionDoneAcknowledgement", () => {
     expect(acknowledgeSessionView).not.toHaveBeenCalled();
 
     setVisibility("visible");
-    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await act(() => document.dispatchEvent(new Event("visibilitychange")));
 
     await waitFor(() => expect(acknowledgeSessionView).toHaveBeenCalledWith("%1", "epoch-1", 1));
   });

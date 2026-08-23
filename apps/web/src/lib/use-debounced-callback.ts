@@ -2,7 +2,8 @@ import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 
 import { useTimeout } from "./use-timeout";
 
-type DebouncedFunction<A extends unknown[]> = ((...args: A) => void) & {
+type DebouncedCallback<A extends unknown[]> = {
+  run: (...args: A) => void;
   cancel: () => void;
 };
 
@@ -14,22 +15,22 @@ type DebouncedFunction<A extends unknown[]> = ((...args: A) => void) & {
 export const useDebouncedCallback = <A extends unknown[]>(
   callback: (...args: A) => void,
   delayMs: number,
-): DebouncedFunction<A> => {
+): DebouncedCallback<A> => {
   const callbackRef = useRef(callback);
   useLayoutEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
 
-  const timer = useTimeout();
+  const { set: setTimeout, cancel } = useTimeout();
 
   const run = useCallback(
     (...args: A) => {
-      timer.set(() => {
+      setTimeout(() => {
         callbackRef.current(...args);
       }, delayMs);
     },
-    [timer, delayMs],
+    [delayMs, setTimeout],
   );
 
-  return useMemo(() => Object.assign(run, { cancel: timer.cancel }), [run, timer]);
+  return useMemo(() => ({ run, cancel }), [cancel, run]);
 };

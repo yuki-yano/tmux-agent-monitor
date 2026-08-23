@@ -62,6 +62,7 @@ describe("BranchSection", () => {
     branchesError: null,
     mutating: null,
     mutationError: null,
+    nowMs: Date.parse("2026-02-17T00:10:00.000Z"),
     ...overrides,
   });
 
@@ -104,6 +105,31 @@ describe("BranchSection", () => {
     expect(within(plainRow).queryByText("Default")).toBeNull();
     expect(within(plainRow).queryByText("Current")).toBeNull();
     expect(within(plainRow).queryByText("Worktree")).toBeNull();
+  });
+
+  it("updates relative commit times when nowMs changes", () => {
+    const committedEntry = {
+      ...plainEntry,
+      committedAt: "2026-02-17T00:09:00.000Z",
+    };
+    const actions = buildActions();
+    const { rerender } = render(
+      <BranchSection state={buildState({ branches: [committedEntry] })} actions={actions} />,
+    );
+
+    expect(screen.getByText("1m ago")).toBeTruthy();
+
+    rerender(
+      <BranchSection
+        state={buildState({
+          branches: [committedEntry],
+          nowMs: Date.parse("2026-02-17T00:12:00.000Z"),
+        })}
+        actions={actions}
+      />,
+    );
+
+    expect(screen.getByText("3m ago")).toBeTruthy();
   });
 
   it("hides diff metrics on the default branch entry only", () => {

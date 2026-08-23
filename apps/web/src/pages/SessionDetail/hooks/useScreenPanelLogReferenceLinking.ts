@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ScreenMode } from "@/lib/screen-loading";
 import { useLazyRef } from "@/lib/use-lazy-ref";
-
 import type { ScreenWrapMode } from "../atoms/screenAtoms";
 import {
   extractLogReferenceTokensFromLine,
@@ -125,6 +124,7 @@ export const useScreenPanelLogReferenceLinking = ({
       if (!line) {
         continue;
       }
+      // oxlint-disable-next-line react/refs -- A bounded deterministic LRU avoids reparsing unchanged log lines.
       const tokens = extractCachedTokensFromLine(line);
       const pathTokens: string[] = [];
       const filenameTokens: string[] = [];

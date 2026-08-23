@@ -95,7 +95,7 @@ const resolveDnsNameFromStatus = (value: unknown) => {
   return normalizeDnsName(self.DNSName);
 };
 
-const parseJson = (raw: string): unknown | null => {
+const parseJson = (raw: string): unknown => {
   try {
     return JSON.parse(raw) as unknown;
   } catch {

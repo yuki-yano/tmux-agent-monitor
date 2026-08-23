@@ -33,6 +33,7 @@ type ScoredCandidate = {
 const FIRST_JSON_LINE_MAX_BYTES = 64 * 1024;
 const FIRST_JSON_LINE_CHUNK_BYTES = 4096;
 const LSOF_PID_BATCH_SIZE = 256;
+const readString = (value: unknown): string => (typeof value === "string" ? value : "");
 
 const scoreByEventTime = (fileMtimeMs: number, lastEventAt: string | null): number => {
   if (!lastEventAt) {
@@ -179,7 +180,7 @@ const resolveClaudeSessionFromHistory = async (
       payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
     const sessionCwd =
       type === "session_meta" && payloadRecord
-        ? normalizeAbsolutePath(String(payloadRecord.cwd ?? ""))
+        ? normalizeAbsolutePath(readString(payloadRecord.cwd))
         : null;
     if (sessionCwd && sessionCwd === normalizedCwd) {
       score += 100;
@@ -339,12 +340,12 @@ const resolveCodexSessionCandidates = async (pane: SessionDetail): Promise<Score
     if (type !== "session_meta" || !payloadRecord) {
       continue;
     }
-    const sessionId = String(payloadRecord.id ?? "").trim();
+    const sessionId = readString(payloadRecord.id).trim();
     if (!sessionId) {
       continue;
     }
     let score = 5;
-    const metaCwd = normalizeAbsolutePath(String(payloadRecord.cwd ?? ""));
+    const metaCwd = normalizeAbsolutePath(readString(payloadRecord.cwd));
     if (metaCwd && normalizedCwd && metaCwd === normalizedCwd) {
       score += 100;
     }

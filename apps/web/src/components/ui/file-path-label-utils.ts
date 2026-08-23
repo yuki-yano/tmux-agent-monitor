@@ -161,6 +161,7 @@ export const useOverflowTruncate = (text: string) => {
     const el = ref.current;
     if (!el) return;
     if (!text) {
+      // oxlint-disable-next-line react/set-state-in-effect -- Layout measurement state must reset before paint.
       setTruncate(false);
       return;
     }

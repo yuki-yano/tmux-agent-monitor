@@ -130,7 +130,7 @@ const replaceCssValueUrls = (value: string, context: PreviewTransformContext) =>
       `"${rewritten.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`,
     ).nodes;
   });
-  return parsed.toString();
+  return valueParser.stringify(parsed.nodes);
 };
 
 const replaceImportUrl = (rule: AtRule, context: PreviewTransformContext) => {
@@ -144,7 +144,7 @@ const replaceImportUrl = (rule: AtRule, context: PreviewTransformContext) => {
     return;
   }
   firstNode.value = rewritePreviewResourceUrl(firstNode.value, context);
-  rule.params = parsed.toString();
+  rule.params = valueParser.stringify(parsed.nodes);
 };
 
 export const transformPreviewCss = (css: string, context: PreviewTransformContext) => {

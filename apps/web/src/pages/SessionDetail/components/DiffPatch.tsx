@@ -110,10 +110,18 @@ const DiffPatch = memo(
       () => new Set(referenceCandidateTokens),
       [referenceCandidateTokens],
     );
-    const activeLinkableTokens =
-      onResolveFileReferenceCandidates && referenceCandidateTokens.length > 0
-        ? linkableTokens
-        : EMPTY_LINKABLE_TOKENS;
+    const activeLinkableTokens = useMemo(() => {
+      if (!onResolveFileReferenceCandidates || referenceCandidateTokenSet.size === 0) {
+        return EMPTY_LINKABLE_TOKENS;
+      }
+      const activeTokens = new Set<string>();
+      linkableTokens.forEach((token) => {
+        if (referenceCandidateTokenSet.has(token)) {
+          activeTokens.add(token);
+        }
+      });
+      return activeTokens;
+    }, [linkableTokens, onResolveFileReferenceCandidates, referenceCandidateTokenSet]);
     const renderedLines = useMemo(() => {
       const lineCounts = new Map<string, number>();
       return lines.map((line) => {
@@ -134,16 +142,6 @@ const DiffPatch = memo(
       const requestId = activeResolveCandidatesRequestIdRef.current + 1;
       activeResolveCandidatesRequestIdRef.current = requestId;
       let cancelled = false;
-
-      setLinkableTokens((previous) => {
-        const next = new Set<string>();
-        previous.forEach((token) => {
-          if (referenceCandidateTokenSet.has(token)) {
-            next.add(token);
-          }
-        });
-        return areSameStringSet(next, previous) ? previous : next;
-      });
 
       void onResolveFileReferenceCandidates(referenceCandidateTokens)
         .then((resolvedTokens) => {

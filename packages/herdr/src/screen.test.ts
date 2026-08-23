@@ -59,7 +59,8 @@ describe("createHerdrScreenCapture", () => {
       if (params.pane_id === "bad") {
         throw new Error("missing pane");
       }
-      return { read: { text: `screen:${params.pane_id}\n`, truncated: false } };
+      const paneId = typeof params.pane_id === "string" ? params.pane_id : "";
+      return { read: { text: `screen:${paneId}\n`, truncated: false } };
     });
     const client = { request };
     const screen = createHerdrScreenCapture(client);

@@ -1,7 +1,7 @@
 import type { RepoFileNodeKind } from "@vde-monitor/shared";
 import { defaultStyles } from "react-file-icon";
 
-type FileIconStyleKey = keyof typeof defaultStyles | "default";
+type FileIconStyleKey = keyof typeof defaultStyles;
 
 type FileIconModel =
   | {

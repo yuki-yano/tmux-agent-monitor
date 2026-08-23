@@ -69,7 +69,7 @@ describe("proxy", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(child.kill).toHaveBeenCalled();
+    expect(child.killed).toBe(true);
   });
 
   it("maps ErrorResponse from proxy to INVALID_PANE", async () => {

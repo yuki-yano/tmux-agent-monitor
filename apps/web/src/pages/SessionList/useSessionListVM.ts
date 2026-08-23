@@ -123,7 +123,7 @@ export const useSessionListVM = () => {
   const handleOpenPaneHere = useCallback(
     (targetPaneId: string) => {
       closeQuickPanel();
-      navigate({ to: "/sessions/$paneId", params: { paneId: targetPaneId } });
+      void navigate({ to: "/sessions/$paneId", params: { paneId: targetPaneId } });
       closeLogModal();
     },
     [closeLogModal, closeQuickPanel, navigate],
@@ -165,7 +165,7 @@ export const useSessionListVM = () => {
   );
 
   const handleRefresh = useCallback(() => {
-    refreshSessions();
+    void refreshSessions();
   }, [refreshSessions]);
 
   const handleOpenChatGrid = useCallback(() => {

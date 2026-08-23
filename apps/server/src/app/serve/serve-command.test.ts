@@ -454,7 +454,7 @@ describe("createGracefulShutdown", () => {
       exitProcess: vi.fn(),
     });
 
-    shutdown();
+    void shutdown();
     await flushMicrotasks();
     await vi.advanceTimersByTimeAsync(4999);
 

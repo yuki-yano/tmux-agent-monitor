@@ -113,25 +113,25 @@ const resolvePreviewAgent = (session: SessionSummary | null): "codex" | "claude"
 
 const buildPreviewLines = ({
   hoveredPaneId,
-  previewEntry,
+  hasPreviewEntry,
   previewText,
-  session,
+  agent,
   resolvedTheme,
   highlightCorrections,
 }: {
   hoveredPaneId: string | null;
-  previewEntry: { screen: string } | null;
+  hasPreviewEntry: boolean;
   previewText: string;
-  session: SessionSummary | null;
+  agent: "codex" | "claude" | "unknown";
   resolvedTheme: Theme;
   highlightCorrections: HighlightCorrectionConfig | undefined;
 }) => {
-  if (!hoveredPaneId || !previewEntry) {
+  if (!hoveredPaneId || !hasPreviewEntry) {
     return [];
   }
   const text = previewText.length > 0 ? previewText : "No log data";
   return renderAnsiLines(text, resolvedTheme, {
-    agent: resolvePreviewAgent(session),
+    agent,
     highlightCorrections,
   });
 };
@@ -274,35 +274,30 @@ export const useSidebarPreview = ({
     fetchTimeline,
   });
 
-  const hoveredPaneData = resolveHoveredPaneData({
-    hoveredPaneId,
-    sessionIndex,
-    previewCache,
-    previewLoading,
-    previewError,
-  });
+  const hoveredPaneData = useMemo(
+    () =>
+      resolveHoveredPaneData({
+        hoveredPaneId,
+        sessionIndex,
+        previewCache,
+        previewLoading,
+        previewError,
+      }),
+    [hoveredPaneId, previewCache, previewError, previewLoading, sessionIndex],
+  );
   const hoveredSession = hoveredPaneData.session;
-  const hoveredPreviewEntry = hoveredPaneData.previewEntry;
-  const hoveredPreviewText = hoveredPaneData.previewText;
   const hoveredPreviewLoading = hoveredPaneData.loading;
   const hoveredPreviewError = hoveredPaneData.error;
   const hoveredPreviewLines = useMemo(() => {
     return buildPreviewLines({
       hoveredPaneId,
-      previewEntry: hoveredPreviewEntry,
-      previewText: hoveredPreviewText,
-      session: hoveredSession,
+      hasPreviewEntry: hoveredPaneData.previewEntry != null,
+      previewText: hoveredPaneData.previewText,
+      agent: resolvePreviewAgent(hoveredPaneData.session),
       resolvedTheme,
       highlightCorrections,
     });
-  }, [
-    highlightCorrections,
-    hoveredPaneId,
-    hoveredPreviewEntry,
-    hoveredPreviewText,
-    hoveredSession,
-    resolvedTheme,
-  ]);
+  }, [highlightCorrections, hoveredPaneData, hoveredPaneId, resolvedTheme]);
 
   useEffect(() => {
     const activePaneIds = new Set(sessionIndex.keys());

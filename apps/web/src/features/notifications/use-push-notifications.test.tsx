@@ -24,6 +24,13 @@ const createSettingsResponse = () =>
     },
   });
 
+const readRequestUrl = (input: RequestInfo | URL): string => {
+  if (typeof input === "string") {
+    return input;
+  }
+  return input instanceof URL ? input.href : input.url;
+};
+
 const installPushSubscription = () => {
   const subscription = {
     endpoint: "https://push.example/subscription",
@@ -271,7 +278,7 @@ describe("usePushNotifications", () => {
     const obsoleteScopeResponse = createDeferred<Response>();
     let postCount = 0;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
+      const url = readRequestUrl(input);
       if (url.endsWith("/notifications/settings")) return createSettingsResponse();
       if (init?.method === "POST") {
         postCount += 1;
@@ -320,7 +327,7 @@ describe("usePushNotifications", () => {
     installPushSubscription();
     const postedUrls: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
+      const url = readRequestUrl(input);
       if (url.endsWith("/notifications/settings")) return createSettingsResponse();
       if (init?.method === "POST") {
         postedUrls.push(url);
@@ -383,7 +390,7 @@ describe("usePushNotifications", () => {
     const postedUrls: string[] = [];
     const settingsUrls: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
+      const url = readRequestUrl(input);
       if (url.endsWith("/notifications/settings")) {
         settingsUrls.push(url);
         return createSettingsResponse();

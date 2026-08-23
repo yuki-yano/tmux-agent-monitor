@@ -146,7 +146,7 @@ describe("useSessionDiffs", () => {
       expect(result.current.diffSummary).not.toBeNull();
     });
 
-    result.current.ensureDiffFile("src/index.ts");
+    void result.current.ensureDiffFile("src/index.ts");
 
     await waitFor(() => {
       expect(requestDiffFile).toHaveBeenCalledWith("pane-1", "src/index.ts", "HEAD", {

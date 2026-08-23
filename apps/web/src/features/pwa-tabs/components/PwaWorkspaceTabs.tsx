@@ -92,12 +92,19 @@ export const PwaWorkspaceTabs = () => {
     reorderTabsByClosableOrder,
   });
   const previousGroupKeysRef = useRef<string[]>([]);
-  let nextGridColumn = fixedSessionsTab == null ? 1 : 2;
-  const orderedGroupLayouts = orderedTabGroups.map((group) => {
-    const groupColumnStart = nextGridColumn;
-    nextGridColumn += group.tabs.length + 1;
-    return { group, groupColumnStart };
-  });
+  const firstGroupColumn = fixedSessionsTab == null ? 1 : 2;
+  const orderedGroupLayouts = orderedTabGroups.map((group, groupIndex) => ({
+    group,
+    groupColumnStart:
+      firstGroupColumn +
+      orderedTabGroups
+        .slice(0, groupIndex)
+        .reduce((columnCount, precedingGroup) => columnCount + precedingGroup.tabs.length + 1, 0),
+  }));
+  const nextGridColumn = orderedGroupLayouts.reduce(
+    (column, { group }) => column + group.tabs.length + 1,
+    firstGroupColumn,
+  );
   const tabGridColumnCount = Math.max(1, nextGridColumn - 1);
   const closeAllGridColumn = tabGridColumnCount + 1;
   const gridColumnCount = closeAllGridColumn;

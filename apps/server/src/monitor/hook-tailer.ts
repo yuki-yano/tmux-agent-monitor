@@ -64,7 +64,7 @@ const dispatchHookEvent = (
   return true;
 };
 
-const parseLine = (line: string): unknown | null => {
+const parseLine = (line: string): unknown => {
   try {
     return JSON.parse(line);
   } catch {

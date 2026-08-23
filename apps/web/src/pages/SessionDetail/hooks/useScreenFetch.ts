@@ -556,7 +556,7 @@ export const useScreenFetch = ({
       return;
     }
     // react-doctor-disable-next-line no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent
-    refreshScreen();
+    void refreshScreen();
   }, [refreshScreen, transport]);
 
   // False positive: this reconciles connection lifecycle state owned by the

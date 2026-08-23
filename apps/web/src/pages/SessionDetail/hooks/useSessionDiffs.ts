@@ -392,16 +392,17 @@ export const useSessionDiffs = ({
     pollTickRef.current = pollDiffSummaryTick;
   }, [loadDiffSummary, onReconnectRef, pollDiffSummaryTick, pollTickRef]);
 
+  const diffSummaryRev = diffSummary?.rev ?? null;
   const loadDiffFile = useCallback(
     async (path: string) => {
-      if (!paneId || !diffSummary?.rev || diffSnapshotRef.current == null) return;
+      if (!paneId || !diffSummaryRev || diffSnapshotRef.current == null) return;
       if (diffLoadingFiles[path]) return;
       const cached = getDiffFileFromCache(
         paneId,
         worktreePath,
         branch,
         diffMode,
-        diffSummary.rev,
+        diffSummaryRev,
         path,
       );
       if (cached) {
@@ -409,7 +410,7 @@ export const useSessionDiffs = ({
         return;
       }
       const targetScopeKey = requestScopeKey;
-      const targetRev = diffSummary.rev;
+      const targetRev = diffSummaryRev;
       const targetGeneration = diffScopeGenerationRef.current;
       const targetSnapshot = diffSnapshotRef.current;
       const isCurrentRevision = () =>
@@ -453,7 +454,7 @@ export const useSessionDiffs = ({
       branch,
       diffMode,
       diffLoadingFiles,
-      diffSummary?.rev,
+      diffSummaryRev,
       inFlightDiffFiles,
       paneId,
       requestScopeKey,
@@ -483,7 +484,7 @@ export const useSessionDiffs = ({
   // and moving it to render or a user event would skip the initial load.
   useEffect(() => {
     // react-doctor-disable-next-line no-pass-data-to-parent
-    loadDiffSummary();
+    void loadDiffSummary();
   }, [loadDiffSummary]);
 
   useEffect(() => {

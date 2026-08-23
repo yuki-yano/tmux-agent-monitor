@@ -22,11 +22,14 @@ const getVisibleLabel = (testId: string) => {
 };
 
 describe("TruncatedSegmentText", () => {
-  let originalGetBoundingClientRect: typeof HTMLElement.prototype.getBoundingClientRect;
+  let originalGetBoundingClientRect: PropertyDescriptor | undefined;
   let originalFonts: PropertyDescriptor | undefined;
 
   beforeEach(() => {
-    originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+    originalGetBoundingClientRect = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "getBoundingClientRect",
+    );
     HTMLElement.prototype.getBoundingClientRect = function () {
       const dataWidth = this.getAttribute?.("data-width");
       if (dataWidth) {
@@ -52,7 +55,15 @@ describe("TruncatedSegmentText", () => {
   });
 
   afterEach(() => {
-    HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    if (originalGetBoundingClientRect) {
+      Object.defineProperty(
+        HTMLElement.prototype,
+        "getBoundingClientRect",
+        originalGetBoundingClientRect,
+      );
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, "getBoundingClientRect");
+    }
     if (originalFonts) {
       Object.defineProperty(document, "fonts", originalFonts);
     } else {

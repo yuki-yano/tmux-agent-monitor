@@ -281,7 +281,7 @@ const buildLinkifiedTextFragment = (
 };
 
 const shouldTrimTrailingWrapper = (candidate: string, wrapper: string) => {
-  const count = (target: string) => [...candidate].filter((char) => char === target).length;
+  const count = (target: string) => Array.from(candidate).filter((char) => char === target).length;
   if (wrapper === ")") {
     return count("(") < count(")");
   }

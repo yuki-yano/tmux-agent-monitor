@@ -57,7 +57,10 @@ const asNullableString = (value: unknown): string | null => {
   if (typeof value === "string") {
     return value;
   }
-  return String(value);
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return null;
 };
 
 const parseWindow = (value: unknown): CodexRateLimitWindow | null => {

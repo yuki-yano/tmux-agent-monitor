@@ -81,8 +81,10 @@ export const useRepositoryActivityData = ({
 
   useEffect(() => {
     // This is lifecycle data loading, not live child state forwarded to a parent callback.
+    /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecycle request. */
     // react-doctor-disable-next-line no-pass-live-state-to-parent
     void load({ requestedRange: range });
+    /* oxlint-enable react/set-state-in-effect */
   }, [load, range]);
 
   const handleRangeChange = useCallback(

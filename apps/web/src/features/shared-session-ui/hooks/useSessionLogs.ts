@@ -108,22 +108,25 @@ export const useSessionLogs = ({
   );
 
   const selectedLogEntry = pickCacheEntryByPaneId(logCache, selectedPaneId);
+  const selectedLogAgent =
+    selectedSession?.agent === "codex" || selectedSession?.agent === "claude"
+      ? selectedSession.agent
+      : "unknown";
 
   const selectedLogLines = useMemo(() => {
     if (!selectedLogEntry) return [];
     const text = selectedLogEntry.screen.length > 0 ? selectedLogEntry.screen : "No log data";
-    const agent =
-      selectedSession?.agent === "codex" || selectedSession?.agent === "claude"
-        ? selectedSession.agent
-        : "unknown";
-    const renderedLines = renderAnsiLines(text, resolvedTheme, { agent, highlightCorrections });
+    const renderedLines = renderAnsiLines(text, resolvedTheme, {
+      agent: selectedLogAgent,
+      highlightCorrections,
+    });
     if (renderedLines.every((line) => !line.includes("http://") && !line.includes("https://"))) {
       return renderedLines;
     }
     return renderedLines.map((line) =>
       line.includes("http://") || line.includes("https://") ? linkifyLogLineHttpUrls(line) : line,
     );
-  }, [selectedLogEntry, resolvedTheme, selectedSession?.agent, highlightCorrections]);
+  }, [selectedLogEntry, resolvedTheme, selectedLogAgent, highlightCorrections]);
 
   const selectedLogLoading = isPaneLoading(selectedPaneId, logLoading);
   const selectedLogError = pickPaneError(selectedPaneId, logError);

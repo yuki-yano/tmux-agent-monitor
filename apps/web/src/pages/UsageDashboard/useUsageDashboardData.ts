@@ -151,6 +151,7 @@ export const useUsageDashboardData = ({
   );
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- This effect owns initial loading and request guards.
     void loadDashboard();
   }, [loadDashboard]);
 

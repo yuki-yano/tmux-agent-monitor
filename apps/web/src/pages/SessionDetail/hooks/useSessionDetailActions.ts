@@ -70,7 +70,7 @@ export const useSessionDetailActions = ({
   const handleOpenPaneHere = useCallback(
     (targetPaneId: string) => {
       closeQuickPanel();
-      navigate({ to: "/sessions/$paneId", params: { paneId: targetPaneId } });
+      void navigate({ to: "/sessions/$paneId", params: { paneId: targetPaneId } });
       closeLogModal();
     },
     [closeLogModal, closeQuickPanel, navigate],
@@ -79,7 +79,7 @@ export const useSessionDetailActions = ({
   const handleOpenPaneAfterResumeWindow = useCallback(
     (targetPaneId: string, sourcePaneId: string) => {
       closeQuickPanel();
-      navigate({ to: "/sessions/$paneId", params: { paneId: targetPaneId } });
+      void navigate({ to: "/sessions/$paneId", params: { paneId: targetPaneId } });
       closeLogModal();
       if (pwaTabsEnabled && sourcePaneId !== targetPaneId) {
         dismissSessionTab(sourcePaneId);

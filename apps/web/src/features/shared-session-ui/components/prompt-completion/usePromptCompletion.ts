@@ -127,6 +127,7 @@ export const usePromptCompletion = ({
       !requestRepoFileSearch ||
       !tokenTrigger
     ) {
+      // oxlint-disable-next-line react/set-state-in-effect -- Invalid tokens must clear stale suggestions immediately.
       setOptions([]);
       setLoading(false);
       setError(null);

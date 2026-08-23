@@ -25,11 +25,14 @@ const expectVisibleLabel = async (testId: string, expected: string) => {
 };
 
 describe("TruncatedPathText", () => {
-  let originalGetBoundingClientRect: typeof HTMLElement.prototype.getBoundingClientRect;
+  let originalGetBoundingClientRect: PropertyDescriptor | undefined;
   let originalFonts: PropertyDescriptor | undefined;
 
   beforeEach(() => {
-    originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+    originalGetBoundingClientRect = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "getBoundingClientRect",
+    );
     HTMLElement.prototype.getBoundingClientRect = function () {
       const dataWidth = this.getAttribute?.("data-width");
       if (dataWidth) {
@@ -55,7 +58,15 @@ describe("TruncatedPathText", () => {
   });
 
   afterEach(() => {
-    HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    if (originalGetBoundingClientRect) {
+      Object.defineProperty(
+        HTMLElement.prototype,
+        "getBoundingClientRect",
+        originalGetBoundingClientRect,
+      );
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, "getBoundingClientRect");
+    }
     if (originalFonts) {
       Object.defineProperty(document, "fonts", originalFonts);
     } else {

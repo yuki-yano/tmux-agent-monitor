@@ -355,7 +355,7 @@ export const useSessionCommits = ({
   // and moving it to render or a user event would skip the initial load.
   useEffect(() => {
     // react-doctor-disable-next-line no-pass-data-to-parent
-    loadCommitLog({ force: true });
+    void loadCommitLog({ force: true });
   }, [loadCommitLog]);
 
   useEffect(() => {
