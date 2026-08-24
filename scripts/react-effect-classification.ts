@@ -95,8 +95,6 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/pages/SessionDetail/hooks/useSessionDoneAcknowledgement.ts::useSessionDoneAcknowledgement::useEffect::f0d483687d9d::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-search-effects.ts::useSessionFilesSearchEffects::useEffect::08bd638307a8::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts::useSessionRepoNotes::useEffect::bffd15f6ee3e::1",
-    "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts::useSessionTimeline::useEffect::3d31067cccc7::1",
-    "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts::useSessionTimeline::useEffect::d2e8c287598d::1",
     "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts::useRepositoryActivityData::useEffect::aa6b86e68fd4::1",
     "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts::useUsageDashboardData::useEffect::3bb65cbc9349::1",
     "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts::useUsageTimelineData::useEffect::5e0909d43bf2::1",
@@ -158,7 +156,6 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts::useSessionRepoNotes::useEffect::0cae477dc569::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts::useSessionRepoNotes::useLayoutEffect::5519bc3b8cfd::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts::useSessionScreen::useLayoutEffect::fd0e98efeaf4::1",
-    "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts::useSessionTimeline::useLayoutEffect::9f928c5f2a04::1",
     "apps/web/src/state/session-context.tsx::SessionRuntime::useEffect::2001f977f776::1",
   ],
 };

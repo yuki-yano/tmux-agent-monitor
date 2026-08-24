@@ -7,16 +7,16 @@
   },
   "metrics": {
     "productionFiles": 338,
-    "useEffect": 105,
-    "useLayoutEffect": 34,
-    "effectTotal": 139,
-    "sessionDetailEffects": 72,
-    "useMemo": 165,
-    "useCallback": 392,
+    "useEffect": 103,
+    "useLayoutEffect": 33,
+    "effectTotal": 136,
+    "sessionDetailEffects": 69,
+    "useMemo": 166,
+    "useCallback": 390,
     "memo": 43,
-    "sessionDetailAndLibUseMemo": 76,
-    "sessionDetailAndLibUseCallback": 191,
-    "visibilityPollingCallerFiles": 10,
+    "sessionDetailAndLibUseMemo": 77,
+    "sessionDetailAndLibUseCallback": 189,
+    "visibilityPollingCallerFiles": 9,
     "sessionDetailOwnershipLines": 1902,
     "reactOxlintDisable": 10,
     "reactDoctorDisable": 51,
@@ -28,9 +28,9 @@
     "dom-layout": 23,
     "event-migration": 5,
     "external-sync": 43,
-    "identity-reset": 27,
+    "identity-reset": 26,
     "ref-mirror": 15,
-    "request-bridge": 22
+    "request-bridge": 20
   },
   "inventory": [
     {
@@ -2503,7 +2503,7 @@
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDetailTimelineLogsActions.ts",
-      "line": 121,
+      "line": 123,
       "column": 3,
       "owner": "useSessionDetailTimelineLogsActions",
       "hook": "useEffect",
@@ -2945,75 +2945,6 @@
       "id": "E119"
     },
     {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
-      "line": 140,
-      "column": 3,
-      "owner": "useSessionTimeline",
-      "hook": "useLayoutEffect",
-      "dependencies": ["paneId"],
-      "fingerprint": "9f928c5f2a04",
-      "category": "identity-reset",
-      "disposition": "key-reset",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { activePaneIdRef.current = paneId; return () => { activePaneIdRef.current = \"\"; timelineRequestIdRef.current += 1; }; }",
-      "id": "E120"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
-      "line": 195,
-      "column": 3,
-      "owner": "useSessionTimeline",
-      "hook": "useEffect",
-      "dependencies": ["loadTimeline", "mobileDefaultCollapsed", "paneId"],
-      "fingerprint": "d2e8c287598d",
-      "category": "request-bridge",
-      "disposition": "query",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { const paneStateKey = `${paneId}\\0${mobileDefaultCollapsed}`; void loadTimeline(); if (paneStateKeyRef.current !== paneStateKey) { // Preserve the legacy direct-prop fallbac",
-      "id": "E121"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts",
-      "line": 207,
-      "column": 3,
-      "owner": "useSessionTimeline",
-      "hook": "useEffect",
-      "dependencies": ["connected", "loadTimeline"],
-      "fingerprint": "3d31067cccc7",
-      "category": "request-bridge",
-      "disposition": "query",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (previousConnectedRef.current === false && connected) { void loadTimeline({ silent: true }); } previousConnectedRef.current = connected; }",
-      "id": "E122"
-    },
-    {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
       "line": 101,
       "column": 3,
@@ -3043,7 +2974,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!branchList || !repoRoot) { return; } if (storedVirtualBranch) { if ( (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) || storedVirtualBranch === default",
-      "id": "E123"
+      "id": "E120"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
@@ -3076,7 +3007,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!worktreeList || !normalizedRepoRoot) { return; } if (virtualWorktreePath) { if (virtualWorktreePath === actualWorktreePath) { clearStoredSelection(paneId); setVirtualW",
-      "id": "E124"
+      "id": "E121"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/SessionDetailView.tsx",
@@ -3099,7 +3030,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!shouldDelayMissingState) { return; } missingSessionGraceTimer.set(() => { setGraceState((current) => (current.shouldDelay ? { ...current, elapsed: true } : current)); ",
-      "id": "E125"
+      "id": "E122"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -3122,7 +3053,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { publishedSearchQueryRef.current = initialSearchQuery; }",
-      "id": "E126"
+      "id": "E123"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -3145,7 +3076,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!isFocused) { return; } if (suppressNextDebounceRef.current) { suppressNextDebounceRef.current = false; return; } if (draftSearchQuery === initialSearchQuery) { return;",
-      "id": "E127"
+      "id": "E124"
     },
     {
       "file": "apps/web/src/pages/SessionList/SessionListView.tsx",
@@ -3168,7 +3099,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { return () => { if (reorderScrollFrameRef.current != null) { window.cancelAnimationFrame(reorderScrollFrameRef.current); reorderScrollFrameRef.current = null; } }; }",
-      "id": "E128"
+      "id": "E125"
     },
     {
       "file": "apps/web/src/pages/SessionList/useSessionListVM.ts",
@@ -3191,7 +3122,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { storeSessionListFilter(filter); }",
-      "id": "E129"
+      "id": "E126"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts",
@@ -3214,7 +3145,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E130"
+      "id": "E127"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts",
@@ -3237,7 +3168,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // oxlint-disable-next-line react/set-state-in-effect -- This effect owns initial loading and request guards. void loadDashboard(); }",
-      "id": "E131"
+      "id": "E128"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts",
@@ -3260,7 +3191,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E132"
+      "id": "E129"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -3289,7 +3220,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setFileNavigatorConfig({ autoExpandMatchLimit: 100 }); setWorkspaceTabsDisplayMode(\"all\"); setLaunchConfig(defaultLaunchConfig); setCapabilities({ screenImage: false, launc",
-      "id": "E133"
+      "id": "E130"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -3312,7 +3243,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!hasToken) { notificationTitleFingerprintRef.current = \"\"; return; } const nextEntries = toNotificationSessionTitleEntries(sessions); const nextFingerprint = buildNotif",
-      "id": "E134"
+      "id": "E131"
     },
     {
       "file": "apps/web/src/state/theme-context.tsx",
@@ -3335,7 +3266,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof window === \"undefined\") return; const applyTheme = (nextTheme: Theme) => { document.documentElement.dataset.theme = nextTheme; setResolvedTheme(nextTheme); }; co",
-      "id": "E135"
+      "id": "E132"
     },
     {
       "file": "apps/web/src/state/use-session-polling.ts",
@@ -3358,7 +3289,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled) { return; } void refreshSessions(); }",
-      "id": "E136"
+      "id": "E133"
     },
     {
       "file": "apps/web/src/state/use-session-token.ts",
@@ -3381,7 +3312,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!initialAccess.hasAccessDirective) { return; } if (initialAccess.token) { localStorage.setItem(TOKEN_KEY, initialAccess.token); } else { localStorage.removeItem(TOKEN_K",
-      "id": "E137"
+      "id": "E134"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -3404,7 +3335,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || !token) { transportRef.current = \"polling\"; handleTransportChange(\"polling\"); return; } const normalized = apiBaseUrl?.trim(); const basePath = normalized &",
-      "id": "E138"
+      "id": "E135"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -3427,7 +3358,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || typeof window === \"undefined\") return; const handleResume = () => { // If SSE is already open, nothing to do. if (transportRef.current === \"sse\") return; re",
-      "id": "E139"
+      "id": "E136"
     }
   ]
 }

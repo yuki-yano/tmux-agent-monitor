@@ -1,18 +1,19 @@
+import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   SessionStateTimeline,
   SessionStateTimelineRange,
   SessionStateTimelineScope,
 } from "@vde-monitor/shared";
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
-import { useVisibilityPolling } from "@/lib/use-visibility-polling";
 
-import { runPaneRequest } from "./session-request-guard";
+import { sessionDetailQueryKeys } from "../session-detail-query-keys";
 
 type UseSessionTimelineParams = {
   paneId: string;
+  repoRoot: string | null;
   connected: boolean;
   requestStateTimeline: (
     paneId: string,
@@ -21,226 +22,225 @@ type UseSessionTimelineParams = {
       range?: SessionStateTimelineRange;
       limit?: number;
     },
+    signal?: AbortSignal,
   ) => Promise<SessionStateTimeline>;
   hasRepoTimeline: boolean;
   mobileDefaultCollapsed: boolean;
-};
-
-type LoadTimelineOptions = {
-  silent?: boolean;
+  limit?: number;
 };
 
 const DEFAULT_RANGE: SessionStateTimelineRange = "1h";
 const DEFAULT_SCOPE: SessionStateTimelineScope = "pane";
 const TIMELINE_POLL_INTERVAL_MS = 5000;
+const OFFLINE_TIMELINE_MESSAGE = "Offline: waiting to load timeline";
 
 const resolveTimelineError = (err: unknown) =>
   resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.timeline);
 
-type TimelineState = {
-  timeline: SessionStateTimeline | null;
+type TimelineUiState = {
+  paneStateKey: string;
+  repoRoot: string | null;
+  connected: boolean;
+  hasRepoTimeline: boolean;
   timelineScope: SessionStateTimelineScope;
   timelineRange: SessionStateTimelineRange;
-  timelineError: string | null;
-  timelineLoading: boolean;
   timelineExpanded: boolean;
+  showColdLoading: boolean;
 };
 
-type TimelineAction =
-  | { type: "resetPane"; expanded: boolean }
-  | { type: "loadStart"; silent: boolean }
-  | { type: "loadSuccess"; timeline: SessionStateTimeline }
-  | { type: "loadFailure"; error: string }
-  | { type: "loadFinish"; silent: boolean; loading: boolean }
-  | { type: "setScope"; scope: SessionStateTimelineScope }
-  | { type: "setRange"; range: SessionStateTimelineRange }
-  | { type: "toggleExpanded" };
+type TimelineVisibleErrorState = {
+  queryKey: readonly unknown[];
+  error: unknown;
+};
 
-const buildTimelineInitialState = (expanded: boolean): TimelineState => ({
-  timeline: null,
+const buildTimelineUiState = ({
+  paneId,
+  repoRoot,
+  connected,
+  hasRepoTimeline,
+  mobileDefaultCollapsed,
+}: Pick<
+  UseSessionTimelineParams,
+  "paneId" | "repoRoot" | "connected" | "hasRepoTimeline" | "mobileDefaultCollapsed"
+>): TimelineUiState => ({
+  paneStateKey: `${paneId}\0${mobileDefaultCollapsed}`,
+  repoRoot,
+  connected,
+  hasRepoTimeline,
   timelineScope: DEFAULT_SCOPE,
   timelineRange: DEFAULT_RANGE,
-  timelineError: null,
-  timelineLoading: false,
-  timelineExpanded: expanded,
+  timelineExpanded: !mobileDefaultCollapsed,
+  showColdLoading: connected && onlineManager.isOnline(),
 });
-
-const timelineReducer = (state: TimelineState, action: TimelineAction): TimelineState => {
-  switch (action.type) {
-    case "resetPane":
-      return buildTimelineInitialState(action.expanded);
-    case "loadStart":
-      return {
-        ...state,
-        timelineLoading: action.silent ? state.timelineLoading : true,
-      };
-    case "loadSuccess":
-      return { ...state, timeline: action.timeline, timelineError: null };
-    case "loadFailure":
-      return { ...state, timelineError: action.error };
-    case "loadFinish":
-      return {
-        ...state,
-        timelineLoading: action.silent ? state.timelineLoading : action.loading,
-      };
-    case "setScope":
-      return { ...state, timelineScope: action.scope };
-    case "setRange":
-      return { ...state, timelineRange: action.range };
-    case "toggleExpanded":
-      return { ...state, timelineExpanded: !state.timelineExpanded };
-  }
-};
 
 export const useSessionTimeline = ({
   paneId,
+  repoRoot,
   connected,
   requestStateTimeline,
   hasRepoTimeline,
   mobileDefaultCollapsed,
+  limit,
 }: UseSessionTimelineParams) => {
-  const [state, dispatch] = useReducer(
-    timelineReducer,
-    !mobileDefaultCollapsed,
-    buildTimelineInitialState,
+  const queryClient = useQueryClient();
+  const [uiState, setUiState] = useState(() =>
+    buildTimelineUiState({ paneId, repoRoot, connected, hasRepoTimeline, mobileDefaultCollapsed }),
+  );
+  const paneStateKey = `${paneId}\0${mobileDefaultCollapsed}`;
+  let currentUiState = uiState;
+
+  // Production pane changes remount SessionDetailProvider. Keep the direct-prop fallback used by
+  // isolated consumers/tests, and permanently downgrade repo scope when its repository disappears.
+  if (uiState.paneStateKey !== paneStateKey) {
+    currentUiState = buildTimelineUiState({
+      paneId,
+      repoRoot,
+      connected,
+      hasRepoTimeline,
+      mobileDefaultCollapsed,
+    });
+    setUiState(currentUiState);
+  } else if (
+    uiState.repoRoot !== repoRoot ||
+    uiState.connected !== connected ||
+    uiState.hasRepoTimeline !== hasRepoTimeline
+  ) {
+    const appConnectionChanged = uiState.connected !== connected;
+    const repositoryChanged = uiState.repoRoot !== repoRoot;
+    currentUiState = {
+      ...uiState,
+      repoRoot,
+      connected,
+      hasRepoTimeline,
+      timelineScope: hasRepoTimeline ? uiState.timelineScope : DEFAULT_SCOPE,
+      showColdLoading: appConnectionChanged
+        ? false
+        : repositoryChanged
+          ? connected && onlineManager.isOnline()
+          : uiState.showColdLoading,
+    };
+    setUiState(currentUiState);
+  }
+
+  const { timelineRange, timelineExpanded } = currentUiState;
+  const timelineScope: SessionStateTimelineScope =
+    currentUiState.timelineScope === "repo" && hasRepoTimeline ? "repo" : DEFAULT_SCOPE;
+  const queryKey = useMemo(
+    () =>
+      sessionDetailQueryKeys.timeline(paneId, {
+        repoRoot,
+        scope: timelineScope,
+        range: timelineRange,
+        limit,
+      }),
+    [limit, paneId, repoRoot, timelineRange, timelineScope],
   );
   const {
-    timeline,
-    timelineScope: storedTimelineScope,
-    timelineRange,
-    timelineError,
-    timelineLoading,
-    timelineExpanded,
-  } = state;
-  const previousConnectedRef = useRef<boolean | null>(null);
-  const activePaneIdRef = useRef(paneId);
-  const paneStateKeyRef = useRef(`${paneId}\0${mobileDefaultCollapsed}`);
-  const timelineRequestIdRef = useRef(0);
-  const pendingInteractiveLoadsRef = useRef(0);
-  const [scopeAvailability, setScopeAvailability] = useState(() => ({
-    paneId,
-    hasRepoTimeline,
-    downgraded: storedTimelineScope === "repo" && !hasRepoTimeline,
-  }));
-  let currentScopeAvailability = scopeAvailability;
-  if (
-    scopeAvailability.paneId !== paneId ||
-    scopeAvailability.hasRepoTimeline !== hasRepoTimeline
-  ) {
-    currentScopeAvailability = {
-      paneId,
-      hasRepoTimeline,
-      downgraded:
-        scopeAvailability.paneId === paneId && scopeAvailability.downgraded
-          ? true
-          : storedTimelineScope === "repo" && !hasRepoTimeline,
-    };
-    setScopeAvailability(currentScopeAvailability);
-  }
-  useLayoutEffect(() => {
-    activePaneIdRef.current = paneId;
-    return () => {
-      activePaneIdRef.current = "";
-      timelineRequestIdRef.current += 1;
-    };
-  }, [paneId]);
-  const timelineScope = currentScopeAvailability.downgraded ? DEFAULT_SCOPE : storedTimelineScope;
-
-  const loadTimeline = useCallback(
-    async ({ silent = false }: LoadTimelineOptions = {}) => {
-      if (!paneId) {
-        return;
-      }
-      const targetPaneId = paneId;
-      if (!silent) {
-        pendingInteractiveLoadsRef.current += 1;
-      }
-      dispatch({ type: "loadStart", silent });
-      await runPaneRequest({
-        requestIdRef: timelineRequestIdRef,
-        activePaneIdRef,
-        paneId: targetPaneId,
-        run: async () => {
-          const requestedScope =
-            timelineScope === "repo" && hasRepoTimeline ? ("repo" as const) : undefined;
-          return requestStateTimeline(targetPaneId, {
-            scope: requestedScope,
-            range: timelineRange,
-          });
+    data: timeline = null,
+    error: queryError,
+    fetchStatus,
+    isFetched,
+    isLoading,
+  } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) =>
+      requestStateTimeline(
+        paneId,
+        {
+          ...(timelineScope === "repo" ? { scope: timelineScope } : {}),
+          range: timelineRange,
+          ...(limit == null ? {} : { limit }),
         },
-        onSuccess: (nextTimeline) => {
-          dispatch({ type: "loadSuccess", timeline: nextTimeline });
-        },
-        onError: (err) => {
-          dispatch({ type: "loadFailure", error: resolveTimelineError(err) });
-        },
-        onSettled: () => {
-          if (silent) {
-            return;
-          }
-          pendingInteractiveLoadsRef.current = Math.max(0, pendingInteractiveLoadsRef.current - 1);
-          if (activePaneIdRef.current === targetPaneId) {
-            dispatch({
-              type: "loadFinish",
-              silent,
-              loading: pendingInteractiveLoadsRef.current > 0,
-            });
-          }
-        },
-      });
-    },
-    [hasRepoTimeline, paneId, requestStateTimeline, timelineRange, timelineScope],
-  );
-
-  useEffect(() => {
-    const paneStateKey = `${paneId}\0${mobileDefaultCollapsed}`;
-    void loadTimeline();
-    if (paneStateKeyRef.current !== paneStateKey) {
-      // Preserve the legacy direct-prop fallback: a pane switch clears stale data without
-      // flashing the loading state. Production pane changes remount at SessionDetailProvider.
-      paneStateKeyRef.current = paneStateKey;
-      pendingInteractiveLoadsRef.current = 0;
-      dispatch({ type: "resetPane", expanded: !mobileDefaultCollapsed });
-    }
-  }, [loadTimeline, mobileDefaultCollapsed, paneId]);
-
-  useEffect(() => {
-    if (previousConnectedRef.current === false && connected) {
-      void loadTimeline({ silent: true });
-    }
-    previousConnectedRef.current = connected;
-  }, [connected, loadTimeline]);
-
-  const pollTimeline = useCallback(() => {
-    void loadTimeline({ silent: true });
-  }, [loadTimeline]);
-
-  useVisibilityPolling({
+        signal,
+      ),
     enabled: Boolean(paneId) && connected,
-    intervalMs: TIMELINE_POLL_INTERVAL_MS,
-    onTick: pollTimeline,
-    onResume: pollTimeline,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    networkMode: "online",
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
+    refetchOnMount: "always",
+    refetchInterval: TIMELINE_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
+  const [manualRefreshGeneration, setManualRefreshGeneration] = useState<number | null>(null);
+  const nextManualRefreshGenerationRef = useRef(0);
+  const [visibleErrorState, setVisibleErrorState] = useState<TimelineVisibleErrorState>(() => ({
+    queryKey,
+    error: null,
+  }));
+  let currentVisibleErrorState = visibleErrorState;
+  if (visibleErrorState.queryKey !== queryKey) {
+    currentVisibleErrorState = { queryKey, error: null };
+    setVisibleErrorState(currentVisibleErrorState);
+  } else if (
+    fetchStatus === "idle" &&
+    queryError != null &&
+    visibleErrorState.error !== queryError
+  ) {
+    currentVisibleErrorState = { queryKey, error: queryError };
+    setVisibleErrorState(currentVisibleErrorState);
+  } else if (
+    fetchStatus === "idle" &&
+    queryError == null &&
+    timeline != null &&
+    visibleErrorState.error != null
+  ) {
+    currentVisibleErrorState = { queryKey, error: null };
+    setVisibleErrorState(currentVisibleErrorState);
+  }
+  const timelineError =
+    fetchStatus === "paused" && timeline == null
+      ? OFFLINE_TIMELINE_MESSAGE
+      : fetchStatus === "fetching" && manualRefreshGeneration != null
+        ? null
+        : currentVisibleErrorState.error == null
+          ? null
+          : resolveTimelineError(currentVisibleErrorState.error);
+  const timelineLoading =
+    manualRefreshGeneration != null || (currentUiState.showColdLoading && !isFetched && isLoading);
 
   const toggleTimelineExpanded = useCallback(() => {
-    dispatch({ type: "toggleExpanded" });
+    setUiState((current) => ({ ...current, timelineExpanded: !current.timelineExpanded }));
   }, []);
 
-  const refreshTimeline = useCallback(() => {
-    void loadTimeline();
-  }, [loadTimeline]);
+  const refreshTimeline = useCallback(async () => {
+    const generation = nextManualRefreshGenerationRef.current + 1;
+    nextManualRefreshGenerationRef.current = generation;
+    setManualRefreshGeneration(generation);
+    try {
+      await queryClient.cancelQueries({ queryKey, exact: true });
+      if (nextManualRefreshGenerationRef.current !== generation) {
+        return;
+      }
+      await queryClient.refetchQueries({ queryKey, exact: true, type: "active" });
+    } finally {
+      setManualRefreshGeneration((current) => (current === generation ? null : current));
+    }
+  }, [queryClient, queryKey]);
 
   const setTimelineScope = useCallback(
     (scope: SessionStateTimelineScope) => {
-      setScopeAvailability({ paneId, hasRepoTimeline, downgraded: false });
-      dispatch({ type: "setScope", scope: scope === "repo" && !hasRepoTimeline ? "pane" : scope });
+      setUiState((current) => ({
+        ...current,
+        timelineScope: scope === "repo" && !hasRepoTimeline ? DEFAULT_SCOPE : scope,
+        showColdLoading: connected && onlineManager.isOnline(),
+      }));
     },
-    [hasRepoTimeline, paneId],
+    [connected, hasRepoTimeline],
   );
 
-  const setTimelineRange = useCallback((range: SessionStateTimelineRange) => {
-    dispatch({ type: "setRange", range });
-  }, []);
+  const setTimelineRange = useCallback(
+    (range: SessionStateTimelineRange) => {
+      setUiState((current) => ({
+        ...current,
+        timelineRange: range,
+        showColdLoading: connected && onlineManager.isOnline(),
+      }));
+    },
+    [connected],
+  );
 
   return {
     timeline,

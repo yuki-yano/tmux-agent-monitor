@@ -47,6 +47,7 @@ type UseSessionDetailTimelineLogsActionsArgs = {
       range?: SessionStateTimelineRange;
       limit?: number;
     },
+    signal?: AbortSignal,
   ) => Promise<SessionStateTimeline>;
   sessions: SessionSummary[];
   resolvedTheme: Theme;
@@ -84,6 +85,7 @@ export const useSessionDetailTimelineLogsActions = ({
 }: UseSessionDetailTimelineLogsActionsArgs) => {
   const timeline = useSessionTimeline({
     paneId,
+    repoRoot: currentRepoRoot,
     connected,
     requestStateTimeline,
     hasRepoTimeline: currentRepoRoot != null,
