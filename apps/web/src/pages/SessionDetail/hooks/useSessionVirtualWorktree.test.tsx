@@ -1,7 +1,12 @@
+import { QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { WorktreeList } from "@vde-monitor/shared";
+import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createAppQueryClient } from "@/state/query-client";
+
+import { sessionDetailQueryKeys } from "../session-detail-query-keys";
 import { createSessionDetail } from "../test-helpers";
 import { useSessionVirtualWorktree } from "./useSessionVirtualWorktree";
 
@@ -59,36 +64,37 @@ const createMainOnlyWorktreeList = (repoRoot: string): WorktreeList => ({
 type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
 };
 
 const createDeferred = <T,>(): Deferred<T> => {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((res) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
     resolve = res;
+    reject = rej;
   });
-  return { promise, resolve };
+  return { promise, reject, resolve };
+};
+
+const createQueryWrapper = (queryClient = createAppQueryClient()) => {
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 };
 
 describe("useSessionVirtualWorktree", () => {
   afterEach(() => {
-    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    onlineManager.setOnline(true);
+    window.localStorage.clear();
   });
 
-  it("ignores an older response after revisiting a pane and loads the latest response", async () => {
-    const repoRootA = "/tmp/repo-a";
-    const repoRootB = "/tmp/repo-b";
-    const firstADeferred = createDeferred<WorktreeList>();
-    const revisitADeferred = createDeferred<WorktreeList>();
-    let paneACalls = 0;
-    const requestWorktrees = vi.fn((paneId: string) => {
-      if (paneId === "pane-a") {
-        paneACalls += 1;
-        return paneACalls === 1 ? firstADeferred.promise : revisitADeferred.promise;
-      }
-      return Promise.resolve(createWorktreeList(repoRootB));
-    });
-    const { result, rerender } = renderHook(
-      ({ paneId, repoRoot }: { paneId: string; repoRoot: string }) =>
+  it("loads worktrees with the query abort signal", async () => {
+    const repoRoot = "/tmp/repo-a";
+    const paneId = "pane-1";
+    const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
+    const { result } = renderHook(
+      () =>
         useSessionVirtualWorktree({
           paneId,
           session: createSessionDetail({
@@ -99,76 +105,194 @@ describe("useSessionVirtualWorktree", () => {
           }),
           requestWorktrees,
         }),
-      { initialProps: { paneId: "pane-a", repoRoot: repoRootA } },
+      { wrapper: createQueryWrapper() },
     );
 
-    await waitFor(() => {
-      expect(requestWorktrees).toHaveBeenCalledTimes(1);
-      expect(result.current.loading).toBe(true);
-    });
-    rerender({ paneId: "pane-b", repoRoot: repoRootB });
-    await waitFor(() => {
-      expect(result.current.repoRoot).toBe(repoRootB);
-    });
-    rerender({ paneId: "pane-a", repoRoot: repoRootA });
-
-    await waitFor(() => {
-      expect(requestWorktrees).toHaveBeenCalledTimes(3);
-      expect(result.current.loading).toBe(true);
-    });
-    expect(result.current.entries).toEqual([]);
-    expect(result.current.repoRoot).toBeNull();
-
-    await act(async () => {
-      firstADeferred.resolve(createWorktreeList("/tmp/stale-a"));
-      await firstADeferred.promise;
-    });
-    expect(result.current.entries).toEqual([]);
-    expect(result.current.repoRoot).toBeNull();
     expect(result.current.loading).toBe(true);
-
-    await act(async () => {
-      revisitADeferred.resolve(createWorktreeList(repoRootA));
-      await revisitADeferred.promise;
-    });
     await waitFor(() => {
-      expect(result.current.repoRoot).toBe(repoRootA);
+      expect(result.current.entries).toHaveLength(2);
       expect(result.current.loading).toBe(false);
     });
+    expect(requestWorktrees).toHaveBeenCalledWith(paneId, expect.any(AbortSignal));
   });
 
-  it("requests on offline mount and manual refresh", async () => {
-    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+  it("pauses an offline cold mount without a spinner and resumes once online", async () => {
+    onlineManager.setOnline(false);
     const repoRoot = "/tmp/repo-offline";
     const paneId = "pane-offline";
     const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
-    const { result } = renderHook(() =>
-      useSessionVirtualWorktree({
-        paneId,
-        session: createSessionDetail({
+    const { result } = renderHook(
+      () =>
+        useSessionVirtualWorktree({
           paneId,
-          repoRoot,
-          worktreePath: `${repoRoot}/main`,
-          branch: "main",
+          session: createSessionDetail({
+            paneId,
+            repoRoot,
+            worktreePath: `${repoRoot}/main`,
+            branch: "main",
+          }),
+          requestWorktrees,
         }),
-        requestWorktrees,
-      }),
+      { wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
-      expect(requestWorktrees).toHaveBeenCalledTimes(1);
       expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBe("Offline: waiting to load worktrees");
     });
-    await act(async () => {
-      await result.current.refreshWorktrees();
+    expect(requestWorktrees).not.toHaveBeenCalled();
+
+    act(() => {
+      onlineManager.setOnline(true);
     });
 
-    expect(requestWorktrees).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(result.current.entries).toHaveLength(2);
+      expect(result.current.error).toBeNull();
+    });
+    expect(requestWorktrees).toHaveBeenCalledTimes(1);
   });
 
-  it("hydrates virtual selection from pane-scoped storage on initial load", async () => {
-    const repoRoot = "/tmp/repo-a";
-    const paneId = "pane-1";
+  it("coalesces the StrictMode replay into one active request", async () => {
+    const repoRoot = "/tmp/repo-strict";
+    const paneId = "pane-strict";
+    let activeRequests = 0;
+    let maxActiveRequests = 0;
+    let abortedRequests = 0;
+    let appliedSuccesses = 0;
+    const requestWorktrees = vi.fn(
+      (requestPaneId: string, signal?: AbortSignal): Promise<WorktreeList> =>
+        new Promise((resolve, reject) => {
+          expect(requestPaneId).toBe(paneId);
+          activeRequests += 1;
+          maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+          const timer = window.setTimeout(() => {
+            activeRequests -= 1;
+            appliedSuccesses += 1;
+            resolve(createWorktreeList(repoRoot));
+          }, 10);
+          signal?.addEventListener(
+            "abort",
+            () => {
+              window.clearTimeout(timer);
+              activeRequests -= 1;
+              abortedRequests += 1;
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
+        }),
+    );
+    const queryClient = createAppQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <StrictMode>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </StrictMode>
+    );
+    const { result } = renderHook(
+      () =>
+        useSessionVirtualWorktree({
+          paneId,
+          session: createSessionDetail({
+            paneId,
+            repoRoot,
+            worktreePath: `${repoRoot}/main`,
+            branch: "main",
+          }),
+          requestWorktrees,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.entries).toHaveLength(2);
+    });
+    expect(requestWorktrees).toHaveBeenCalledTimes(1);
+    expect(abortedRequests).toBe(0);
+    expect(maxActiveRequests).toBe(1);
+    expect(appliedSuccesses).toBe(1);
+  });
+
+  it("cancels an in-flight cold request before a manual refresh", async () => {
+    const repoRoot = "/tmp/repo-cold-refresh";
+    const paneId = "pane-cold-refresh";
+    const refreshed = createDeferred<WorktreeList>();
+    let initialSignal: AbortSignal | undefined;
+    const requestWorktrees = vi.fn(
+      (_requestPaneId: string, signal?: AbortSignal): Promise<WorktreeList> => {
+        if (requestWorktrees.mock.calls.length === 1) {
+          initialSignal = signal;
+          return new Promise((_, reject) => {
+            signal?.addEventListener(
+              "abort",
+              () => reject(new DOMException("Aborted", "AbortError")),
+              { once: true },
+            );
+          });
+        }
+        return refreshed.promise;
+      },
+    );
+    const { result } = renderHook(
+      () =>
+        useSessionVirtualWorktree({
+          paneId,
+          session: createSessionDetail({ paneId, repoRoot }),
+          requestWorktrees,
+        }),
+      { wrapper: createQueryWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(initialSignal).toBeDefined();
+    });
+    let refreshPromise!: Promise<void>;
+    act(() => {
+      refreshPromise = result.current.refreshWorktrees();
+    });
+
+    await waitFor(() => {
+      expect(initialSignal?.aborted).toBe(true);
+      expect(requestWorktrees).toHaveBeenCalledTimes(2);
+    });
+    await act(async () => {
+      refreshed.resolve(createMainOnlyWorktreeList(repoRoot));
+      await refreshPromise;
+    });
+    await waitFor(() => {
+      expect(result.current.entries).toHaveLength(1);
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it("exposes a request error without stale entries on a cold load", async () => {
+    const paneId = "pane-error";
+    const repoRoot = "/tmp/repo-error";
+    const requestWorktrees = vi.fn(async () => {
+      throw new Error("worktree api failed");
+    });
+    const { result } = renderHook(
+      () =>
+        useSessionVirtualWorktree({
+          paneId,
+          session: createSessionDetail({ paneId, repoRoot }),
+          requestWorktrees,
+        }),
+      { wrapper: createQueryWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.error).toBe("worktree api failed");
+    });
+    await waitFor(() => {
+      expect(result.current.entries).toEqual([]);
+    });
+    expect(requestWorktrees).toHaveBeenCalledTimes(1);
+  });
+
+  it("hydrates virtual selection from pane-scoped storage", async () => {
+    const repoRoot = "/tmp/repo-stored";
+    const paneId = "pane-stored";
     window.localStorage.setItem(
       buildStorageKey(paneId),
       JSON.stringify({
@@ -180,14 +304,8 @@ describe("useSessionVirtualWorktree", () => {
     );
     const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
     const { result } = renderHook(
-      ({ paneId, session }: { paneId: string; session: ReturnType<typeof createSessionDetail> }) =>
+      () =>
         useSessionVirtualWorktree({
-          paneId,
-          session,
-          requestWorktrees,
-        }),
-      {
-        initialProps: {
           paneId,
           session: createSessionDetail({
             paneId,
@@ -195,8 +313,9 @@ describe("useSessionVirtualWorktree", () => {
             worktreePath: `${repoRoot}/main`,
             branch: "main",
           }),
-        },
-      },
+          requestWorktrees,
+        }),
+      { wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
@@ -204,8 +323,8 @@ describe("useSessionVirtualWorktree", () => {
     });
   });
 
-  it("does not hydrate virtual selection from another pane storage", async () => {
-    const repoRoot = "/tmp/repo-x";
+  it("does not hydrate selection from another pane", async () => {
+    const repoRoot = "/tmp/repo-isolated";
     window.localStorage.setItem(
       buildStorageKey("pane-1"),
       JSON.stringify({
@@ -216,30 +335,102 @@ describe("useSessionVirtualWorktree", () => {
       }),
     );
     const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
-    const { result } = renderHook(() =>
-      useSessionVirtualWorktree({
-        paneId: "pane-2",
-        session: createSessionDetail({
+    const { result } = renderHook(
+      () =>
+        useSessionVirtualWorktree({
           paneId: "pane-2",
-          repoRoot,
-          worktreePath: `${repoRoot}/main`,
-          branch: "main",
+          session: createSessionDetail({ paneId: "pane-2", repoRoot }),
+          requestWorktrees,
         }),
-        requestWorktrees,
-      }),
+      { wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
-      expect(requestWorktrees).toHaveBeenCalledWith("pane-2");
+      expect(result.current.entries).toHaveLength(2);
     });
     expect(result.current.virtualWorktreePath).toBeNull();
+    expect(window.localStorage.getItem(buildStorageKey("pane-2"))).toBeNull();
   });
 
-  it("does not copy the current virtual selection into a pane switched to the same repo", async () => {
-    const repoRoot = "/tmp/repo-shared";
+  it("keeps query data and virtual selection pane-scoped across A to B to A", async () => {
+    const repoRoot = "/tmp/repo-pane-lifetime";
+    const queryClient = createAppQueryClient();
+    const wrapper = createQueryWrapper(queryClient);
+    const revisitA = createDeferred<WorktreeList>();
+    const requestWorktrees = vi.fn((paneId: string): Promise<WorktreeList> => {
+      if (paneId === "pane-a" && requestWorktrees.mock.calls.length === 3) {
+        return revisitA.promise;
+      }
+      return Promise.resolve(createWorktreeList(repoRoot));
+    });
+    const firstA = renderHook(
+      () =>
+        useSessionVirtualWorktree({
+          paneId: "pane-a",
+          session: createSessionDetail({ paneId: "pane-a", repoRoot }),
+          requestWorktrees,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(firstA.result.current.entries).toHaveLength(2);
+    });
+    act(() => {
+      firstA.result.current.selectVirtualWorktree(`${repoRoot}/feature-a`);
+    });
+    expect(firstA.result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
+    firstA.unmount();
+
+    const paneB = renderHook(
+      () =>
+        useSessionVirtualWorktree({
+          paneId: "pane-b",
+          session: createSessionDetail({ paneId: "pane-b", repoRoot }),
+          requestWorktrees,
+        }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(paneB.result.current.entries).toHaveLength(2);
+    });
+    expect(paneB.result.current.virtualWorktreePath).toBeNull();
+    paneB.unmount();
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(sessionDetailQueryKeys.worktrees("pane-a", repoRoot))).toBe(
+        undefined,
+      );
+    });
+    const secondA = renderHook(
+      () =>
+        useSessionVirtualWorktree({
+          paneId: "pane-a",
+          session: createSessionDetail({ paneId: "pane-a", repoRoot }),
+          requestWorktrees,
+        }),
+      { wrapper },
+    );
+
+    expect(secondA.result.current.entries).toEqual([]);
+    expect(secondA.result.current.loading).toBe(true);
+    expect(secondA.result.current.virtualWorktreePath).toBeNull();
+    await act(async () => {
+      revisitA.resolve(createWorktreeList(repoRoot));
+      await revisitA.promise;
+    });
+    await waitFor(() => {
+      expect(secondA.result.current.entries).toHaveLength(2);
+      expect(secondA.result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
+    });
+  });
+
+  it("persists and clears a virtual selection", async () => {
+    const repoRoot = "/tmp/repo-select";
+    const paneId = "pane-select";
     const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
-    const { result, rerender } = renderHook(
-      ({ paneId }: { paneId: string }) =>
+    const { result } = renderHook(
+      () =>
         useSessionVirtualWorktree({
           paneId,
           session: createSessionDetail({
@@ -250,7 +441,7 @@ describe("useSessionVirtualWorktree", () => {
           }),
           requestWorktrees,
         }),
-      { initialProps: { paneId: "pane-1" } },
+      { wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
@@ -259,105 +450,18 @@ describe("useSessionVirtualWorktree", () => {
     act(() => {
       result.current.selectVirtualWorktree(`${repoRoot}/feature-a`);
     });
-    await waitFor(() => {
-      expect(window.localStorage.getItem(buildStorageKey("pane-1"))).toContain(
-        `${repoRoot}/feature-a`,
-      );
-    });
-
-    rerender({ paneId: "pane-2" });
-
-    await waitFor(() => {
-      expect(requestWorktrees).toHaveBeenCalledWith("pane-2");
-    });
-    expect(result.current.virtualWorktreePath).toBeNull();
-    expect(window.localStorage.getItem(buildStorageKey("pane-2"))).toBeNull();
-  });
-
-  it("clears pane-scoped storage when clearing virtual worktree", async () => {
-    const repoRoot = "/tmp/repo-b";
-    const paneId = "pane-1";
-    const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
-    const { result } = renderHook(() =>
-      useSessionVirtualWorktree({
-        paneId,
-        session: createSessionDetail({
-          paneId,
-          repoRoot,
-          worktreePath: `${repoRoot}/main`,
-          branch: "main",
-        }),
-        requestWorktrees,
-      }),
-    );
-
-    await waitFor(() => {
-      expect(requestWorktrees).toHaveBeenCalledWith(paneId);
-    });
-
-    act(() => {
-      result.current.selectVirtualWorktree(`${repoRoot}/feature-a`);
-    });
-
-    await waitFor(() => {
-      expect(window.localStorage.getItem(buildStorageKey(paneId))).toContain(
-        `${repoRoot}/feature-a`,
-      );
-    });
+    expect(window.localStorage.getItem(buildStorageKey(paneId))).toContain(`${repoRoot}/feature-a`);
 
     act(() => {
       result.current.clearVirtualWorktree();
     });
-
+    expect(result.current.virtualWorktreePath).toBeNull();
     expect(window.localStorage.getItem(buildStorageKey(paneId))).toBeNull();
   });
 
-  it("resets stale entries when worktree loading fails after pane switch", async () => {
-    const requestWorktrees = vi.fn(async (paneId: string) => {
-      if (paneId === "pane-1") {
-        return createWorktreeList("/tmp/repo-a");
-      }
-      throw new Error("worktree api failed");
-    });
-
-    const { result, rerender } = renderHook(
-      ({ paneId, repoRoot }: { paneId: string; repoRoot: string }) =>
-        useSessionVirtualWorktree({
-          paneId,
-          session: createSessionDetail({
-            paneId,
-            repoRoot,
-            worktreePath: `${repoRoot}/main`,
-            branch: "main",
-          }),
-          requestWorktrees,
-        }),
-      {
-        initialProps: {
-          paneId: "pane-1",
-          repoRoot: "/tmp/repo-a",
-        },
-      },
-    );
-
-    await waitFor(() => {
-      expect(result.current.entries.length).toBeGreaterThan(0);
-    });
-
-    rerender({
-      paneId: "pane-2",
-      repoRoot: "/tmp/repo-b",
-    });
-
-    await waitFor(() => {
-      expect(result.current.error).toContain("worktree api failed");
-    });
-    expect(result.current.entries).toEqual([]);
-  });
-
-  it("keeps stored virtual selection when worktree list is temporarily empty", async () => {
-    const repoRoot = "/tmp/repo-c";
-    const paneId = "pane-1";
+  it("keeps a stored selection when a manual refresh is temporarily empty", async () => {
+    const repoRoot = "/tmp/repo-empty";
+    const paneId = "pane-empty";
     window.localStorage.setItem(
       buildStorageKey(paneId),
       JSON.stringify({
@@ -367,33 +471,25 @@ describe("useSessionVirtualWorktree", () => {
         updatedAt: new Date(0).toISOString(),
       }),
     );
-    const requestWorktreesReady = vi.fn(async () => createWorktreeList(repoRoot));
-    const requestWorktreesEmpty = vi.fn(async () => createEmptyWorktreeList(repoRoot));
-    const { result, rerender } = renderHook(
-      ({ requestWorktrees }: { requestWorktrees: (paneId: string) => Promise<WorktreeList> }) =>
+    const requestWorktrees = vi
+      .fn(async () => createWorktreeList(repoRoot))
+      .mockResolvedValueOnce(createWorktreeList(repoRoot))
+      .mockResolvedValueOnce(createEmptyWorktreeList(repoRoot));
+    const { result } = renderHook(
+      () =>
         useSessionVirtualWorktree({
           paneId,
-          session: createSessionDetail({
-            paneId,
-            repoRoot,
-            worktreePath: `${repoRoot}/main`,
-            branch: "main",
-          }),
+          session: createSessionDetail({ paneId, repoRoot }),
           requestWorktrees,
         }),
-      {
-        initialProps: {
-          requestWorktrees: requestWorktreesReady,
-        },
-      },
+      { wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
       expect(result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
     });
-
-    rerender({
-      requestWorktrees: requestWorktreesEmpty,
+    await act(async () => {
+      await result.current.refreshWorktrees();
     });
 
     await waitFor(() => {
@@ -403,7 +499,7 @@ describe("useSessionVirtualWorktree", () => {
     expect(window.localStorage.getItem(buildStorageKey(paneId))).toContain(`${repoRoot}/feature-a`);
   });
 
-  it("clears a virtual selection that disappears from a non-empty worktree list", async () => {
+  it("clears a stored selection that disappears from a non-empty refresh", async () => {
     const repoRoot = "/tmp/repo-invalidated";
     const paneId = "pane-invalidated";
     window.localStorage.setItem(
@@ -415,33 +511,28 @@ describe("useSessionVirtualWorktree", () => {
         updatedAt: new Date(0).toISOString(),
       }),
     );
-    const requestWorktreesReady = vi.fn(async () => createWorktreeList(repoRoot));
-    const requestWorktreesWithoutSelection = vi.fn(async () =>
-      createMainOnlyWorktreeList(repoRoot),
-    );
-    const { result, rerender } = renderHook(
-      ({ requestWorktrees }: { requestWorktrees: (paneId: string) => Promise<WorktreeList> }) =>
+    const requestWorktrees = vi
+      .fn(async () => createWorktreeList(repoRoot))
+      .mockResolvedValueOnce(createWorktreeList(repoRoot))
+      .mockResolvedValueOnce(createMainOnlyWorktreeList(repoRoot));
+    const { result } = renderHook(
+      () =>
         useSessionVirtualWorktree({
           paneId,
-          session: createSessionDetail({
-            paneId,
-            repoRoot,
-            worktreePath: `${repoRoot}/main`,
-            branch: "main",
-          }),
+          session: createSessionDetail({ paneId, repoRoot }),
           requestWorktrees,
         }),
-      { initialProps: { requestWorktrees: requestWorktreesReady } },
+      { wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
       expect(result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
     });
-
-    rerender({ requestWorktrees: requestWorktreesWithoutSelection });
+    await act(async () => {
+      await result.current.refreshWorktrees();
+    });
 
     await waitFor(() => {
-      expect(result.current.entries).toHaveLength(1);
       expect(result.current.virtualWorktreePath).toBeNull();
     });
     expect(window.localStorage.getItem(buildStorageKey(paneId))).toBeNull();
@@ -468,17 +559,14 @@ describe("useSessionVirtualWorktree", () => {
           requestWorktrees,
         }),
       {
-        initialProps: {
-          worktreePath: `${repoRoot}/main`,
-          branch: "main",
-        },
+        initialProps: { worktreePath: `${repoRoot}/main`, branch: "main" },
+        wrapper: createQueryWrapper(),
       },
     );
 
     await waitFor(() => {
       expect(result.current.virtualWorktreePath).toBe(`${repoRoot}/feature-a`);
     });
-
     rerender({ worktreePath: `${repoRoot}/feature-a`, branch: "feature/a" });
 
     await waitFor(() => {
@@ -487,114 +575,115 @@ describe("useSessionVirtualWorktree", () => {
     expect(window.localStorage.getItem(buildStorageKey(paneId))).toBeNull();
   });
 
-  it("refreshes worktrees when refreshWorktrees is called", async () => {
+  it("keeps previous data visible and loading false during manual refresh", async () => {
     const repoRoot = "/tmp/repo-refresh";
     const paneId = "pane-refresh";
-    const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
-    const { result } = renderHook(() =>
-      useSessionVirtualWorktree({
-        paneId,
-        session: createSessionDetail({
-          paneId,
-          repoRoot,
-          worktreePath: `${repoRoot}/main`,
-          branch: "main",
-        }),
-        requestWorktrees,
-      }),
-    );
-
-    await waitFor(() => {
-      expect(requestWorktrees).toHaveBeenCalledTimes(1);
-    });
-
-    await act(async () => {
-      await result.current.refreshWorktrees();
-    });
-
-    expect(requestWorktrees).toHaveBeenCalledTimes(2);
-  });
-
-  it("keeps previous entries visible during background refresh", async () => {
-    const repoRoot = "/tmp/repo-background-refresh";
-    const paneId = "pane-background-refresh";
     const deferred = createDeferred<WorktreeList>();
     const requestWorktrees = vi
       .fn(async () => createWorktreeList(repoRoot))
       .mockResolvedValueOnce(createWorktreeList(repoRoot))
       .mockImplementationOnce(async () => deferred.promise);
-    const { result } = renderHook(() =>
-      useSessionVirtualWorktree({
-        paneId,
-        session: createSessionDetail({
+    const { result } = renderHook(
+      () =>
+        useSessionVirtualWorktree({
           paneId,
-          repoRoot,
-          worktreePath: `${repoRoot}/main`,
-          branch: "main",
+          session: createSessionDetail({ paneId, repoRoot }),
+          requestWorktrees,
         }),
-        requestWorktrees,
-      }),
+      { wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
-      expect(result.current.entries.length).toBe(2);
+      expect(result.current.entries).toHaveLength(2);
     });
-
     act(() => {
       void result.current.refreshWorktrees();
     });
-
+    expect(result.current.entries).toHaveLength(2);
     expect(result.current.loading).toBe(false);
-    expect(result.current.entries.length).toBe(2);
 
     await act(async () => {
       deferred.resolve(createEmptyWorktreeList(repoRoot));
       await deferred.promise;
     });
-
     await waitFor(() => {
       expect(result.current.entries).toEqual([]);
     });
+    expect(requestWorktrees).toHaveBeenCalledTimes(2);
   });
 
-  it("does not auto-refresh worktrees without explicit trigger", async () => {
-    vi.useFakeTimers();
-    try {
-      const repoRoot = "/tmp/repo-auto-refresh";
-      const paneId = "pane-auto-refresh";
-      const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
-      const { unmount } = renderHook(() =>
+  it("hides a warm refresh error while retrying and keeps previous data visible", async () => {
+    const repoRoot = "/tmp/repo-retry";
+    const paneId = "pane-retry";
+    const retried = createDeferred<WorktreeList>();
+    const requestWorktrees = vi
+      .fn(async () => createWorktreeList(repoRoot))
+      .mockResolvedValueOnce(createWorktreeList(repoRoot))
+      .mockRejectedValueOnce(new Error("temporary worktree failure"))
+      .mockImplementationOnce(async () => retried.promise);
+    const { result } = renderHook(
+      () =>
         useSessionVirtualWorktree({
           paneId,
-          session: createSessionDetail({
-            paneId,
-            repoRoot,
-            worktreePath: `${repoRoot}/main`,
-            branch: "main",
-          }),
+          session: createSessionDetail({ paneId, repoRoot }),
           requestWorktrees,
         }),
+      { wrapper: createQueryWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.entries).toHaveLength(2);
+    });
+    await act(async () => {
+      await result.current.refreshWorktrees();
+    });
+    await waitFor(() => {
+      expect(result.current.error).toBe("temporary worktree failure");
+    });
+
+    act(() => {
+      void result.current.refreshWorktrees();
+    });
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+      expect(result.current.entries).toHaveLength(2);
+      expect(result.current.loading).toBe(false);
+    });
+    await act(async () => {
+      retried.resolve(createMainOnlyWorktreeList(repoRoot));
+      await retried.promise;
+    });
+    await waitFor(() => {
+      expect(result.current.entries).toHaveLength(1);
+    });
+  });
+
+  it("does not auto-refresh without an explicit trigger", async () => {
+    vi.useFakeTimers();
+    try {
+      const repoRoot = "/tmp/repo-no-poll";
+      const paneId = "pane-no-poll";
+      const requestWorktrees = vi.fn(async () => createWorktreeList(repoRoot));
+      const { unmount } = renderHook(
+        () =>
+          useSessionVirtualWorktree({
+            paneId,
+            session: createSessionDetail({ paneId, repoRoot }),
+            requestWorktrees,
+          }),
+        { wrapper: createQueryWrapper() },
       );
 
       await act(async () => {
         await Promise.resolve();
       });
-
       expect(requestWorktrees).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(10_000);
       });
-
       expect(requestWorktrees).toHaveBeenCalledTimes(1);
-
       unmount();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(10_000);
-      });
-
-      expect(requestWorktrees).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }

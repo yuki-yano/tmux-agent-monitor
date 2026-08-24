@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import {
   RouterContextProvider,
   createMemoryHistory,
@@ -11,6 +12,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "@/state/theme-context";
+import { createAppQueryClient } from "@/state/query-client";
 
 import { createSessionContextMock } from "./session-context-mock";
 import { SessionDetailProvider } from "./SessionDetailProvider";
@@ -135,6 +137,7 @@ vi.mock("@/state/session-context", () => ({
 }));
 
 const renderWithRouter = (ui: ReactNode) => {
+  const queryClient = createAppQueryClient();
   const rootRoute = createRootRoute({ component: () => null });
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -146,9 +149,11 @@ const renderWithRouter = (ui: ReactNode) => {
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   return render(
-    <RouterContextProvider router={router}>
-      <ThemeProvider>{ui}</ThemeProvider>
-    </RouterContextProvider>,
+    <QueryClientProvider client={queryClient}>
+      <RouterContextProvider router={router}>
+        <ThemeProvider>{ui}</ThemeProvider>
+      </RouterContextProvider>
+    </QueryClientProvider>,
   );
 };
 

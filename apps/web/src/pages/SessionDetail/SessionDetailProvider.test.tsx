@@ -1,8 +1,11 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, screen } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { type ReactNode, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+
+import { createAppQueryClient } from "@/state/query-client";
 
 import { NotesSection } from "./components/NotesSection";
 import { useSessionDetailViewDataSectionProps } from "./hooks/useSessionDetailViewDataSectionProps";
@@ -26,6 +29,11 @@ const setScreenErrorMock = vi.fn();
 const pushNotificationsRenderSpy = vi.fn();
 let mockResolvedTheme: "latte" | "mocha" = "mocha";
 let mockSessionsContext: Record<string, unknown> = {};
+
+const QueryTestProvider = ({ children }: { children: ReactNode }) => {
+  const [queryClient] = useState(createAppQueryClient);
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+};
 
 // Mirrors use-session-store.ts's real toSessionDetail cache: the same
 // underlying session object reference must resolve to the same "detail" view
@@ -223,9 +231,11 @@ const renderContext = (
     connectionIssue: options.connectionIssue ?? null,
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <JotaiProvider store={store}>
-      <SessionDetailProvider paneId="pane-1">{children}</SessionDetailProvider>
-    </JotaiProvider>
+    <QueryTestProvider>
+      <JotaiProvider store={store}>
+        <SessionDetailProvider paneId="pane-1">{children}</SessionDetailProvider>
+      </JotaiProvider>
+    </QueryTestProvider>
   );
   return renderHook(() => useSessionDetailContext(), { wrapper });
 };
@@ -240,6 +250,7 @@ describe("SessionDetailProvider", () => {
       <SessionDetailProvider paneId="pane-1">
         <div data-testid="child">child</div>
       </SessionDetailProvider>,
+      { wrapper: QueryTestProvider },
     );
 
     expect(screen.getByTestId("child").textContent).toBe("child");
@@ -257,6 +268,7 @@ describe("SessionDetailProvider", () => {
       <SessionDetailProvider paneId="pane-1">
         <PaneLifetimeProbe paneId="pane-1" />
       </SessionDetailProvider>,
+      { wrapper: QueryTestProvider },
     );
     expect(screen.getByTestId("pane-lifetime").dataset.mountedPaneId).toBe("pane-1");
 
@@ -504,6 +516,7 @@ describe("SessionDetailProvider", () => {
         <SessionDetailProvider paneId="pane-1">
           <NotesProbe />
         </SessionDetailProvider>,
+        { wrapper: QueryTestProvider },
       );
     });
 
