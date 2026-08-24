@@ -7,19 +7,19 @@
   },
   "metrics": {
     "productionFiles": 338,
-    "useEffect": 99,
-    "useLayoutEffect": 33,
+    "useEffect": 97,
+    "useLayoutEffect": 35,
     "effectTotal": 132,
     "sessionDetailEffects": 65,
-    "useMemo": 168,
-    "useCallback": 387,
+    "useMemo": 170,
+    "useCallback": 388,
     "memo": 43,
-    "sessionDetailAndLibUseMemo": 79,
-    "sessionDetailAndLibUseCallback": 186,
+    "sessionDetailAndLibUseMemo": 81,
+    "sessionDetailAndLibUseCallback": 187,
     "visibilityPollingCallerFiles": 9,
-    "sessionDetailOwnershipLines": 1902,
+    "sessionDetailOwnershipLines": 1903,
     "reactOxlintDisable": 10,
-    "reactDoctorDisable": 49,
+    "reactDoctorDisable": 48,
     "exhaustiveDepsSuppression": 0,
     "useNoMemoDirective": 0
   },
@@ -27,9 +27,9 @@
     "derived-state": 4,
     "dom-layout": 23,
     "event-migration": 5,
-    "external-sync": 43,
+    "external-sync": 44,
     "identity-reset": 25,
-    "ref-mirror": 15,
+    "ref-mirror": 14,
     "request-bridge": 17
   },
   "inventory": [
@@ -2480,12 +2480,12 @@
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 193,
+      "line": 377,
       "column": 3,
       "owner": "useSessionDiffs",
       "hook": "useLayoutEffect",
-      "dependencies": ["requestScopeKey"],
-      "fingerprint": "1c976834aba4",
+      "dependencies": ["scope"],
+      "fingerprint": "159183b19b7e",
       "category": "identity-reset",
       "disposition": "key-reset",
       "confidence": "high",
@@ -2498,40 +2498,79 @@
         "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { diffScopeGenerationRef.current += 1; diffSnapshotRef.current = null; diffSummaryRevRef.current = null; }",
+      "preview": "() => { activeScopeRef.current = scope; diffScopeGenerationRef.current += 1; diffSnapshotRef.current = null; diffSummaryRevRef.current = null; lastUiForceHydrationDataUpdateCountRe",
       "id": "E102"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 388,
+      "line": 396,
       "column": 3,
       "owner": "useSessionDiffs",
       "hook": "useLayoutEffect",
-      "dependencies": ["loadDiffSummary", "onReconnectRef", "pollDiffSummaryTick", "pollTickRef"],
-      "fingerprint": "ea501012ebea",
-      "category": "ref-mirror",
+      "dependencies": ["connected", "queryClient", "queryKey", "setFileError"],
+      "fingerprint": "d252b02043d6",
+      "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
       "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "no",
-        "callbackIdentityIsNotSubscriptionContract": "no",
-        "effectEventIsNotExported": "no"
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
       },
       "testEvidence": {
         "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { onReconnectRef.current = () => { void loadDiffSummary(); }; pollTickRef.current = pollDiffSummaryTick; }",
+      "preview": "() => { const wasConnected = previousConnectedRef.current; previousConnectedRef.current = connected; if (wasConnected && !connected) { refreshGenerationRef.current += 1; forceHydra",
       "id": "E103"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 485,
+      "line": 409,
       "column": 3,
       "owner": "useSessionDiffs",
-      "hook": "useEffect",
-      "dependencies": ["loadDiffSummary"],
-      "fingerprint": "453daefb092b",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "branch",
+        "diffMode",
+        "paneId",
+        "scope",
+        "setDiffFiles",
+        "setDiffLoadingFiles",
+        "setDiffOpen",
+        "setFileError",
+        "worktreePath"
+      ],
+      "fingerprint": "43d87a695538",
+      "category": "identity-reset",
+      "disposition": "key-reset",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { setDiffFiles({}); setDiffOpen({}); setDiffLoadingFiles({}); setFileError(null); return () => { clearDiffFileCacheForPane(paneId, worktreePath, branch, diffMode); }; }",
+      "id": "E104"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
+      "line": 546,
+      "column": 3,
+      "owner": "useSessionDiffs",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "applyDiffSummary",
+        "currentSummaryUiState",
+        "dataUpdateCount",
+        "querySummary",
+        "scope"
+      ],
+      "fingerprint": "bcceb0c13ed3",
       "category": "request-bridge",
       "disposition": "query",
       "confidence": "high",
@@ -2544,45 +2583,12 @@
         "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { // react-doctor-disable-next-line no-pass-data-to-parent void loadDiffSummary(); }",
-      "id": "E104"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 490,
-      "column": 3,
-      "owner": "useSessionDiffs",
-      "hook": "useEffect",
-      "dependencies": [
-        "branch",
-        "diffMode",
-        "paneId",
-        "setDiffError",
-        "setDiffFiles",
-        "setDiffLoadingFiles",
-        "setDiffOpen",
-        "setDiffSummary",
-        "worktreePath"
-      ],
-      "fingerprint": "0e12d80a85a7",
-      "category": "identity-reset",
-      "disposition": "key-reset",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { setDiffSummary(null); setDiffFiles({}); setDiffOpen({}); setDiffLoadingFiles({}); setDiffError(null); return () => { clearDiffFileCacheForPane(paneId, worktreePath, branch,",
+      "preview": "() => { if (querySummary == null || activeScopeRef.current !== scope) { return; } const marker = forceHydrationRef.current; const forceHydrate = (marker != null && marker.scope ===",
       "id": "E105"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 511,
+      "line": 673,
       "column": 3,
       "owner": "useSessionDiffs",
       "hook": "useEffect",

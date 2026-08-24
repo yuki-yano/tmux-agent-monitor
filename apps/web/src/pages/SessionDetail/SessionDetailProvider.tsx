@@ -98,6 +98,7 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
 
   const diffs = useSessionDiffs({
     paneId,
+    repoRoot: base.session?.repoRoot ?? null,
     connected: base.connected,
     worktreePath: effectiveWorktreeScope,
     branch: effectiveBranchScope,

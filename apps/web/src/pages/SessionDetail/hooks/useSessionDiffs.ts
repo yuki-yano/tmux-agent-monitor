@@ -1,6 +1,15 @@
+import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DiffFile, DiffMode, DiffSummary } from "@vde-monitor/shared";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
@@ -8,23 +17,22 @@ import { resolveUnknownErrorMessage } from "@/lib/api-utils";
 import {
   diffErrorAtom,
   diffFilesAtom,
-  diffLoadingAtom,
   diffLoadingFilesAtom,
   diffOpenAtom,
-  diffSummaryAtom,
 } from "../atoms/diffAtoms";
+import { sessionDetailQueryKeys } from "../session-detail-query-keys";
 import { AUTO_REFRESH_INTERVAL_MS, buildDiffSummarySnapshot } from "../sessionDetailUtils";
-import { runScopedRequest } from "./session-request-guard";
-import { useScopeGuard } from "./useScopeGuard";
 
 type UseSessionDiffsParams = {
   paneId: string;
+  repoRoot: string | null;
   connected: boolean;
   worktreePath?: string | null;
   branch?: string | null;
   requestDiffSummary: (
     paneId: string,
     options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
+    signal?: AbortSignal,
   ) => Promise<DiffSummary>;
   requestDiffFile: (
     paneId: string,
@@ -33,6 +41,48 @@ type UseSessionDiffsParams = {
     options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
   ) => Promise<DiffFile>;
 };
+
+type DiffScopeIdentity = {
+  paneId: string;
+  repoRoot: string | null;
+  worktreePath: string | null;
+  branch: string | null;
+  mode: DiffMode;
+};
+
+type BlockingSummaryRefresh = {
+  scope: DiffScopeIdentity;
+  generation: number;
+  dataUpdateCount: number;
+  errorUpdateCount: number;
+};
+
+type VisibleSummaryError = {
+  error: unknown;
+  snapshot: string | null;
+};
+
+type DiffSummaryUiState = {
+  scope: DiffScopeIdentity;
+  connected: boolean;
+  generation: number;
+  blocking: BlockingSummaryRefresh | null;
+  forceHydrationDataUpdateCount: number | null;
+  visibleError: VisibleSummaryError | null;
+};
+
+type ForceHydrationMarker = {
+  scope: DiffScopeIdentity;
+  generation: number;
+  minimumDataUpdateCount: number;
+};
+
+const OFFLINE_DIFF_MESSAGE = "Offline: waiting to load diffs";
+
+const subscribeBrowserOnline = (onStoreChange: () => void) =>
+  onlineManager.subscribe(onStoreChange);
+const getBrowserOnlineSnapshot = () => onlineManager.isOnline();
+const getServerBrowserOnlineSnapshot = () => true;
 
 // ---------------------------------------------------------------------------
 // Module-level diff file cache (replaces TanStack Query cache)
@@ -156,17 +206,22 @@ const fetchCurrentDiffFileWithCache = async (
 
 export const useSessionDiffs = ({
   paneId,
+  repoRoot,
   connected,
   worktreePath = null,
   branch = null,
   requestDiffSummary,
   requestDiffFile,
 }: UseSessionDiffsParams) => {
+  const queryClient = useQueryClient();
+  const browserOnline = useSyncExternalStore(
+    subscribeBrowserOnline,
+    getBrowserOnlineSnapshot,
+    getServerBrowserOnlineSnapshot,
+  );
   const [worktreeDiffMode, setWorktreeDiffMode] = useState<DiffMode>("total");
   const diffMode: DiffMode = branch == null ? worktreeDiffMode : "committed";
-  const [diffSummary, setDiffSummary] = useAtom(diffSummaryAtom);
-  const [diffError, setDiffError] = useAtom(diffErrorAtom);
-  const [diffLoading, setDiffLoading] = useAtom(diffLoadingAtom);
+  const [fileError, setFileError] = useAtom(diffErrorAtom);
   const [diffFiles, setDiffFiles] = useAtom(diffFilesAtom);
   const [diffOpen, setDiffOpen] = useAtom(diffOpenAtom);
   const [diffLoadingFiles, setDiffLoadingFiles] = useAtom(diffLoadingFilesAtom);
@@ -176,25 +231,11 @@ export const useSessionDiffs = ({
   const diffSummaryRevRef = useRef<string | null>(null);
   const diffScopeGenerationRef = useRef(0);
   const [inFlightDiffFiles] = useState(() => new Map<string, Promise<DiffFile>>());
-  const onReconnectRef = useRef<() => void>(() => {});
-  const pollTickRef = useRef<() => void>(() => {});
-  const { scopeKey: requestScopeKey, activeScopeRef } = useScopeGuard({
-    paneId,
-    worktreePath,
-    branch,
-    variant: diffMode,
-    connected,
-    onReconnectRef,
-    pollTickRef,
-    pollIntervalMs: AUTO_REFRESH_INTERVAL_MS,
-  });
-  const summaryRequestIdRef = useRef(0);
-
-  useLayoutEffect(() => {
-    diffScopeGenerationRef.current += 1;
-    diffSnapshotRef.current = null;
-    diffSummaryRevRef.current = null;
-  }, [requestScopeKey]);
+  const activeScopeRef = useRef<DiffScopeIdentity | null>(null);
+  const previousConnectedRef = useRef(connected);
+  const refreshGenerationRef = useRef(0);
+  const forceHydrationRef = useRef<ForceHydrationMarker | null>(null);
+  const lastUiForceHydrationDataUpdateCountRef = useRef<number | null>(null);
 
   const requestOptions = useMemo(
     () =>
@@ -205,11 +246,197 @@ export const useSessionDiffs = ({
           : ({ force: true, mode: diffMode } as const),
     [branch, diffMode, worktreePath],
   );
+  const queryKey = useMemo(
+    () =>
+      sessionDetailQueryKeys.diffSummary(paneId, {
+        repoRoot,
+        worktreePath,
+        branch,
+        mode: diffMode,
+      }),
+    [branch, diffMode, paneId, repoRoot, worktreePath],
+  );
+  const scope = useMemo<DiffScopeIdentity>(
+    () => ({ paneId, repoRoot, worktreePath, branch, mode: diffMode }),
+    [branch, diffMode, paneId, repoRoot, worktreePath],
+  );
+  const {
+    data: querySummary,
+    error: queryError,
+    fetchStatus,
+    isFetched,
+    isLoading,
+  } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => requestDiffSummary(paneId, requestOptions, signal),
+    enabled: Boolean(paneId) && Boolean(repoRoot) && connected,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    networkMode: "online",
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: "always",
+    refetchInterval: connected && browserOnline ? AUTO_REFRESH_INTERVAL_MS : false,
+    refetchIntervalInBackground: false,
+  });
+  const subscribeQueryCache = useCallback(
+    (onStoreChange: () => void) => queryClient.getQueryCache().subscribe(onStoreChange),
+    [queryClient],
+  );
+  const getDataUpdateCount = useCallback(
+    () => queryClient.getQueryState(queryKey)?.dataUpdateCount ?? 0,
+    [queryClient, queryKey],
+  );
+  const getErrorUpdateCount = useCallback(
+    () => queryClient.getQueryState(queryKey)?.errorUpdateCount ?? 0,
+    [queryClient, queryKey],
+  );
+  const dataUpdateCount = useSyncExternalStore(
+    subscribeQueryCache,
+    getDataUpdateCount,
+    getDataUpdateCount,
+  );
+  const errorUpdateCount = useSyncExternalStore(
+    subscribeQueryCache,
+    getErrorUpdateCount,
+    getErrorUpdateCount,
+  );
+  const [summaryUiState, setSummaryUiState] = useState<DiffSummaryUiState>(() => ({
+    scope,
+    connected,
+    generation: 0,
+    blocking: null,
+    forceHydrationDataUpdateCount: null,
+    visibleError: null,
+  }));
+  let currentSummaryUiState = summaryUiState;
+  if (summaryUiState.scope !== scope) {
+    currentSummaryUiState = {
+      scope,
+      connected,
+      generation: summaryUiState.generation + 1,
+      blocking: null,
+      forceHydrationDataUpdateCount: null,
+      visibleError: null,
+    };
+    setSummaryUiState(currentSummaryUiState);
+  } else if (summaryUiState.connected !== connected) {
+    const generation = summaryUiState.generation + 1;
+    const blocking =
+      connected && paneId && repoRoot
+        ? { scope, generation, dataUpdateCount, errorUpdateCount }
+        : null;
+    currentSummaryUiState = {
+      scope,
+      connected,
+      generation,
+      blocking,
+      forceHydrationDataUpdateCount: null,
+      visibleError: null,
+    };
+    setSummaryUiState(currentSummaryUiState);
+  } else if (summaryUiState.blocking) {
+    if (dataUpdateCount > summaryUiState.blocking.dataUpdateCount) {
+      currentSummaryUiState = {
+        ...summaryUiState,
+        blocking: null,
+        forceHydrationDataUpdateCount: dataUpdateCount,
+        visibleError: null,
+      };
+      setSummaryUiState(currentSummaryUiState);
+    } else if (
+      fetchStatus === "idle" &&
+      errorUpdateCount > summaryUiState.blocking.errorUpdateCount
+    ) {
+      currentSummaryUiState = {
+        ...summaryUiState,
+        blocking: null,
+        forceHydrationDataUpdateCount: null,
+        visibleError: {
+          error: queryError,
+          snapshot: querySummary == null ? null : buildDiffSummarySnapshot(querySummary),
+        },
+      };
+      setSummaryUiState(currentSummaryUiState);
+    }
+  } else if (
+    summaryUiState.visibleError != null &&
+    summaryUiState.visibleError.snapshot !==
+      (querySummary == null ? null : buildDiffSummarySnapshot(querySummary))
+  ) {
+    currentSummaryUiState = {
+      ...summaryUiState,
+      visibleError: null,
+    };
+    setSummaryUiState(currentSummaryUiState);
+  }
+
+  // (1) The active scope is valid only for this mounted layout lifetime. Object identity, rather
+  // than a serialised key, prevents A -> B -> A responses from re-entering the current scope.
+  useLayoutEffect(() => {
+    activeScopeRef.current = scope;
+    diffScopeGenerationRef.current += 1;
+    diffSnapshotRef.current = null;
+    diffSummaryRevRef.current = null;
+    lastUiForceHydrationDataUpdateCountRef.current = null;
+    const activeScope = scope;
+    return () => {
+      if (activeScopeRef.current === activeScope) {
+        activeScopeRef.current = null;
+        diffScopeGenerationRef.current += 1;
+        refreshGenerationRef.current += 1;
+        forceHydrationRef.current = null;
+      }
+    };
+  }, [scope]);
+
+  // (2) App connection transitions own cancellation and error-reset semantics independently from
+  // scope identity. Disabling a Query observer does not cancel a request that is already running.
+  useLayoutEffect(() => {
+    const wasConnected = previousConnectedRef.current;
+    previousConnectedRef.current = connected;
+    if (wasConnected && !connected) {
+      refreshGenerationRef.current += 1;
+      forceHydrationRef.current = null;
+      void queryClient.cancelQueries({ queryKey, exact: true });
+    } else if (!wasConnected && connected) {
+      setFileError(null);
+    }
+  }, [connected, queryClient, queryKey, setFileError]);
+
+  // (3) Reset the legacy file surface before paint when the Query summary scope changes.
+  useLayoutEffect(() => {
+    setDiffFiles({});
+    setDiffOpen({});
+    setDiffLoadingFiles({});
+    setFileError(null);
+    return () => {
+      clearDiffFileCacheForPane(paneId, worktreePath, branch, diffMode);
+    };
+  }, [
+    branch,
+    diffMode,
+    paneId,
+    scope,
+    setDiffFiles,
+    setDiffLoadingFiles,
+    setDiffOpen,
+    setFileError,
+    worktreePath,
+  ]);
 
   const applyDiffSummary = useCallback(
-    (summary: DiffSummary, refreshOpenFiles: boolean, targetScopeKey: string) => {
+    (summary: DiffSummary, targetScope: DiffScopeIdentity, forceHydrate: boolean) => {
+      if (activeScopeRef.current !== targetScope) {
+        return;
+      }
       const targetSnapshot = buildDiffSummarySnapshot(summary);
       const snapshotChanged = diffSnapshotRef.current !== targetSnapshot;
+      if (!snapshotChanged && !forceHydrate) {
+        return;
+      }
+      setFileError(null);
       if (snapshotChanged) {
         diffScopeGenerationRef.current += 1;
         setDiffLoadingFiles({});
@@ -219,12 +446,11 @@ export const useSessionDiffs = ({
       diffSnapshotRef.current = targetSnapshot;
       const targetGeneration = diffScopeGenerationRef.current;
       const isCurrentRevision = () =>
-        activeScopeRef.current === targetScopeKey &&
+        activeScopeRef.current === targetScope &&
         diffScopeGenerationRef.current === targetGeneration &&
         diffSummaryRevRef.current === summary.rev &&
         diffSnapshotRef.current === targetSnapshot;
       pruneDiffFileCacheToRev(paneId, worktreePath, branch, diffMode, summary.rev);
-      setDiffSummary(summary);
       const fileSet = new Set(summary.files.map((file) => file.path));
       setDiffOpen((prev) => {
         if (!summary.files.length) {
@@ -256,7 +482,7 @@ export const useSessionDiffs = ({
         return acc;
       }, {});
       setDiffFiles(cachedFiles);
-      if (openTargets.length > 0 && refreshOpenFiles) {
+      if (openTargets.length > 0) {
         void Promise.all(
           openTargets.map(async ([path]) => {
             const cacheMiss = cachedFiles[path] == null;
@@ -272,7 +498,12 @@ export const useSessionDiffs = ({
                 summary.rev,
                 path,
                 inFlightDiffFiles,
-                buildInFlightDiffFileKey(targetScopeKey, targetGeneration, summary.rev, path),
+                buildInFlightDiffFileKey(
+                  JSON.stringify(targetScope),
+                  targetGeneration,
+                  summary.rev,
+                  path,
+                ),
                 isCurrentRevision,
                 () => requestDiffFile(paneId, path, summary.rev, requestOptions),
               );
@@ -284,7 +515,7 @@ export const useSessionDiffs = ({
               if (!isCurrentRevision()) {
                 return;
               }
-              setDiffError(resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.diffFile));
+              setFileError(resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.diffFile));
             } finally {
               if (cacheMiss && isCurrentRevision()) {
                 setDiffLoadingFiles((prev) => ({ ...prev, [path]: false }));
@@ -302,95 +533,53 @@ export const useSessionDiffs = ({
       paneId,
       requestDiffFile,
       requestOptions,
-      setDiffError,
       setDiffFiles,
       setDiffLoadingFiles,
       setDiffOpen,
-      setDiffSummary,
+      setFileError,
       worktreePath,
     ],
   );
 
-  const loadDiffSummary = useCallback(async () => {
-    if (!paneId) return;
-    const targetScopeKey = requestScopeKey;
-    setDiffLoading(true);
-    setDiffError(null);
-    await runScopedRequest({
-      requestIdRef: summaryRequestIdRef,
-      activeScopeRef,
-      scopeKey: targetScopeKey,
-      run: () => requestDiffSummary(paneId, requestOptions),
-      onSuccess: (summary) => {
-        applyDiffSummary(summary, true, targetScopeKey);
-        setDiffLoading(false);
-      },
-      onError: (err) => {
-        setDiffError(resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.diffSummary));
-        setDiffLoading(false);
-      },
-      onSettled: ({ isCurrent }) => {
-        if (isCurrent()) {
-          setDiffLoading(false);
-        }
-      },
-    });
-  }, [
-    activeScopeRef,
-    applyDiffSummary,
-    paneId,
-    requestDiffSummary,
-    requestOptions,
-    requestScopeKey,
-    setDiffError,
-    setDiffLoading,
-  ]);
-
-  const pollDiffSummary = useCallback(async () => {
-    if (!paneId) return;
-    const targetScopeKey = requestScopeKey;
-    await runScopedRequest({
-      requestIdRef: summaryRequestIdRef,
-      activeScopeRef,
-      scopeKey: targetScopeKey,
-      run: () => requestDiffSummary(paneId, requestOptions),
-      onSuccess: (summary) => {
-        setDiffLoading(false);
-        const snapshot = buildDiffSummarySnapshot(summary);
-        if (snapshot === diffSnapshotRef.current) {
-          return;
-        }
-        setDiffError(null);
-        applyDiffSummary(summary, true, targetScopeKey);
-      },
-      onSettled: ({ isCurrent }) => {
-        if (isCurrent()) {
-          setDiffLoading(false);
-        }
-      },
-    });
-  }, [
-    activeScopeRef,
-    applyDiffSummary,
-    paneId,
-    requestDiffSummary,
-    requestOptions,
-    requestScopeKey,
-    setDiffError,
-    setDiffLoading,
-  ]);
-  const pollDiffSummaryTick = useCallback(() => {
-    void pollDiffSummary();
-  }, [pollDiffSummary]);
-
-  // Keep scope-guard callbacks current before its passive reconnect/polling
-  // effects can run, without mutating refs during render.
+  // (4) Bridge every successful Query write, including structurally equal data, into the legacy
+  // file/open cache before paint. Automatic equal-snapshot polls intentionally do no work.
   useLayoutEffect(() => {
-    onReconnectRef.current = () => {
-      void loadDiffSummary();
-    };
-    pollTickRef.current = pollDiffSummaryTick;
-  }, [loadDiffSummary, onReconnectRef, pollDiffSummaryTick, pollTickRef]);
+    if (querySummary == null || activeScopeRef.current !== scope) {
+      return;
+    }
+    const marker = forceHydrationRef.current;
+    const forceHydrate =
+      (marker != null &&
+        marker.scope === scope &&
+        dataUpdateCount >= marker.minimumDataUpdateCount) ||
+      (currentSummaryUiState.scope === scope &&
+        currentSummaryUiState.forceHydrationDataUpdateCount === dataUpdateCount &&
+        lastUiForceHydrationDataUpdateCountRef.current !== dataUpdateCount);
+    if (currentSummaryUiState.forceHydrationDataUpdateCount === dataUpdateCount && forceHydrate) {
+      lastUiForceHydrationDataUpdateCountRef.current = dataUpdateCount;
+    }
+    applyDiffSummary(querySummary, scope, forceHydrate);
+    if (forceHydrate && forceHydrationRef.current === marker) {
+      forceHydrationRef.current = null;
+    }
+  }, [applyDiffSummary, currentSummaryUiState, dataUpdateCount, querySummary, scope]);
+
+  const diffSummary = querySummary ?? null;
+  const blockingRefresh = currentSummaryUiState.blocking != null;
+  const summaryError =
+    fetchStatus === "paused" && diffSummary == null
+      ? OFFLINE_DIFF_MESSAGE
+      : blockingRefresh
+        ? null
+        : (currentSummaryUiState.visibleError?.error ?? (diffSummary == null ? queryError : null));
+  const diffError =
+    fileError ??
+    (summaryError == null
+      ? null
+      : resolveUnknownErrorMessage(summaryError, API_ERROR_MESSAGES.diffSummary));
+  const diffLoading =
+    (blockingRefresh && browserOnline) ||
+    (connected && browserOnline && diffSummary == null && !isFetched && isLoading);
 
   const diffSummaryRev = diffSummary?.rev ?? null;
   const loadDiffFile = useCallback(
@@ -409,12 +598,12 @@ export const useSessionDiffs = ({
         setDiffFiles((prev) => ({ ...prev, [path]: cached }));
         return;
       }
-      const targetScopeKey = requestScopeKey;
+      const targetScope = scope;
       const targetRev = diffSummaryRev;
       const targetGeneration = diffScopeGenerationRef.current;
       const targetSnapshot = diffSnapshotRef.current;
       const isCurrentRevision = () =>
-        activeScopeRef.current === targetScopeKey &&
+        activeScopeRef.current === targetScope &&
         diffScopeGenerationRef.current === targetGeneration &&
         diffSummaryRevRef.current === targetRev &&
         diffSnapshotRef.current === targetSnapshot;
@@ -430,7 +619,7 @@ export const useSessionDiffs = ({
           targetRev,
           path,
           inFlightDiffFiles,
-          buildInFlightDiffFileKey(targetScopeKey, targetGeneration, targetRev, path),
+          buildInFlightDiffFileKey(JSON.stringify(targetScope), targetGeneration, targetRev, path),
           isCurrentRevision,
           () => requestDiffFile(paneId, path, targetRev, requestOptions),
         );
@@ -442,7 +631,7 @@ export const useSessionDiffs = ({
         if (!isCurrentRevision()) {
           return;
         }
-        setDiffError(resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.diffFile));
+        setFileError(resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.diffFile));
       } finally {
         if (isCurrentRevision()) {
           setDiffLoadingFiles((prev) => ({ ...prev, [path]: false }));
@@ -457,10 +646,10 @@ export const useSessionDiffs = ({
       diffSummaryRev,
       inFlightDiffFiles,
       paneId,
-      requestScopeKey,
       requestDiffFile,
       requestOptions,
-      setDiffError,
+      scope,
+      setFileError,
       setDiffFiles,
       setDiffLoadingFiles,
       worktreePath,
@@ -480,37 +669,84 @@ export const useSessionDiffs = ({
     [loadDiffFile, setDiffOpen],
   );
 
-  // False positive: diff summary loading is lifecycle IO keyed by pane/worktree,
-  // and moving it to render or a user event would skip the initial load.
-  useEffect(() => {
-    // react-doctor-disable-next-line no-pass-data-to-parent
-    void loadDiffSummary();
-  }, [loadDiffSummary]);
-
-  useEffect(() => {
-    setDiffSummary(null);
-    setDiffFiles({});
-    setDiffOpen({});
-    setDiffLoadingFiles({});
-    setDiffError(null);
-    return () => {
-      clearDiffFileCacheForPane(paneId, worktreePath, branch, diffMode);
-    };
-  }, [
-    branch,
-    diffMode,
-    paneId,
-    setDiffError,
-    setDiffFiles,
-    setDiffLoadingFiles,
-    setDiffOpen,
-    setDiffSummary,
-    worktreePath,
-  ]);
-
+  // (5) File refreshes use the last committed open-state snapshot.
   useEffect(() => {
     diffOpenRef.current = diffOpen;
   }, [diffOpen]);
+
+  const refreshDiff = useCallback(async () => {
+    if (!paneId || !repoRoot || !connected) {
+      return;
+    }
+    const targetScope = scope;
+    const generation = refreshGenerationRef.current + 1;
+    refreshGenerationRef.current = generation;
+    const isCurrent = () =>
+      activeScopeRef.current === targetScope && refreshGenerationRef.current === generation;
+    setFileError(null);
+    setSummaryUiState((current) => ({
+      scope: targetScope,
+      connected,
+      generation: Math.max(current.generation, generation),
+      blocking: { scope: targetScope, generation, dataUpdateCount, errorUpdateCount },
+      forceHydrationDataUpdateCount: null,
+      visibleError: null,
+    }));
+    await queryClient.cancelQueries({ queryKey, exact: true });
+    if (!isCurrent()) {
+      return;
+    }
+    const currentDataUpdateCount =
+      queryClient.getQueryState(queryKey)?.dataUpdateCount ?? dataUpdateCount;
+    const marker: ForceHydrationMarker = {
+      scope: targetScope,
+      generation,
+      minimumDataUpdateCount: currentDataUpdateCount + 1,
+    };
+    forceHydrationRef.current = marker;
+    try {
+      await queryClient.fetchQuery({
+        queryKey,
+        queryFn: ({ signal }) => requestDiffSummary(paneId, requestOptions, signal),
+        staleTime: 0,
+        gcTime: 0,
+        retry: false,
+        networkMode: "online",
+      });
+    } catch (err) {
+      if (isCurrent()) {
+        const currentSummary = queryClient.getQueryData<DiffSummary>(queryKey);
+        if (forceHydrationRef.current === marker) {
+          forceHydrationRef.current = null;
+        }
+        setSummaryUiState((current) =>
+          current.blocking?.generation === generation
+            ? {
+                ...current,
+                blocking: null,
+                visibleError: {
+                  error: err,
+                  snapshot:
+                    currentSummary == null ? null : buildDiffSummarySnapshot(currentSummary),
+                },
+              }
+            : current,
+        );
+      }
+    }
+  }, [
+    connected,
+    dataUpdateCount,
+    errorUpdateCount,
+    paneId,
+    queryClient,
+    queryKey,
+    repoRoot,
+    requestDiffSummary,
+    requestOptions,
+    scope,
+    setFileError,
+  ]);
 
   return {
     diffSummary,
@@ -519,7 +755,7 @@ export const useSessionDiffs = ({
     diffFiles,
     diffOpen,
     diffLoadingFiles,
-    refreshDiff: loadDiffSummary,
+    refreshDiff,
     diffMode,
     setDiffMode: setWorktreeDiffMode,
     toggleDiff,
