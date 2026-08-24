@@ -7,8 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createAppQueryClient } from "@/state/query-client";
 
-import { NotesSection } from "./components/NotesSection";
-import { useSessionDetailViewDataSectionProps } from "./hooks/useSessionDetailViewDataSectionProps";
+import { ConnectedNotesSection } from "./components/NotesSection";
 import { useSessionDetailVMState } from "./hooks/useSessionDetailVMState";
 import {
   type SessionContextMockOverrides,
@@ -21,6 +20,7 @@ import {
   createSessionStreamDataMock,
 } from "./session-context-mock";
 import { SessionDetailProvider, useSessionDetailContext } from "./SessionDetailProvider";
+import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
 import { createSessionDetail } from "./test-helpers";
 
 const session = createSessionDetail({ paneId: "pane-1" });
@@ -206,12 +206,15 @@ vi.mock("./hooks/useSessionControls", () => ({
   }),
 }));
 
-// Renders NotesSection through the real collector hook
-// (useSessionDetailViewDataSectionProps) exactly the way SessionDetailView
-// does, so the memo-effectiveness of the real props chain is exercised.
+// Renders NotesSection through the dedicated notes controller exactly the way
+// SessionDetailView does, so the memo-effectiveness of the connected boundary
+// is exercised.
 const NotesProbe = () => {
-  const { notesSectionProps } = useSessionDetailViewDataSectionProps({ isMobile: false });
-  return <NotesSection {...notesSectionProps} />;
+  return (
+    <SessionDetailNotesProvider>
+      <ConnectedNotesSection />
+    </SessionDetailNotesProvider>
+  );
 };
 
 const PaneLifetimeProbe = ({ paneId }: { paneId: string }) => {

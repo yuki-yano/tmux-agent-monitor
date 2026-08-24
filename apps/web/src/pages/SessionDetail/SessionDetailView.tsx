@@ -26,7 +26,7 @@ import { FileContentModal } from "./components/FileContentModal";
 import { FileNavigatorSection } from "./components/FileNavigatorSection";
 import { LogFileCandidateModal } from "./components/LogFileCandidateModal";
 import { LogModal } from "@/features/shared-session-ui/components/LogModal";
-import { NotesSection } from "./components/NotesSection";
+import { ConnectedNotesSection } from "./components/NotesSection";
 import { QuickPanel } from "@/features/shared-session-ui/components/QuickPanel";
 import { ScreenPanel } from "./components/ScreenPanel";
 import { SessionDetailMissingState } from "./components/SessionDetailMissingState";
@@ -35,6 +35,7 @@ import { SessionSidebar } from "@/features/shared-session-ui/components/SessionS
 import { StateTimelineSection } from "./components/StateTimelineSection";
 import { WorktreeSection } from "./components/WorktreeSection";
 import { useSessionDetailContext } from "./SessionDetailProvider";
+import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
 import {
   CLOSE_DETAIL_TAB_VALUE,
   type DetailSectionTab,
@@ -149,7 +150,7 @@ const useMissingSessionGrace = (shouldDelayMissingState: boolean) => {
   return currentGraceState.elapsed;
 };
 
-export const SessionDetailView = () => {
+const SessionDetailViewContent = () => {
   const { base } = useSessionDetailContext();
   const { session, connectionIssue, hasLoadedInitialSessions } = base;
   const missingSessionState = resolveMissingSessionState(connectionIssue);
@@ -175,7 +176,7 @@ export const SessionDetailView = () => {
   } = useSessionDetailSectionTabs({
     scope: { repoRoot: session?.repoRoot, branch: session?.branch },
   });
-  const { diffSectionProps, stateTimelineSectionProps, commitSectionProps, notesSectionProps } =
+  const { diffSectionProps, stateTimelineSectionProps, commitSectionProps } =
     useSessionDetailViewDataSectionProps({ isMobile });
   const {
     fileNavigatorSectionProps,
@@ -250,7 +251,7 @@ export const SessionDetailView = () => {
       ariaLabel: "Notes panel",
       label: "Notes",
       icon: BookText,
-      render: () => <NotesSection {...notesSectionProps} />,
+      render: () => <ConnectedNotesSection />,
     },
     {
       value: "changes",
@@ -448,3 +449,9 @@ export const SessionDetailView = () => {
     </>
   );
 };
+
+export const SessionDetailView = () => (
+  <SessionDetailNotesProvider>
+    <SessionDetailViewContent />
+  </SessionDetailNotesProvider>
+);

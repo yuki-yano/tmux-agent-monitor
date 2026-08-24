@@ -17,29 +17,13 @@ import { useTimeout } from "@/lib/use-timeout";
 import { useNoteAutoFocus } from "../hooks/useNoteAutoFocus";
 import { useNoteAutoSave } from "../hooks/useNoteAutoSave";
 import { useNotesPolling } from "../hooks/useNotesPolling";
+import {
+  type SessionDetailNotesSectionProps,
+  useSessionDetailNotesSectionProps,
+} from "../SessionDetailNotesProvider";
 import { NotesDeleteDialog, NotesSectionList } from "./notes-section-list";
 
-type NotesSectionState = {
-  repoRoot: string | null;
-  notes: RepoNote[];
-  notesLoading: boolean;
-  notesError: string | null;
-  creatingNote: boolean;
-  savingNoteId: string | null;
-  deletingNoteId: string | null;
-};
-
-type NotesSectionActions = {
-  onRefresh: (options?: { silent?: boolean }) => void;
-  onCreate: (input: { title?: string | null; body: string }) => Promise<RepoNote | null>;
-  onSave: (noteId: string, input: { title?: string | null; body: string }) => Promise<boolean>;
-  onDelete: (noteId: string) => Promise<boolean>;
-};
-
-type NotesSectionProps = {
-  state: NotesSectionState;
-  actions: NotesSectionActions;
-};
+export type NotesSectionProps = SessionDetailNotesSectionProps;
 
 const COPY_FEEDBACK_MS = 1200;
 const EMPTY_NOTE_PREVIEW = "(empty note)";
@@ -278,3 +262,8 @@ export const NotesSection = memo(({ state, actions }: NotesSectionProps) => {
 });
 
 NotesSection.displayName = "NotesSection";
+
+export const ConnectedNotesSection = () => {
+  const props = useSessionDetailNotesSectionProps();
+  return <NotesSection {...props} />;
+};

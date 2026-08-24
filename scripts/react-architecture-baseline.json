@@ -6,7 +6,7 @@
     "excluded": ["*.test.*", "*.spec.*", "__tests__"]
   },
   "metrics": {
-    "productionFiles": 338,
+    "productionFiles": 339,
     "useEffect": 97,
     "useLayoutEffect": 35,
     "effectTotal": 132,
@@ -17,7 +17,7 @@
     "sessionDetailAndLibUseMemo": 81,
     "sessionDetailAndLibUseCallback": 187,
     "visibilityPollingCallerFiles": 9,
-    "sessionDetailOwnershipLines": 1903,
+    "sessionDetailOwnershipLines": 1855,
     "reactOxlintDisable": 10,
     "reactDoctorDisable": 48,
     "exhaustiveDepsSuppression": 0,
@@ -2925,7 +2925,7 @@
     },
     {
       "file": "apps/web/src/pages/SessionDetail/SessionDetailView.tsx",
-      "line": 136,
+      "line": 137,
       "column": 3,
       "owner": "useMissingSessionGrace",
       "hook": "useEffect",

@@ -6,15 +6,17 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { RepoNote } from "@vde-monitor/shared";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "@/state/theme-context";
 import { createAppQueryClient } from "@/state/query-client";
 
 import { createSessionContextMock } from "./session-context-mock";
+import { sessionDetailQueryKeys } from "./session-detail-query-keys";
 import { SessionDetailProvider } from "./SessionDetailProvider";
 import { SessionDetailView } from "./SessionDetailView";
 import { createSessionDetail } from "./test-helpers";
@@ -50,6 +52,8 @@ const requestRepoFileContent = vi.fn(async () => ({
   languageHint: "markdown" as const,
   content: "# Changed preview",
 }));
+const requestRepoNotes = vi.fn(async (): Promise<RepoNote[]> => []);
+const updateRepoNote = vi.fn();
 
 const sessionContextValue = createSessionContextMock({
   stream: {
@@ -122,7 +126,8 @@ const sessionContextValue = createSessionContextMock({
     requestRepoFileContent,
   },
   notes: {
-    requestRepoNotes: vi.fn(async () => []),
+    requestRepoNotes,
+    updateRepoNote,
   },
 });
 
@@ -136,8 +141,7 @@ vi.mock("@/state/session-context", () => ({
   useSessionLaunchApi: () => sessionContextValue,
 }));
 
-const renderWithRouter = (ui: ReactNode) => {
-  const queryClient = createAppQueryClient();
+const renderWithRouter = (ui: ReactNode, queryClient = createAppQueryClient()) => {
   const rootRoute = createRootRoute({ component: () => null });
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -158,6 +162,13 @@ const renderWithRouter = (ui: ReactNode) => {
 };
 
 describe("SessionDetail Provider <-> View wiring (smoke)", () => {
+  beforeEach(() => {
+    requestRepoFileContent.mockClear();
+    requestRepoNotes.mockClear();
+    requestRepoNotes.mockResolvedValue([]);
+    updateRepoNote.mockClear();
+  });
+
   it("mounts the real Provider + View and switches between every inspector section", async () => {
     const store = createStore();
 
@@ -172,6 +183,7 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
     expect(await screen.findByRole("button", { name: "Edit session title" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "State Timeline" })).toBeTruthy();
     expect(screen.getByRole("tablist", { name: "Session inspector sections" })).toBeTruthy();
+    expect(requestRepoNotes).toHaveBeenCalledWith("pane-1", expect.any(AbortSignal));
 
     const inspectorSections = [
       ["Changes panel", "Changes"],
@@ -210,5 +222,104 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
       "README.md",
       expect.objectContaining({ maxBytes: 256 * 1024 }),
     );
+  });
+
+  it("keeps the notes query mounted while polling only when the Notes section is visible", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = createStore();
+      const queryClient = createAppQueryClient();
+      const repoRoot = session.repoRoot ?? "/repo";
+      const note: RepoNote = {
+        id: "note-1",
+        repoRoot,
+        title: null,
+        body: "original body",
+        createdAt: "2026-02-10T00:00:00.000Z",
+        updatedAt: "2026-02-10T00:00:00.000Z",
+      };
+      requestRepoNotes.mockResolvedValue([note]);
+      const notesQueryKey = sessionDetailQueryKeys.notes("pane-1", repoRoot);
+
+      renderWithRouter(
+        <JotaiProvider store={store}>
+          <SessionDetailProvider paneId="pane-1">
+            <SessionDetailView />
+          </SessionDetailProvider>
+        </JotaiProvider>,
+        queryClient,
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(requestRepoNotes).toHaveBeenCalledTimes(1);
+      expect(queryClient.getQueryData(notesQueryKey)).toEqual([note]);
+      expect(
+        queryClient
+          .getQueryCache()
+          .find({ queryKey: notesQueryKey, exact: true })
+          ?.getObserversCount(),
+      ).toBe(1);
+
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+        await Promise.resolve();
+      });
+      expect(requestRepoNotes).toHaveBeenCalledTimes(1);
+
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Notes panel" }), { button: 0 });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(requestRepoNotes).toHaveBeenCalledTimes(2);
+      expect(
+        queryClient
+          .getQueryCache()
+          .find({ queryKey: notesQueryKey, exact: true })
+          ?.getObserversCount(),
+      ).toBe(1);
+
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+        await Promise.resolve();
+      });
+      expect(requestRepoNotes).toHaveBeenCalledTimes(3);
+
+      fireEvent.click(screen.getByRole("button", { name: "Expand note note-1" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start editing note note-1" }));
+      fireEvent.change(screen.getByLabelText("Edit note body note-1"), {
+        target: { value: "unsaved draft" },
+      });
+      expect(screen.getByDisplayValue("unsaved draft")).toBeTruthy();
+      expect(updateRepoNote).not.toHaveBeenCalled();
+
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Changes panel" }), { button: 0 });
+      expect(screen.queryByLabelText("Edit note body note-1")).toBeNull();
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+        await Promise.resolve();
+      });
+      expect(requestRepoNotes).toHaveBeenCalledTimes(3);
+      expect(updateRepoNote).not.toHaveBeenCalled();
+      expect(
+        queryClient
+          .getQueryCache()
+          .find({ queryKey: notesQueryKey, exact: true })
+          ?.getObserversCount(),
+      ).toBe(1);
+
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Notes panel" }), { button: 0 });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Expand note note-1" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start editing note note-1" }));
+      expect((screen.getByLabelText("Edit note body note-1") as HTMLTextAreaElement).value).toBe(
+        "original body",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

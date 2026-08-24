@@ -3,7 +3,6 @@ import { useCallback, useMemo } from "react";
 import type { DiffScope } from "../components/DiffSection";
 import { useSessionDetailContext } from "../SessionDetailProvider";
 import { resolveSessionFileRoot } from "../sessionDetailUtils";
-import { useSessionRepoNotes } from "./useSessionRepoNotes";
 
 type UseSessionDetailViewDataSectionPropsArgs = {
   isMobile: boolean;
@@ -68,26 +67,6 @@ export const useSessionDetailViewDataSectionProps = ({
     toggleCommitFile,
     copyHash,
   } = commits;
-  const {
-    notes: repoNotes,
-    notesLoading,
-    notesError,
-    creatingNote,
-    savingNoteId,
-    deletingNoteId,
-    refreshNotes,
-    createNote,
-    saveNote,
-    removeNote,
-  } = useSessionRepoNotes({
-    paneId,
-    repoRoot: session?.repoRoot ?? null,
-    connected: base.connected,
-    requestRepoNotes: base.requestRepoNotes,
-    createRepoNote: base.createRepoNote,
-    updateRepoNote: base.updateRepoNote,
-    deleteRepoNote: base.deleteRepoNote,
-  });
   const sessionBranch = screenEffectiveBranch ?? session?.branch ?? null;
   const virtualBranch = scope.virtualBranch.virtualBranch;
   const onClearVirtualBranch = scope.virtualBranch.clearVirtualBranch;
@@ -271,43 +250,9 @@ export const useSessionDetailViewDataSectionProps = ({
     ],
   );
 
-  const notesSectionProps = useMemo(
-    () => ({
-      state: {
-        repoRoot: session?.repoRoot ?? null,
-        notes: repoNotes,
-        notesLoading,
-        notesError,
-        creatingNote,
-        savingNoteId,
-        deletingNoteId,
-      },
-      actions: {
-        onRefresh: refreshNotes,
-        onCreate: createNote,
-        onSave: saveNote,
-        onDelete: removeNote,
-      },
-    }),
-    [
-      createNote,
-      creatingNote,
-      deletingNoteId,
-      notesError,
-      notesLoading,
-      refreshNotes,
-      removeNote,
-      repoNotes,
-      session?.repoRoot,
-      saveNote,
-      savingNoteId,
-    ],
-  );
-
   return {
     diffSectionProps,
     stateTimelineSectionProps,
     commitSectionProps,
-    notesSectionProps,
   };
 };
