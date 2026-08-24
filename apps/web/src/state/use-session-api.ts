@@ -200,15 +200,17 @@ export const useSessionApi = ({
       request,
       field,
       fallbackMessage,
+      signal,
     }: {
       paneId: string;
-      request: (param: PaneParam) => Promise<Response>;
+      request: (param: PaneParam, signal?: AbortSignal) => Promise<Response>;
       field: K;
       fallbackMessage: string;
+      signal?: AbortSignal;
     }) =>
       requestPaneField<T, K>({
         paneId,
-        request: request(buildPaneParam(paneId)),
+        request: request(buildPaneParam(paneId), signal),
         field,
         fallbackMessage,
       }),
@@ -222,16 +224,18 @@ export const useSessionApi = ({
       request,
       field,
       fallbackMessage,
+      signal,
     }: {
       paneId: string;
       hash: string;
-      request: (param: PaneHashParam) => Promise<Response>;
+      request: (param: PaneHashParam, signal?: AbortSignal) => Promise<Response>;
       field: K;
       fallbackMessage: string;
+      signal?: AbortSignal;
     }) =>
       requestPaneField<T, K>({
         paneId,
-        request: request(buildPaneHashParam(paneId, hash)),
+        request: request(buildPaneHashParam(paneId, hash), signal),
         field,
         fallbackMessage,
       }),

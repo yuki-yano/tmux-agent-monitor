@@ -6,7 +6,7 @@
     "excluded": ["*.test.*", "*.spec.*", "__tests__"]
   },
   "metrics": {
-    "productionFiles": 336,
+    "productionFiles": 338,
     "useEffect": 106,
     "useLayoutEffect": 34,
     "effectTotal": 140,
@@ -3289,7 +3289,7 @@
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
-      "line": 373,
+      "line": 387,
       "column": 3,
       "owner": "SessionRuntime",
       "hook": "useEffect",
@@ -3318,7 +3318,7 @@
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
-      "line": 386,
+      "line": 400,
       "column": 3,
       "owner": "SessionRuntime",
       "hook": "useEffect",

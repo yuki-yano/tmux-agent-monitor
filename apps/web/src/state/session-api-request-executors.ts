@@ -18,6 +18,7 @@ import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import {
   expectField,
   extractErrorMessage,
+  isAbortError,
   requestJson,
   toErrorWithFallback,
 } from "@/lib/api-utils";
@@ -72,6 +73,9 @@ export const requestSessionField = async <T, K extends keyof T>({
     onConnectionIssue(null);
     return value;
   } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
     const message = resolveUnknownErrorMessage(error, fallbackMessage);
     onConnectionIssue(message);
     throw toErrorWithFallback(error, fallbackMessage);

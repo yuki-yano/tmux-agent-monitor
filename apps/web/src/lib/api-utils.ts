@@ -22,7 +22,10 @@ type ErrorMessageResult = {
 const readJsonSafe = async <T>(res: Response): Promise<T | null> => {
   try {
     return (await res.json()) as T;
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
     return null;
   }
 };
@@ -30,7 +33,7 @@ const readJsonSafe = async <T>(res: Response): Promise<T | null> => {
 const executeRequest = (request: JsonRequest, signal?: AbortSignal) =>
   typeof request === "function" ? request(signal) : request;
 
-const isAbortError = (error: unknown) =>
+export const isAbortError = (error: unknown) =>
   error instanceof DOMException
     ? error.name === "AbortError"
     : typeof error === "object" &&

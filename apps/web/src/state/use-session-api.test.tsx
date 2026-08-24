@@ -56,6 +56,44 @@ describe("useSessionApi", () => {
     expect(requestedAuthorization).toBe("Bearer token");
   });
 
+  it("forwards read cancellation to fetch without reporting a connection issue", async () => {
+    const requestStarted = createDeferred<void>();
+    const onConnectionIssue = vi.fn();
+    let receivedSignal: AbortSignal | null = null;
+    server.use(
+      http.get(pathToUrl("/sessions/:paneId/branches"), async ({ request }) => {
+        receivedSignal = request.signal;
+        requestStarted.resolve();
+        await new Promise<void>((resolve) => {
+          request.signal.addEventListener("abort", () => resolve(), { once: true });
+        });
+        return HttpResponse.json({ branches: { entries: [] } });
+      }),
+    );
+    const { result } = renderHook(() =>
+      useSessionApi({
+        token: "token",
+        apiBaseUrl: API_BASE_URL,
+        onSessions: vi.fn(),
+        onConnectionIssue,
+        onSessionUpdated: vi.fn(),
+        onSessionRemoved: vi.fn(),
+        onHighlightCorrections: vi.fn(),
+        onFileNavigatorConfig: vi.fn(),
+      }),
+    );
+    const controller = new AbortController();
+
+    const request = result.current.branches.requestBranches("pane-1", undefined, controller.signal);
+    const assertion = expect(request).rejects.toMatchObject({ name: "AbortError" });
+    await requestStarted.promise;
+    controller.abort();
+
+    await assertion;
+    expect((receivedSignal as AbortSignal | null)?.aborted).toBe(true);
+    expect(onConnectionIssue).not.toHaveBeenCalled();
+  });
+
   it("dedupes in-flight screen requests", async () => {
     const deferred = createDeferred<void>();
     let requestCount = 0;

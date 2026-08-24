@@ -5,6 +5,7 @@ import { API_ERROR_MESSAGES } from "./api-messages";
 import {
   expectField,
   extractErrorMessage,
+  isAbortError,
   requestJson,
   resolveUnknownErrorMessage,
   toErrorWithFallback,
@@ -78,6 +79,20 @@ describe("api-utils", () => {
     expect(resolveUnknownErrorMessage("boom", "fallback")).toBe("boom");
     expect(resolveUnknownErrorMessage({ message: "oops" }, "fallback")).toBe("oops");
     expect(resolveUnknownErrorMessage("", "fallback")).toBe("fallback");
+  });
+
+  it("recognizes browser and error-like abort errors", () => {
+    expect(isAbortError(new DOMException("Aborted", "AbortError"))).toBe(true);
+    expect(isAbortError({ name: "AbortError" })).toBe(true);
+    expect(isAbortError(new Error("Aborted"))).toBe(false);
+  });
+
+  it("propagates aborts raised while parsing a response body", async () => {
+    const abortError = new DOMException("Aborted", "AbortError");
+    const response = new Response();
+    vi.spyOn(response, "json").mockRejectedValue(abortError);
+
+    await expect(requestJson(Promise.resolve(response))).rejects.toBe(abortError);
   });
 
   it("supports timeout with AbortController and returns timeout message", async () => {

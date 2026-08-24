@@ -124,6 +124,7 @@ export type SessionCoreApiContextValue = {
     paneId: string,
     trigger: PromptCompletionTrigger,
     query?: string,
+    signal?: AbortSignal,
   ) => Promise<PromptCompletionResult>;
   requestStateTimeline: (
     paneId: string,
@@ -132,6 +133,7 @@ export type SessionCoreApiContextValue = {
       range?: SessionStateTimelineRange;
       limit?: number;
     },
+    signal?: AbortSignal,
   ) => Promise<SessionStateTimeline>;
   requestScreen: (
     paneId: string,
@@ -158,8 +160,12 @@ export type SessionCoreApiContextValue = {
 
 /** Worktrees/branches/commits/diffs — the repo-history exploration surface. */
 export type SessionBranchesApiContextValue = {
-  requestWorktrees: (paneId: string) => Promise<WorktreeList>;
-  requestBranches: (paneId: string, options?: { force?: boolean }) => Promise<BranchList>;
+  requestWorktrees: (paneId: string, signal?: AbortSignal) => Promise<WorktreeList>;
+  requestBranches: (
+    paneId: string,
+    options?: { force?: boolean },
+    signal?: AbortSignal,
+  ) => Promise<BranchList>;
   requestBranchCheckout: (paneId: string, branch: string) => Promise<void>;
   requestBranchCreate: (paneId: string, name: string, base?: string) => Promise<void>;
   requestBranchDelete: (
@@ -170,12 +176,14 @@ export type SessionBranchesApiContextValue = {
   requestDiffSummary: (
     paneId: string,
     options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
+    signal?: AbortSignal,
   ) => Promise<DiffSummary>;
   requestDiffFile: (
     paneId: string,
     path: string,
     rev: string | null | undefined,
     options: { mode: DiffMode; force?: boolean; worktreePath?: string; branch?: string },
+    signal?: AbortSignal,
   ) => Promise<DiffFile>;
   requestCommitLog: (
     paneId: string,
@@ -186,17 +194,20 @@ export type SessionBranchesApiContextValue = {
       worktreePath?: string;
       branch?: string;
     },
+    signal?: AbortSignal,
   ) => Promise<CommitLog>;
   requestCommitDetail: (
     paneId: string,
     hash: string,
     options?: { force?: boolean; worktreePath?: string },
+    signal?: AbortSignal,
   ) => Promise<CommitDetail>;
   requestCommitFile: (
     paneId: string,
     hash: string,
     path: string,
     options?: { force?: boolean; worktreePath?: string },
+    signal?: AbortSignal,
   ) => Promise<CommitFileDiff>;
 };
 
@@ -205,6 +216,7 @@ export type SessionFilesApiContextValue = {
   requestRepoFileTree: (
     paneId: string,
     options?: { path?: string; cursor?: string; limit?: number; worktreePath?: string },
+    signal?: AbortSignal,
   ) => Promise<RepoFileTreePage>;
   requestRepoFileSearch: (
     paneId: string,
@@ -215,18 +227,20 @@ export type SessionFilesApiContextValue = {
       worktreePath?: string;
       exactReference?: boolean;
     },
+    signal?: AbortSignal,
   ) => Promise<RepoFileSearchPage>;
   requestRepoFileContent: (
     paneId: string,
     path: string,
     options?: { maxBytes?: number; worktreePath?: string },
+    signal?: AbortSignal,
   ) => Promise<RepoFileContent>;
   revokeRepoFilePreview: (paneId: string, token: string) => Promise<void>;
 };
 
 /** Repo notes CRUD. */
 export type SessionNotesApiContextValue = {
-  requestRepoNotes: (paneId: string) => Promise<RepoNote[]>;
+  requestRepoNotes: (paneId: string, signal?: AbortSignal) => Promise<RepoNote[]>;
   createRepoNote: (
     paneId: string,
     input: { title?: string | null; body: string },

@@ -35,17 +35,19 @@ import {
 
 type RequestPaneQueryField = <T, K extends keyof T>(params: {
   paneId: string;
-  request: (param: PaneParam) => Promise<Response>;
+  request: (param: PaneParam, signal?: AbortSignal) => Promise<Response>;
   field: K;
   fallbackMessage: string;
+  signal?: AbortSignal;
 }) => Promise<NonNullable<T[K]>>;
 
 type RequestPaneHashField = <T, K extends keyof T>(params: {
   paneId: string;
   hash: string;
-  request: (param: PaneHashParam) => Promise<Response>;
+  request: (param: PaneHashParam, signal?: AbortSignal) => Promise<Response>;
   field: K;
   fallbackMessage: string;
+  signal?: AbortSignal;
 }) => Promise<NonNullable<T[K]>>;
 
 type CreateSessionQueryRequestsParams = {
@@ -58,7 +60,8 @@ type PaneQueryValueParams<T, K extends keyof T> = {
   paneId: string;
   field: K;
   fallbackMessage: string;
-  request: (param: PaneParam) => Promise<Response>;
+  request: (param: PaneParam, signal?: AbortSignal) => Promise<Response>;
+  signal?: AbortSignal;
 };
 
 type PaneHashQueryValueParams<T, K extends keyof T> = {
@@ -66,7 +69,8 @@ type PaneHashQueryValueParams<T, K extends keyof T> = {
   hash: string;
   field: K;
   fallbackMessage: string;
-  request: (param: PaneHashParam) => Promise<Response>;
+  request: (param: PaneHashParam, signal?: AbortSignal) => Promise<Response>;
+  signal?: AbortSignal;
 };
 
 export const createSessionQueryRequests = ({
@@ -79,12 +83,14 @@ export const createSessionQueryRequests = ({
     field,
     fallbackMessage,
     request,
+    signal,
   }: PaneQueryValueParams<T, K>) => {
     return requestPaneQueryField<T, K>({
       paneId,
       request,
       field,
       fallbackMessage,
+      signal,
     });
   };
 
@@ -94,6 +100,7 @@ export const createSessionQueryRequests = ({
     field,
     fallbackMessage,
     request,
+    signal,
   }: PaneHashQueryValueParams<T, K>) => {
     return requestPaneHashField<T, K>({
       paneId,
@@ -101,6 +108,7 @@ export const createSessionQueryRequests = ({
       request,
       field,
       fallbackMessage,
+      signal,
     });
   };
 
@@ -112,13 +120,19 @@ export const createSessionQueryRequests = ({
       worktreePath?: string;
       branch?: string;
     },
+    signal?: AbortSignal,
   ) => {
     const query = buildDiffQuery(options);
     return requestPaneQueryValue<{ summary?: DiffSummary }, "summary">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].diff.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].diff.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "summary",
       fallbackMessage: API_ERROR_MESSAGES.diffSummary,
+      signal,
     });
   };
 
@@ -126,13 +140,19 @@ export const createSessionQueryRequests = ({
     paneId: string,
     trigger: PromptCompletionTrigger,
     queryValue = "",
+    signal?: AbortSignal,
   ): Promise<PromptCompletionResult> => {
     const query = { trigger, ...(queryValue ? { q: queryValue } : {}) };
     return requestPaneQueryValue<PromptCompletionResult, "items">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].completions.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].completions.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "items",
       fallbackMessage: API_ERROR_MESSAGES.promptCompletions,
+      signal,
     }).then((items) => ({ items }));
   };
 
@@ -146,13 +166,19 @@ export const createSessionQueryRequests = ({
       worktreePath?: string;
       branch?: string;
     },
+    signal?: AbortSignal,
   ) => {
     const query = buildDiffFileQuery(filePath, rev, options);
     return requestPaneQueryValue<{ file?: DiffFile }, "file">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].diff.file.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].diff.file.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "file",
       fallbackMessage: API_ERROR_MESSAGES.diffFile,
+      signal,
     });
   };
 
@@ -165,13 +191,19 @@ export const createSessionQueryRequests = ({
       worktreePath?: string;
       branch?: string;
     },
+    signal?: AbortSignal,
   ) => {
     const query = buildCommitLogQuery(options);
     return requestPaneQueryValue<{ log?: CommitLog }, "log">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].commits.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].commits.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "log",
       fallbackMessage: API_ERROR_MESSAGES.commitLog,
+      signal,
     });
   };
 
@@ -179,14 +211,20 @@ export const createSessionQueryRequests = ({
     paneId: string,
     hash: string,
     options?: { force?: boolean; worktreePath?: string },
+    signal?: AbortSignal,
   ) => {
     const query = buildForceQuery(options);
     return requestPaneHashValue<{ commit?: CommitDetail }, "commit">({
       paneId,
       hash,
-      request: (param) => apiClient.sessions[":paneId"].commits[":hash"].$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].commits[":hash"].$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "commit",
       fallbackMessage: API_ERROR_MESSAGES.commitDetail,
+      signal,
     });
   };
 
@@ -195,15 +233,20 @@ export const createSessionQueryRequests = ({
     hash: string,
     path: string,
     options?: { force?: boolean; worktreePath?: string },
+    signal?: AbortSignal,
   ) => {
     const query = buildCommitFileQuery(path, options);
     return requestPaneHashValue<{ file?: CommitFileDiff }, "file">({
       paneId,
       hash,
-      request: (param) =>
-        apiClient.sessions[":paneId"].commits[":hash"].file.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].commits[":hash"].file.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "file",
       fallbackMessage: API_ERROR_MESSAGES.commitFile,
+      signal,
     });
   };
 
@@ -214,35 +257,49 @@ export const createSessionQueryRequests = ({
       range?: SessionStateTimelineRange;
       limit?: number;
     },
+    signal?: AbortSignal,
   ): Promise<SessionStateTimeline> => {
     const query = buildTimelineQuery(options);
     return requestPaneQueryValue<{ timeline?: SessionStateTimeline }, "timeline">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].timeline.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].timeline.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "timeline",
       fallbackMessage: API_ERROR_MESSAGES.timeline,
+      signal,
     });
   };
 
-  const requestRepoNotes = async (paneId: string): Promise<RepoNote[]> => {
+  const requestRepoNotes = async (paneId: string, signal?: AbortSignal): Promise<RepoNote[]> => {
     return requestPaneQueryValue<{ notes?: RepoNote[] }, "notes">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].notes.$get({ param }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].notes.$get({ param }, { init: { signal: requestSignal } }),
       field: "notes",
       fallbackMessage: API_ERROR_MESSAGES.repoNotes,
+      signal,
     });
   };
 
   const requestRepoFileTree = async (
     paneId: string,
     options?: { path?: string; cursor?: string; limit?: number; worktreePath?: string },
+    signal?: AbortSignal,
   ): Promise<RepoFileTreePage> => {
     const query = buildRepoFileTreeQuery(options);
     return requestPaneQueryValue<{ tree?: RepoFileTreePage }, "tree">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].files.tree.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].files.tree.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "tree",
       fallbackMessage: API_ERROR_MESSAGES.fileTree,
+      signal,
     });
   };
 
@@ -255,13 +312,19 @@ export const createSessionQueryRequests = ({
       worktreePath?: string;
       exactReference?: boolean;
     },
+    signal?: AbortSignal,
   ): Promise<RepoFileSearchPage> => {
     const query = buildRepoFileSearchQuery(queryValue, options);
     return requestPaneQueryValue<{ result?: RepoFileSearchPage }, "result">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].files.search.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].files.search.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "result",
       fallbackMessage: API_ERROR_MESSAGES.fileSearch,
+      signal,
     });
   };
 
@@ -269,35 +332,52 @@ export const createSessionQueryRequests = ({
     paneId: string,
     path: string,
     options?: { maxBytes?: number; worktreePath?: string },
+    signal?: AbortSignal,
   ): Promise<RepoFileContent> => {
     const query = buildRepoFileContentQuery(path, options);
     return requestPaneQueryValue<{ file?: RepoFileContent }, "file">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].files.content.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].files.content.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "file",
       fallbackMessage: API_ERROR_MESSAGES.fileContent,
+      signal,
     });
   };
 
-  const requestWorktrees = async (paneId: string): Promise<WorktreeList> => {
+  const requestWorktrees = async (paneId: string, signal?: AbortSignal): Promise<WorktreeList> => {
     return requestPaneQueryValue<{ worktrees?: WorktreeList }, "worktrees">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].worktrees.$get({ param }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].worktrees.$get(
+          { param },
+          { init: { signal: requestSignal } },
+        ),
       field: "worktrees",
       fallbackMessage: "Failed to load worktrees",
+      signal,
     });
   };
 
   const requestBranches = async (
     paneId: string,
     options?: { force?: boolean },
+    signal?: AbortSignal,
   ): Promise<BranchList> => {
     const query = buildForceQuery(options);
     return requestPaneQueryValue<{ branches?: BranchList }, "branches">({
       paneId,
-      request: (param) => apiClient.sessions[":paneId"].branches.$get({ param, query }),
+      request: (param, requestSignal) =>
+        apiClient.sessions[":paneId"].branches.$get(
+          { param, query },
+          { init: { signal: requestSignal } },
+        ),
       field: "branches",
       fallbackMessage: "Failed to load branches",
+      signal,
     });
   };
 

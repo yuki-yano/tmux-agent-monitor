@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { useSessionConfigData, useSessionCoreApi } from "@/state/session-context";
@@ -5,6 +6,7 @@ import { useSessionConfigData, useSessionCoreApi } from "@/state/session-context
 import { TokenInputBanner } from "./TokenInputBanner";
 
 export const AuthGate = ({ children }: { children: ReactNode }) => {
+  const queryClient = useQueryClient();
   const { authError } = useSessionConfigData();
   const { setToken, reconnect } = useSessionCoreApi();
   const shouldBlock = authError != null;
@@ -18,6 +20,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
       <TokenInputBanner
         authError={authError}
         onSubmit={(nextToken) => {
+          queryClient.clear();
           setToken(nextToken);
           reconnect();
         }}

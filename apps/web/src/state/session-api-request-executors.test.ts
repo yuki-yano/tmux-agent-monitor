@@ -153,6 +153,29 @@ describe("session-api-request-executors", () => {
     expect(onConnectionIssue).toHaveBeenCalledWith("pane not found");
   });
 
+  it("does not report query cancellation as a connection issue", async () => {
+    const ensureToken = vi.fn();
+    const onConnectionIssue = vi.fn();
+    const handleSessionMissing = vi.fn();
+    const abortError = new DOMException("Aborted", "AbortError");
+
+    await expect(
+      requestSessionField<{ summary?: { rev: string } }, "summary">({
+        paneId: "pane-1",
+        request: Promise.reject(abortError),
+        field: "summary",
+        fallbackMessage: "failed",
+        ensureToken,
+        onConnectionIssue,
+        handleSessionMissing,
+      }),
+    ).rejects.toBe(abortError);
+
+    expect(ensureToken).toHaveBeenCalledTimes(1);
+    expect(onConnectionIssue).not.toHaveBeenCalled();
+    expect(handleSessionMissing).not.toHaveBeenCalled();
+  });
+
   it("mutateSession updates session when payload contains session", async () => {
     const ensureToken = vi.fn();
     const onConnectionIssue = vi.fn();
