@@ -315,7 +315,7 @@ describe("SessionDetailProvider", () => {
     const { result } = renderContext([session], { core: { focusPane } });
 
     await act(async () => {
-      await result.current.timelineLogsActions.actions.handleFocusPane("pane-1");
+      await result.current.logsActions.actions.handleFocusPane("pane-1");
     });
 
     expect(focusPane).toHaveBeenCalledWith("pane-1");
@@ -329,7 +329,7 @@ describe("SessionDetailProvider", () => {
     });
 
     act(() => {
-      result.current.timelineLogsActions.actions.handleTouchPaneSortAnchor("pane-2");
+      result.current.logsActions.actions.handleTouchPaneSortAnchor("pane-2");
     });
 
     expect(moveSessionToTop).toHaveBeenCalledWith("pane-2");

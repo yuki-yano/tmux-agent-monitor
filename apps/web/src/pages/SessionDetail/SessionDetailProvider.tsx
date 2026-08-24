@@ -5,7 +5,7 @@ import { usePushNotifications } from "@/features/notifications/use-push-notifica
 import { useSessionBranches } from "./hooks/useSessionBranches";
 import { useSessionCommits } from "./hooks/useSessionCommits";
 import { useSessionDetailScreenControls } from "./hooks/useSessionDetailScreenControls";
-import { useSessionDetailTimelineLogsActions } from "./hooks/useSessionDetailTimelineLogsActions";
+import { useSessionDetailLogsActions } from "./hooks/useSessionDetailLogsActions";
 import { useSessionDoneAcknowledgement } from "./hooks/useSessionDoneAcknowledgement";
 import { useSessionDetailVMState } from "./hooks/useSessionDetailVMState";
 import { useSessionDiffs } from "./hooks/useSessionDiffs";
@@ -171,13 +171,11 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
     revokeRepoFilePreview: base.revokeRepoFilePreview,
   });
 
-  const currentRepoRoot = base.session?.repoRoot ?? null;
-  const timelineLogsActions = useSessionDetailTimelineLogsActions({
+  const logsActions = useSessionDetailLogsActions({
     paneId,
     connected: base.connected,
     connectionIssue: base.connectionIssue,
     requestScreen: base.requestScreen,
-    requestStateTimeline: base.requestStateTimeline,
     sessions: base.sessions,
     resolvedTheme: base.resolvedTheme,
     highlightCorrections: base.highlightCorrections,
@@ -187,7 +185,6 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
     launchAgentInSession: base.launchAgentInSession,
     setScreenError: terminal.screen.setScreenError,
     touchRepoSortAnchor,
-    currentRepoRoot,
   });
 
   // Only the fields consumers actually read are exposed here. The raw
@@ -266,7 +263,7 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
       diffs,
       files,
       commits,
-      timelineLogsActions,
+      logsActions,
       terminal,
       pushNotifications,
     }),
@@ -278,7 +275,7 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
       diffs,
       files,
       commits,
-      timelineLogsActions,
+      logsActions,
       terminal,
       pushNotifications,
     ],

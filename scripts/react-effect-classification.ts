@@ -123,7 +123,7 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts::useSessionCommits::useEffect::db053c8b2d4e::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts::useSessionCommits::useLayoutEffect::2fe58bc42767::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts::useSessionDiffs::useEffect::c5cc34a77de6::1",
-    "apps/web/src/pages/SessionDetail/hooks/useSessionDetailTimelineLogsActions.ts::useSessionDetailTimelineLogsActions::useEffect::88096c9c6c5e::1",
+    "apps/web/src/pages/SessionDetail/hooks/useSessionDetailLogsActions.ts::useSessionDetailLogsActions::useEffect::88096c9c6c5e::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts::useSessionFiles::useEffect::9fc3f1878009::1",
     "apps/web/src/pages/SessionList/components/SessionListHeader.tsx::SessionListSearchInput::useEffect::7b3e63f988b9::1",
   ],

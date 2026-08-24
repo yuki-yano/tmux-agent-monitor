@@ -4,14 +4,8 @@ import type { DiffScope } from "../components/DiffSection";
 import { useSessionDetailContext } from "../SessionDetailProvider";
 import { resolveSessionFileRoot } from "../sessionDetailUtils";
 
-type UseSessionDetailViewDataSectionPropsArgs = {
-  isMobile: boolean;
-};
-
-export const useSessionDetailViewDataSectionProps = ({
-  isMobile,
-}: UseSessionDetailViewDataSectionPropsArgs) => {
-  const { base, scope, diffs, files, commits, timelineLogsActions } = useSessionDetailContext();
+export const useSessionDetailViewDataSectionProps = () => {
+  const { base, scope, diffs, files, commits } = useSessionDetailContext();
   const { paneId, session } = base;
   // Mirrors the old VM's `screen.effectiveBranch` / `screen.effectiveWorktreePath`:
   // these are the worktree selector's effective values, independent from the
@@ -22,19 +16,6 @@ export const useSessionDetailViewDataSectionProps = ({
     session,
     scope.virtualWorktree.effectiveWorktreePath,
   );
-  const {
-    timeline: stateTimeline,
-    timelineScope,
-    timelineRange,
-    hasRepoTimeline,
-    timelineError,
-    timelineLoading,
-    timelineExpanded,
-    setTimelineScope,
-    setTimelineRange,
-    toggleTimelineExpanded,
-    refreshTimeline,
-  } = timelineLogsActions.timeline;
   const {
     diffSummary,
     diffError,
@@ -160,41 +141,6 @@ export const useSessionDetailViewDataSectionProps = ({
     ],
   );
 
-  const stateTimelineSectionProps = useMemo(
-    () => ({
-      state: {
-        timeline: stateTimeline,
-        timelineScope,
-        timelineRange,
-        hasRepoTimeline,
-        timelineError,
-        timelineLoading,
-        timelineExpanded,
-        isMobile,
-      },
-      actions: {
-        onTimelineScopeChange: setTimelineScope,
-        onTimelineRangeChange: setTimelineRange,
-        onTimelineRefresh: refreshTimeline,
-        onToggleTimelineExpanded: toggleTimelineExpanded,
-      },
-    }),
-    [
-      stateTimeline,
-      timelineScope,
-      timelineRange,
-      hasRepoTimeline,
-      timelineError,
-      timelineLoading,
-      timelineExpanded,
-      isMobile,
-      setTimelineScope,
-      setTimelineRange,
-      refreshTimeline,
-      toggleTimelineExpanded,
-    ],
-  );
-
   const commitSectionProps = useMemo(
     () => ({
       state: {
@@ -252,7 +198,6 @@ export const useSessionDetailViewDataSectionProps = ({
 
   return {
     diffSectionProps,
-    stateTimelineSectionProps,
     commitSectionProps,
   };
 };

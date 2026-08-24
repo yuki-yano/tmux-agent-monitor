@@ -32,10 +32,11 @@ import { ScreenPanel } from "./components/ScreenPanel";
 import { SessionDetailMissingState } from "./components/SessionDetailMissingState";
 import { SessionHeader } from "./components/SessionHeader";
 import { SessionSidebar } from "@/features/shared-session-ui/components/SessionSidebar";
-import { StateTimelineSection } from "./components/StateTimelineSection";
+import { ConnectedStateTimelineSection } from "./components/StateTimelineSection";
 import { WorktreeSection } from "./components/WorktreeSection";
 import { useSessionDetailContext } from "./SessionDetailProvider";
 import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
+import { SessionDetailTimelineProvider } from "./SessionDetailTimelineProvider";
 import {
   CLOSE_DETAIL_TAB_VALUE,
   type DetailSectionTab,
@@ -176,8 +177,7 @@ const SessionDetailViewContent = () => {
   } = useSessionDetailSectionTabs({
     scope: { repoRoot: session?.repoRoot, branch: session?.branch },
   });
-  const { diffSectionProps, stateTimelineSectionProps, commitSectionProps } =
-    useSessionDetailViewDataSectionProps({ isMobile });
+  const { diffSectionProps, commitSectionProps } = useSessionDetailViewDataSectionProps();
   const {
     fileNavigatorSectionProps,
     fileContentModalProps,
@@ -237,7 +237,7 @@ const SessionDetailViewContent = () => {
       ariaLabel: "Timeline panel",
       label: "Timeline",
       icon: Clock,
-      render: () => <StateTimelineSection {...stateTimelineSectionProps} />,
+      render: () => <ConnectedStateTimelineSection isMobile />,
     },
     {
       value: "file",
@@ -349,7 +349,7 @@ const SessionDetailViewContent = () => {
             </>
           ) : (
             <>
-              <StateTimelineSection {...stateTimelineSectionProps} />
+              <ConnectedStateTimelineSection isMobile={false} />
 
               <div
                 ref={detailSplitRef}
@@ -452,6 +452,8 @@ const SessionDetailViewContent = () => {
 
 export const SessionDetailView = () => (
   <SessionDetailNotesProvider>
-    <SessionDetailViewContent />
+    <SessionDetailTimelineProvider>
+      <SessionDetailViewContent />
+    </SessionDetailTimelineProvider>
   </SessionDetailNotesProvider>
 );

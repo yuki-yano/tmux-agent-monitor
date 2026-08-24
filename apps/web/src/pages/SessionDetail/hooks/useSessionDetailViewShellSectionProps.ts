@@ -6,7 +6,7 @@ import { useSessionDetailContext } from "../SessionDetailProvider";
 import { useSessionTitleEditor } from "./useSessionTitleEditor";
 
 export const useSessionDetailViewShellSectionProps = () => {
-  const { base, repoPins, terminal, timelineLogsActions } = useSessionDetailContext();
+  const { base, repoPins, terminal, logsActions } = useSessionDetailContext();
   const { paneId, session, nowMs, connectionIssue } = base;
   const { sessionGroups, getRepoSortAnchorAt } = repoPins;
   const {
@@ -50,7 +50,7 @@ export const useSessionDetailViewShellSectionProps = () => {
     closeLogModal,
     toggleQuickPanel,
     closeQuickPanel,
-  } = timelineLogsActions.logs;
+  } = logsActions.logs;
   const {
     handleFocusPane,
     handleLaunchAgentInSession,
@@ -61,7 +61,7 @@ export const useSessionDetailViewShellSectionProps = () => {
     handleOpenInNewTab,
     handleTouchCurrentSession,
     handleTouchPaneSortAnchor,
-  } = timelineLogsActions.actions;
+  } = logsActions.actions;
   const {
     titleDraft,
     titleEditing,

@@ -51,6 +51,7 @@ const defaultLaunchResponse: LaunchCommandResponse = {
 // the old prop-based tests did.
 let mockContextValue: SessionDetailContextValue;
 let mockLayoutValue: ReturnType<typeof useSessionDetailLayoutState>;
+const { timelineHookSpy } = vi.hoisted(() => ({ timelineHookSpy: vi.fn() }));
 
 vi.mock("./SessionDetailProvider", () => ({
   useSessionDetailContext: () => mockContextValue,
@@ -87,6 +88,25 @@ vi.mock("./hooks/useSessionRepoNotes", () => ({
     saveNote: vi.fn(async () => true),
     removeNote: vi.fn(async () => true),
   }),
+}));
+
+vi.mock("./hooks/useSessionTimeline", () => ({
+  useSessionTimeline: () => {
+    timelineHookSpy();
+    return {
+      timeline: null,
+      timelineScope: "pane",
+      timelineRange: "1h",
+      hasRepoTimeline: true,
+      timelineError: null,
+      timelineLoading: false,
+      timelineExpanded: true,
+      setTimelineScope: vi.fn(),
+      setTimelineRange: vi.fn(),
+      toggleTimelineExpanded: vi.fn(),
+      refreshTimeline: vi.fn(),
+    };
+  },
 }));
 
 const DETAIL_SECTION_TAB_STORAGE_KEY = "vde-monitor-session-detail-section-tab";
@@ -315,20 +335,7 @@ const buildDefaultContextValue = () => {
       toggleCommitFile: vi.fn(),
       copyHash: vi.fn(),
     },
-    timelineLogsActions: {
-      timeline: {
-        timeline: null,
-        timelineScope: "pane",
-        timelineRange: "1h",
-        hasRepoTimeline: true,
-        timelineError: null,
-        timelineLoading: false,
-        timelineExpanded: true,
-        setTimelineScope: vi.fn(),
-        setTimelineRange: vi.fn(),
-        toggleTimelineExpanded: vi.fn(),
-        refreshTimeline: vi.fn(),
-      },
+    logsActions: {
       logs: {
         quickPanelOpen: false,
         logModalOpen: false,
@@ -457,6 +464,7 @@ const createViewProps = (overrides: SessionDetailViewOverrides = {}) => {
 describe("SessionDetailView", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    timelineHookSpy.mockClear();
   });
 
   it("renders not found state when session remains missing", () => {
@@ -592,6 +600,8 @@ describe("SessionDetailView", () => {
     });
     renderWithRouter(<SessionDetailView {...props} />);
 
+    expect(timelineHookSpy).toHaveBeenCalledTimes(1);
+
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Changes panel" }), { button: 0 });
     expect(screen.getByRole("tab", { name: "Changes panel" }).getAttribute("data-state")).toBe(
       "active",
@@ -627,6 +637,7 @@ describe("SessionDetailView", () => {
       "active",
     );
     expect(window.localStorage.getItem(storageKey)).toBe("notes");
+    expect(timelineHookSpy).toHaveBeenCalledTimes(1);
   });
 
   it("lays out mobile section tabs in two rows with notes on first row", () => {

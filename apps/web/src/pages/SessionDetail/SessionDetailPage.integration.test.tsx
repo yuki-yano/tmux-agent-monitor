@@ -54,6 +54,21 @@ const requestRepoFileContent = vi.fn(async () => ({
 }));
 const requestRepoNotes = vi.fn(async (): Promise<RepoNote[]> => []);
 const updateRepoNote = vi.fn();
+const requestStateTimeline = vi.fn(async () => ({
+  paneId: session.paneId,
+  now: new Date(0).toISOString(),
+  range: "1h" as const,
+  items: [],
+  totalsMs: {
+    RUNNING: 0,
+    DONE: 0,
+    WAITING_INPUT: 0,
+    WAITING_PERMISSION: 0,
+    SHELL: 0,
+    UNKNOWN: 0,
+  },
+  current: null,
+}));
 
 const sessionContextValue = createSessionContextMock({
   stream: {
@@ -75,21 +90,7 @@ const sessionContextValue = createSessionContextMock({
       screen: "",
       full: true,
     })),
-    requestStateTimeline: vi.fn(async () => ({
-      paneId: session.paneId,
-      now: new Date(0).toISOString(),
-      range: "1h" as const,
-      items: [],
-      totalsMs: {
-        RUNNING: 0,
-        DONE: 0,
-        WAITING_INPUT: 0,
-        WAITING_PERMISSION: 0,
-        SHELL: 0,
-        UNKNOWN: 0,
-      },
-      current: null,
-    })),
+    requestStateTimeline,
   },
   branches: {
     requestDiffSummary: vi.fn(async () => ({
@@ -167,6 +168,7 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
     requestRepoNotes.mockClear();
     requestRepoNotes.mockResolvedValue([]);
     updateRepoNote.mockClear();
+    requestStateTimeline.mockClear();
   });
 
   it("mounts the real Provider + View and switches between every inspector section", async () => {
@@ -222,6 +224,82 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
       "README.md",
       expect.objectContaining({ maxBytes: 256 * 1024 }),
     );
+  });
+
+  it("keeps one timeline observer polling while the mobile section is hidden", async () => {
+    vi.useFakeTimers();
+    const originalMatchMedia = window.matchMedia;
+    try {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        writable: true,
+        value: vi.fn((query: string) => ({
+          matches: query === "(max-width: 767px)",
+          media: query,
+          onchange: null,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      });
+      const store = createStore();
+      const queryClient = createAppQueryClient();
+      const timelineQueryKey = sessionDetailQueryKeys.timeline("pane-1", {
+        repoRoot: session.repoRoot,
+        scope: "pane",
+        range: "1h",
+        limit: undefined,
+      });
+
+      renderWithRouter(
+        <JotaiProvider store={store}>
+          <SessionDetailProvider paneId="pane-1">
+            <SessionDetailView />
+          </SessionDetailProvider>
+        </JotaiProvider>,
+        queryClient,
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(requestStateTimeline).toHaveBeenCalledTimes(1);
+      expect(requestStateTimeline).toHaveBeenLastCalledWith(
+        "pane-1",
+        { range: "1h" },
+        expect.any(AbortSignal),
+      );
+      expect(
+        queryClient
+          .getQueryCache()
+          .find({ queryKey: timelineQueryKey, exact: true })
+          ?.getObserversCount(),
+      ).toBe(1);
+
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Changes panel" }), { button: 0 });
+      expect(screen.queryByRole("heading", { name: "State Timeline" })).toBeNull();
+      expect(requestStateTimeline).toHaveBeenCalledTimes(1);
+      expect(
+        queryClient
+          .getQueryCache()
+          .find({ queryKey: timelineQueryKey, exact: true })
+          ?.getObserversCount(),
+      ).toBe(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000);
+      });
+      expect(requestStateTimeline).toHaveBeenCalledTimes(2);
+    } finally {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      });
+      vi.useRealTimers();
+    }
   });
 
   it("keeps the notes query mounted while polling only when the Notes section is visible", async () => {

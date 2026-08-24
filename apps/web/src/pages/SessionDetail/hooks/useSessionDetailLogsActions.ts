@@ -3,9 +3,6 @@ import type {
   HighlightCorrectionConfig,
   LaunchCommandResponse,
   ScreenResponse,
-  SessionStateTimeline,
-  SessionStateTimelineRange,
-  SessionStateTimelineScope,
   SessionSummary,
 } from "@vde-monitor/shared";
 import { useCallback, useEffect, useRef } from "react";
@@ -17,7 +14,6 @@ import type { LaunchAgentRequestOptions } from "@/state/launch-agent-options";
 
 import { useSessionDetailActions } from "./useSessionDetailActions";
 import { useSessionLogs } from "@/features/shared-session-ui/hooks/useSessionLogs";
-import { useSessionTimeline } from "./useSessionTimeline";
 
 const RESUME_WINDOW_TRANSITION_TIMEOUT_MS = 15_000;
 const RESUME_WINDOW_TRANSITION_POLL_INTERVAL_MS = 300;
@@ -32,7 +28,7 @@ const isAgentStoppedOnSourcePane = (session: SessionSummary | null): boolean => 
   return session?.agent === "unknown" && session.state === "SHELL";
 };
 
-type UseSessionDetailTimelineLogsActionsArgs = {
+type UseSessionDetailLogsActionsArgs = {
   paneId: string;
   connected: boolean;
   connectionIssue: string | null;
@@ -40,15 +36,6 @@ type UseSessionDetailTimelineLogsActionsArgs = {
     paneId: string,
     options: { lines?: number; mode?: "text" | "image"; cursor?: string },
   ) => Promise<ScreenResponse>;
-  requestStateTimeline: (
-    paneId: string,
-    options?: {
-      scope?: SessionStateTimelineScope;
-      range?: SessionStateTimelineRange;
-      limit?: number;
-    },
-    signal?: AbortSignal,
-  ) => Promise<SessionStateTimeline>;
   sessions: SessionSummary[];
   resolvedTheme: Theme;
   highlightCorrections: HighlightCorrectionConfig;
@@ -63,15 +50,13 @@ type UseSessionDetailTimelineLogsActionsArgs = {
   ) => Promise<LaunchCommandResponse>;
   setScreenError: (error: string | null) => void;
   touchRepoSortAnchor: (repoRoot: string | null) => void;
-  currentRepoRoot: string | null;
 };
 
-export const useSessionDetailTimelineLogsActions = ({
+export const useSessionDetailLogsActions = ({
   paneId,
   connected,
   connectionIssue,
   requestScreen,
-  requestStateTimeline,
   sessions,
   resolvedTheme,
   highlightCorrections,
@@ -81,17 +66,7 @@ export const useSessionDetailTimelineLogsActions = ({
   launchAgentInSession,
   setScreenError,
   touchRepoSortAnchor,
-  currentRepoRoot,
-}: UseSessionDetailTimelineLogsActionsArgs) => {
-  const timeline = useSessionTimeline({
-    paneId,
-    repoRoot: currentRepoRoot,
-    connected,
-    requestStateTimeline,
-    hasRepoTimeline: currentRepoRoot != null,
-    mobileDefaultCollapsed: true,
-  });
-
+}: UseSessionDetailLogsActionsArgs) => {
   const logs = useSessionLogs({
     connected,
     connectionIssue,
@@ -204,7 +179,6 @@ export const useSessionDetailTimelineLogsActions = ({
   );
 
   return {
-    timeline,
     logs,
     actions: {
       handleOpenPaneInNewWindow,

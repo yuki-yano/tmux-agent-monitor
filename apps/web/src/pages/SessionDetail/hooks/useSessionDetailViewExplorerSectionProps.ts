@@ -5,10 +5,10 @@ import { resolveSessionFileRoot, sumFileStats } from "../sessionDetailUtils";
 import { useScreenPanelState } from "./useScreenPanelState";
 
 export const useSessionDetailViewExplorerSectionProps = () => {
-  const { base, diffs, files, terminal, timelineLogsActions } = useSessionDetailContext();
+  const { base, diffs, files, terminal, logsActions } = useSessionDetailContext();
   const screen = useScreenPanelState();
   const { paneId, session, connectionIssue, resolvedTheme, launchConfig, capabilities } = base;
-  const { handleLaunchAgentInSession } = timelineLogsActions.actions;
+  const { handleLaunchAgentInSession } = logsActions.actions;
   const {
     mode,
     wrapMode,

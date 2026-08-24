@@ -27,6 +27,8 @@ import { SEGMENT_COLOR_CLASS } from "@/lib/state-segment-colors";
 import { formatDurationMs, formatTime } from "@/lib/time-format";
 import { buildTimelineDisplay } from "@/features/shared-session-ui/components/state-timeline-display";
 
+import { useSessionDetailTimelineSectionProps } from "../SessionDetailTimelineProvider";
+
 type StateTimelineSectionState = {
   timeline: SessionStateTimeline | null;
   timelineScope: SessionStateTimelineScope;
@@ -283,3 +285,11 @@ export const StateTimelineSection = memo(({ state, actions }: StateTimelineSecti
 });
 
 StateTimelineSection.displayName = "StateTimelineSection";
+
+export const ConnectedStateTimelineSection = memo(({ isMobile }: { isMobile: boolean }) => {
+  const { state, actions } = useSessionDetailTimelineSectionProps();
+  const connectedState = useMemo(() => ({ ...state, isMobile }), [isMobile, state]);
+  return <StateTimelineSection state={connectedState} actions={actions} />;
+});
+
+ConnectedStateTimelineSection.displayName = "ConnectedStateTimelineSection";
