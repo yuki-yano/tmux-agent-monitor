@@ -509,6 +509,14 @@ describe("SessionDetailProvider", () => {
     await act(async () => {
       await Promise.resolve();
     });
+    await waitFor(() => {
+      const scopeSlices = scopeSliceRenderSpy.mock.lastCall?.[0] as {
+        branches: { branchesLoading: boolean };
+        virtualWorktree: { loading: boolean };
+      };
+      expect(scopeSlices.branches.branchesLoading).toBe(false);
+      expect(scopeSlices.virtualWorktree.loading).toBe(false);
+    });
     expect(shellSliceRenderSpy).toHaveBeenCalled();
     expect(scopeSliceRenderSpy).toHaveBeenCalled();
     const initialShellSlices = shellSliceRenderSpy.mock.lastCall?.[0] as {

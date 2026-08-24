@@ -39,6 +39,40 @@ type CommitLogTailKeyParams = CommitLogHeadKeyParams & {
   headSnapshot: string | null;
 };
 
+type FilesScopeKeyParams = {
+  resolvedRoot: string | null;
+  worktreePath: string | null;
+};
+
+type FilesTreeKeyParams = FilesScopeKeyParams & {
+  path: string;
+  cursor: string | null;
+  limit: number;
+};
+
+type FilesSearchKeyParams = FilesScopeKeyParams & {
+  query: string;
+  cursor: string | null;
+  limit: number;
+};
+
+type FilesLookupKeyParams = {
+  targetPaneId: string;
+  targetRoot: string;
+  query: string;
+  cursor: string | null;
+  limit: number;
+  exactReference: boolean;
+};
+
+type FilesContentKeyParams = {
+  targetPaneId: string;
+  targetRoot: string;
+  targetWorktreePath: string | null;
+  path: string;
+  maxBytes: number;
+};
+
 export const sessionDetailQueryKeys = {
   all: ["session-detail"] as const,
   pane: (paneId: string) => [...sessionDetailQueryKeys.all, paneId] as const,
@@ -73,4 +107,43 @@ export const sessionDetailQueryKeys = {
     [...sessionDetailQueryKeys.commitsRoot(paneId), "detail", params] as const,
   commitFile: (paneId: string, params: CommitScopeKeyParams & { hash: string; path: string }) =>
     [...sessionDetailQueryKeys.commitsRoot(paneId), "file", params] as const,
+  filesRoot: (paneId: string) => sessionDetailQueryKeys.resource(paneId, "files"),
+  filesScope: (paneId: string, params: FilesScopeKeyParams) =>
+    [...sessionDetailQueryKeys.filesRoot(paneId), "scope", params] as const,
+  filesTreeRoot: (paneId: string, params: FilesScopeKeyParams) =>
+    [...sessionDetailQueryKeys.filesScope(paneId, params), "tree"] as const,
+  filesTree: (paneId: string, params: FilesTreeKeyParams) =>
+    [
+      ...sessionDetailQueryKeys.filesTreeRoot(paneId, {
+        resolvedRoot: params.resolvedRoot,
+        worktreePath: params.worktreePath,
+      }),
+      {
+        path: params.path,
+        cursor: params.cursor,
+        limit: params.limit,
+      },
+    ] as const,
+  filesSearchRoot: (paneId: string, params: FilesScopeKeyParams) =>
+    [...sessionDetailQueryKeys.filesScope(paneId, params), "search"] as const,
+  filesSearch: (paneId: string, params: FilesSearchKeyParams) =>
+    [
+      ...sessionDetailQueryKeys.filesSearchRoot(paneId, {
+        resolvedRoot: params.resolvedRoot,
+        worktreePath: params.worktreePath,
+      }),
+      {
+        query: params.query,
+        cursor: params.cursor,
+        limit: params.limit,
+      },
+    ] as const,
+  filesLookupRoot: (paneId: string, params: FilesScopeKeyParams) =>
+    [...sessionDetailQueryKeys.filesScope(paneId, params), "lookup"] as const,
+  filesLookup: (paneId: string, scope: FilesScopeKeyParams, params: FilesLookupKeyParams) =>
+    [...sessionDetailQueryKeys.filesLookupRoot(paneId, scope), params] as const,
+  filesContentRoot: (paneId: string, params: FilesScopeKeyParams) =>
+    [...sessionDetailQueryKeys.filesScope(paneId, params), "content"] as const,
+  filesContent: (paneId: string, scope: FilesScopeKeyParams, params: FilesContentKeyParams) =>
+    [...sessionDetailQueryKeys.filesContentRoot(paneId, scope), params] as const,
 };

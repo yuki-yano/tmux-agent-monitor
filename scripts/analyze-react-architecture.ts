@@ -85,10 +85,16 @@ interface ArchitectureReport {
     sessionDetailAndLibUseCallback: number;
     visibilityPollingCallerFiles: number;
     sessionDetailOwnershipLines: number;
+    sessionFilesHookFamilyLines: number;
+    largestSessionFilesHookModuleLines: number;
     reactOxlintDisable: number;
     reactDoctorDisable: number;
     exhaustiveDepsSuppression: number;
     useNoMemoDirective: number;
+  };
+  limits: {
+    sessionFilesHookFamilyLines: 2450;
+    largestSessionFilesHookModuleLines: 1000;
   };
   classificationSummary: Record<EffectCategory, number>;
   inventory: EffectSite[];
@@ -578,6 +584,35 @@ export const buildArchitectureReport = (): ArchitectureReport => {
       ? total + readFileSync(absolutePath, "utf8").split("\n").length - 1
       : total;
   }, 0);
+  const sessionFilesHookLineCounts = productionFiles
+    .filter((file) => {
+      const repoPath = toRepoPath(file);
+      const name = path.basename(file);
+      return (
+        repoPath.startsWith("apps/web/src/pages/SessionDetail/hooks/") &&
+        (name.startsWith("useSessionFiles") || name.startsWith("session-files-"))
+      );
+    })
+    .map((file) => readFileSync(file, "utf8").split("\n").length - 1);
+  const sessionFilesHookFamilyLines = sessionFilesHookLineCounts.reduce(
+    (total, lines) => total + lines,
+    0,
+  );
+  const largestSessionFilesHookModuleLines = Math.max(0, ...sessionFilesHookLineCounts);
+  const limits: ArchitectureReport["limits"] = {
+    sessionFilesHookFamilyLines: 2450,
+    largestSessionFilesHookModuleLines: 1000,
+  };
+  if (sessionFilesHookFamilyLines > limits.sessionFilesHookFamilyLines) {
+    throw new Error(
+      `Session files hook family exceeds ${limits.sessionFilesHookFamilyLines} lines: ${sessionFilesHookFamilyLines}`,
+    );
+  }
+  if (largestSessionFilesHookModuleLines > limits.largestSessionFilesHookModuleLines) {
+    throw new Error(
+      `Largest session files hook module exceeds ${limits.largestSessionFilesHookModuleLines} lines: ${largestSessionFilesHookModuleLines}`,
+    );
+  }
 
   const report: ArchitectureReport = {
     schemaVersion: 1,
@@ -613,6 +648,8 @@ export const buildArchitectureReport = (): ArchitectureReport => {
           toRepoPath(productionFiles[index]!) !== "apps/web/src/lib/use-visibility-polling.ts",
       ).length,
       sessionDetailOwnershipLines,
+      sessionFilesHookFamilyLines,
+      largestSessionFilesHookModuleLines,
       reactOxlintDisable: oxlintDisableRules.filter((rules) => /\breact(?:\/|\b)/u.test(rules))
         .length,
       reactDoctorDisable: countMatches(texts, /react-doctor-disable/gu),
@@ -621,6 +658,7 @@ export const buildArchitectureReport = (): ArchitectureReport => {
       ).length,
       useNoMemoDirective: countMatches(texts, /["']use no memo["']/gu),
     },
+    limits,
     classificationSummary,
     inventory,
   };

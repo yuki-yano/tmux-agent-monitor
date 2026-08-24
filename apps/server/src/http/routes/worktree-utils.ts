@@ -278,6 +278,11 @@ export const resolveRequestedWorktreePath = async ({
   if (!worktreePath) {
     return { ok: true, path: fallbackPath };
   }
+  const normalizedOverride = normalizeAbsolutePath(worktreePath);
+  const normalizedFallback = fallbackPath == null ? null : normalizeAbsolutePath(fallbackPath);
+  if (normalizedOverride != null && normalizedOverride === normalizedFallback) {
+    return { ok: true, path: normalizedFallback };
+  }
   const payload = await resolveWorktreePathValidationPayload(detail);
   if (payload.entries.length === 0) {
     return { ok: false, reason: "worktree_override_unavailable" };

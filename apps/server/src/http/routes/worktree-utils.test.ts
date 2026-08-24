@@ -178,6 +178,17 @@ describe("worktree-utils", () => {
     expect(resolveVwWorktreeSnapshotCached).not.toHaveBeenCalled();
   });
 
+  it("accepts an explicit current fallback root without a vw snapshot", async () => {
+    const resolved = await resolveRequestedWorktreePath({
+      detail: { repoRoot: "/repo", currentPath: "/repo" },
+      worktreePath: "/repo/./",
+      fallbackPath: "/repo",
+    });
+
+    expect(resolved).toEqual({ ok: true, path: "/repo" });
+    expect(resolveVwWorktreeSnapshotCached).not.toHaveBeenCalled();
+  });
+
   it("returns unavailable reason when worktree snapshot is unavailable", async () => {
     vi.mocked(resolveVwWorktreeSnapshotCached).mockResolvedValueOnce(null);
 

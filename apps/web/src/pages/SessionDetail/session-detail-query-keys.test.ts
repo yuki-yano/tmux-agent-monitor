@@ -144,4 +144,215 @@ describe("sessionDetailQueryKeys", () => {
     expect(head.slice(0, 3)).toEqual(sessionDetailQueryKeys.commitsRoot("pane-1"));
     expect(head.slice(0, 4)).toEqual(sessionDetailQueryKeys.commitLogRoot("pane-1"));
   });
+
+  it("captures every files response dimension and preserves resource prefixes", () => {
+    const scope = { resolvedRoot: "/repo", worktreePath: "/repo/worktree-a" };
+    const tree = sessionDetailQueryKeys.filesTree("pane-1", {
+      ...scope,
+      path: "src",
+      cursor: "tree-cursor",
+      limit: 200,
+    });
+    const search = sessionDetailQueryKeys.filesSearch("pane-1", {
+      ...scope,
+      query: "index",
+      cursor: "search-cursor",
+      limit: 100,
+    });
+    const lookupParams = {
+      targetPaneId: "pane-log",
+      targetRoot: "/external",
+      query: "src/index.ts",
+      cursor: null,
+      limit: 100,
+      exactReference: true,
+    };
+    const lookup = sessionDetailQueryKeys.filesLookup("pane-1", scope, lookupParams);
+    const contentParams = {
+      targetPaneId: "pane-log",
+      targetRoot: "/external",
+      targetWorktreePath: "/external",
+      path: "src/index.ts",
+      maxBytes: 256 * 1024,
+    };
+    const content = sessionDetailQueryKeys.filesContent("pane-1", scope, contentParams);
+
+    expect(tree.slice(0, -1)).toEqual(sessionDetailQueryKeys.filesTreeRoot("pane-1", scope));
+    expect(search.slice(0, -1)).toEqual(sessionDetailQueryKeys.filesSearchRoot("pane-1", scope));
+    expect(lookup.slice(0, -1)).toEqual(sessionDetailQueryKeys.filesLookupRoot("pane-1", scope));
+    expect(content.slice(0, -1)).toEqual(sessionDetailQueryKeys.filesContentRoot("pane-1", scope));
+    expect(tree).not.toEqual(
+      sessionDetailQueryKeys.filesTree("pane-2", {
+        ...scope,
+        path: "src",
+        cursor: "tree-cursor",
+        limit: 200,
+      }),
+    );
+    expect(tree).not.toEqual(
+      sessionDetailQueryKeys.filesTree("pane-1", {
+        ...scope,
+        path: ".",
+        cursor: "tree-cursor",
+        limit: 200,
+      }),
+    );
+    expect(search).not.toEqual(
+      sessionDetailQueryKeys.filesSearch("pane-1", {
+        ...scope,
+        query: "other",
+        cursor: "search-cursor",
+        limit: 100,
+      }),
+    );
+    expect(lookup).not.toEqual(
+      sessionDetailQueryKeys.filesLookup("pane-1", scope, {
+        ...lookupParams,
+        targetRoot: "/other",
+      }),
+    );
+    expect(content).not.toEqual(
+      sessionDetailQueryKeys.filesContent("pane-1", scope, {
+        ...contentParams,
+        path: "src/other.ts",
+      }),
+    );
+    expect(content).not.toEqual(
+      sessionDetailQueryKeys.filesContent(
+        "pane-1",
+        { ...scope, resolvedRoot: "/other" },
+        contentParams,
+      ),
+    );
+
+    const treeVariants = [
+      sessionDetailQueryKeys.filesTree("pane-2", {
+        ...scope,
+        path: "src",
+        cursor: "tree-cursor",
+        limit: 200,
+      }),
+      sessionDetailQueryKeys.filesTree("pane-1", {
+        ...scope,
+        resolvedRoot: "/other",
+        path: "src",
+        cursor: "tree-cursor",
+        limit: 200,
+      }),
+      sessionDetailQueryKeys.filesTree("pane-1", {
+        ...scope,
+        worktreePath: "/other",
+        path: "src",
+        cursor: "tree-cursor",
+        limit: 200,
+      }),
+      sessionDetailQueryKeys.filesTree("pane-1", {
+        ...scope,
+        path: "other",
+        cursor: "tree-cursor",
+        limit: 200,
+      }),
+      sessionDetailQueryKeys.filesTree("pane-1", {
+        ...scope,
+        path: "src",
+        cursor: "other",
+        limit: 200,
+      }),
+      sessionDetailQueryKeys.filesTree("pane-1", {
+        ...scope,
+        path: "src",
+        cursor: "tree-cursor",
+        limit: 201,
+      }),
+    ];
+    treeVariants.forEach((variant) => expect(variant).not.toEqual(tree));
+
+    const searchVariants = [
+      sessionDetailQueryKeys.filesSearch("pane-2", {
+        ...scope,
+        query: "index",
+        cursor: "search-cursor",
+        limit: 100,
+      }),
+      sessionDetailQueryKeys.filesSearch("pane-1", {
+        ...scope,
+        resolvedRoot: "/other",
+        query: "index",
+        cursor: "search-cursor",
+        limit: 100,
+      }),
+      sessionDetailQueryKeys.filesSearch("pane-1", {
+        ...scope,
+        worktreePath: "/other",
+        query: "index",
+        cursor: "search-cursor",
+        limit: 100,
+      }),
+      sessionDetailQueryKeys.filesSearch("pane-1", {
+        ...scope,
+        query: "other",
+        cursor: "search-cursor",
+        limit: 100,
+      }),
+      sessionDetailQueryKeys.filesSearch("pane-1", {
+        ...scope,
+        query: "index",
+        cursor: "other",
+        limit: 100,
+      }),
+      sessionDetailQueryKeys.filesSearch("pane-1", {
+        ...scope,
+        query: "index",
+        cursor: "search-cursor",
+        limit: 101,
+      }),
+    ];
+    searchVariants.forEach((variant) => expect(variant).not.toEqual(search));
+
+    const lookupVariants = [
+      sessionDetailQueryKeys.filesLookup("pane-2", scope, lookupParams),
+      sessionDetailQueryKeys.filesLookup(
+        "pane-1",
+        { ...scope, resolvedRoot: "/other" },
+        lookupParams,
+      ),
+      sessionDetailQueryKeys.filesLookup(
+        "pane-1",
+        { ...scope, worktreePath: "/other" },
+        lookupParams,
+      ),
+      ...(
+        ["targetPaneId", "targetRoot", "query", "cursor", "limit", "exactReference"] as const
+      ).map((dimension) =>
+        sessionDetailQueryKeys.filesLookup("pane-1", scope, {
+          ...lookupParams,
+          [dimension]:
+            dimension === "limit" ? 101 : dimension === "exactReference" ? false : "other",
+        }),
+      ),
+    ];
+    lookupVariants.forEach((variant) => expect(variant).not.toEqual(lookup));
+
+    const contentVariants = [
+      sessionDetailQueryKeys.filesContent("pane-2", scope, contentParams),
+      sessionDetailQueryKeys.filesContent(
+        "pane-1",
+        { ...scope, resolvedRoot: "/other" },
+        contentParams,
+      ),
+      sessionDetailQueryKeys.filesContent(
+        "pane-1",
+        { ...scope, worktreePath: "/other" },
+        contentParams,
+      ),
+      ...(["targetPaneId", "targetRoot", "targetWorktreePath", "path", "maxBytes"] as const).map(
+        (dimension) =>
+          sessionDetailQueryKeys.filesContent("pane-1", scope, {
+            ...contentParams,
+            [dimension]: dimension === "maxBytes" ? 1 : "other",
+          }),
+      ),
+    ];
+    contentVariants.forEach((variant) => expect(variant).not.toEqual(content));
+  });
 });

@@ -6,8 +6,8 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { RepoNote } from "@vde-monitor/shared";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { RepoFileSearchPage, RepoNote } from "@vde-monitor/shared";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -51,6 +51,18 @@ const requestRepoFileContent = vi.fn(async () => ({
   truncated: false,
   languageHint: "markdown" as const,
   content: "# Changed preview",
+}));
+const requestRepoFileTree = vi.fn(async () => ({
+  basePath: ".",
+  entries: [{ path: "README.md", name: "README.md", kind: "file" as const }],
+}));
+const requestRepoFileSearch = vi.fn<
+  (_paneId: string, query: string) => Promise<RepoFileSearchPage>
+>(async (_paneId, query) => ({
+  query,
+  items: [{ path: "README.md", name: "README.md", kind: "file", score: 1, highlights: [] }],
+  truncated: false,
+  totalMatchedCount: 1,
 }));
 const requestRepoNotes = vi.fn(async (): Promise<RepoNote[]> => []);
 const updateRepoNote = vi.fn();
@@ -123,7 +135,8 @@ const sessionContextValue = createSessionContextMock({
     })),
   },
   files: {
-    requestRepoFileTree: vi.fn(async () => ({ basePath: ".", entries: [] })),
+    requestRepoFileTree,
+    requestRepoFileSearch,
     requestRepoFileContent,
   },
   notes: {
@@ -160,6 +173,14 @@ const renderWithRouter = (ui: ReactNode, queryClient = createAppQueryClient()) =
       </RouterContextProvider>
     </QueryClientProvider>,
   );
+};
+
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
 };
 
 const expectSingleGitScopeObservers = (queryClient: ReturnType<typeof createAppQueryClient>) => {
@@ -201,6 +222,18 @@ const expectSingleGitScopeObservers = (queryClient: ReturnType<typeof createAppQ
 describe("SessionDetail Provider <-> View wiring (smoke)", () => {
   beforeEach(() => {
     requestRepoFileContent.mockClear();
+    requestRepoFileTree.mockReset();
+    requestRepoFileTree.mockResolvedValue({
+      basePath: ".",
+      entries: [{ path: "README.md", name: "README.md", kind: "file" }],
+    });
+    requestRepoFileSearch.mockReset();
+    requestRepoFileSearch.mockImplementation(async (_paneId, query) => ({
+      query,
+      items: [{ path: "README.md", name: "README.md", kind: "file", score: 1, highlights: [] }],
+      truncated: false,
+      totalMatchedCount: 1,
+    }));
     requestRepoNotes.mockClear();
     requestRepoNotes.mockResolvedValue([]);
     updateRepoNote.mockClear();
@@ -225,6 +258,18 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
     expect(screen.getByRole("tablist", { name: "Session inspector sections" })).toBeTruthy();
     expect(requestRepoNotes).toHaveBeenCalledWith("pane-1", expect.any(AbortSignal));
     expectSingleGitScopeObservers(queryClient);
+    const filesTreeRoot = sessionDetailQueryKeys.filesTreeRoot("pane-1", {
+      resolvedRoot: session.repoRoot,
+      worktreePath: null,
+    });
+    await waitFor(() =>
+      expect(
+        queryClient
+          .getQueryCache()
+          .findAll({ queryKey: filesTreeRoot })
+          .reduce((count, query) => count + query.getObserversCount(), 0),
+      ).toBe(1),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle session quick panel" }));
     expect(screen.getByRole("button", { name: "Close quick panel" })).toBeTruthy();
@@ -245,6 +290,12 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Branches panel" }), { button: 0 });
     expect(screen.getByRole("heading", { name: "Branches" })).toBeTruthy();
     expectSingleGitScopeObservers(queryClient);
+    expect(
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: filesTreeRoot })
+        .reduce((count, query) => count + query.getObserversCount(), 0),
+    ).toBe(1);
 
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Worktrees panel" }), { button: 0 });
     expect(screen.getByTestId("worktree-section")).toBeTruthy();
@@ -257,6 +308,78 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Branches panel" }), { button: 0 });
     expect(screen.getByRole("heading", { name: "Branches" })).toBeTruthy();
     expectSingleGitScopeObservers(queryClient);
+  });
+
+  it("keeps exact files observers across Files tab search and content transitions", async () => {
+    const store = createStore();
+    const queryClient = createAppQueryClient();
+    const filesScope = { resolvedRoot: session.repoRoot, worktreePath: null };
+    const treeRoot = sessionDetailQueryKeys.filesTreeRoot("pane-1", filesScope);
+    const searchRoot = sessionDetailQueryKeys.filesSearchRoot("pane-1", filesScope);
+    const contentRoot = sessionDetailQueryKeys.filesContentRoot("pane-1", filesScope);
+    const observerCount = (queryKey: readonly unknown[]) =>
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey })
+        .reduce((count, query) => count + query.getObserversCount(), 0);
+
+    renderWithRouter(
+      <JotaiProvider store={store}>
+        <SessionDetailProvider paneId="pane-1">
+          <SessionDetailView />
+        </SessionDetailProvider>
+      </JotaiProvider>,
+      queryClient,
+    );
+
+    await waitFor(() => expect(observerCount(treeRoot)).toBe(1));
+    expect(observerCount(searchRoot)).toBe(0);
+    expect(observerCount(contentRoot)).toBe(0);
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Files panel" }), { button: 0 });
+    expect(await screen.findByRole("heading", { name: "File Navigator" })).toBeTruthy();
+    expect(observerCount(treeRoot)).toBe(1);
+
+    const searchInput = screen.getByRole("textbox", { name: "Search file path" });
+    fireEvent.change(searchInput, { target: { value: "a" } });
+    await waitFor(() => expect(observerCount(searchRoot)).toBe(1));
+
+    const pendingB = deferred<RepoFileSearchPage>();
+    requestRepoFileSearch.mockImplementation(async (_paneId, query) =>
+      query === "b"
+        ? pendingB.promise
+        : {
+            query,
+            items: [],
+            truncated: false,
+            totalMatchedCount: 0,
+          },
+    );
+    fireEvent.change(searchInput, { target: { value: "b" } });
+    await waitFor(() => expect(observerCount(searchRoot)).toBe(2));
+    pendingB.resolve({
+      query: "b",
+      items: [{ path: "README.md", name: "README.md", kind: "file", score: 1, highlights: [] }],
+      truncated: false,
+      totalMatchedCount: 1,
+    });
+    await waitFor(() => expect(observerCount(searchRoot)).toBe(1));
+
+    fireEvent.change(searchInput, { target: { value: "" } });
+    await waitFor(() => expect(observerCount(searchRoot)).toBe(0));
+    const readmeNode = await screen.findByTitle("README.md");
+    const readmeButton = readmeNode.closest("button");
+    expect(readmeButton).not.toBeNull();
+    fireEvent.click(readmeButton!);
+    await waitFor(() => expect(observerCount(contentRoot)).toBe(1));
+    fireEvent.click(screen.getByRole("button", { name: "Close file content modal" }));
+    await waitFor(() => expect(observerCount(contentRoot)).toBe(0));
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Changes panel" }), { button: 0 });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Files panel" }), { button: 0 });
+    expect(observerCount(treeRoot)).toBe(1);
+    expect(observerCount(searchRoot)).toBe(0);
+    expect(observerCount(contentRoot)).toBe(0);
   });
 
   it("opens a changed file in the shared content preview", async () => {
@@ -277,7 +400,8 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
     expect(requestRepoFileContent).toHaveBeenCalledWith(
       "pane-1",
       "README.md",
-      expect.objectContaining({ maxBytes: 256 * 1024 }),
+      expect.objectContaining({ maxBytes: 256 * 1024, worktreePath: "/Users/test/repo" }),
+      expect.any(AbortSignal),
     );
   });
 

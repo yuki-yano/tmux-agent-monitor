@@ -32,6 +32,33 @@ describe("createApiRouter", () => {
     expect(data.error.code).toBe("REPO_UNAVAILABLE");
   });
 
+  it("accepts the current repo root as an explicit file-route override", async () => {
+    const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "vde-monitor-files-root-override-"));
+    try {
+      await execa("git", ["init", "--quiet", tmpRoot]);
+      await writeFile(path.join(tmpRoot, "README.md"), "root\n");
+      const { api, monitor, detail } = createTestContext();
+      monitor.registry.update({
+        ...detail,
+        repoRoot: tmpRoot,
+        currentPath: tmpRoot,
+        worktreePath: null,
+      });
+
+      const res = await api.request(
+        `/sessions/pane-1/files/tree?limit=200&worktreePath=${encodeURIComponent(tmpRoot)}`,
+        { headers: authHeaders },
+      );
+
+      expect(res.status).toBe(200);
+      expect((await res.json()).tree.entries).toContainEqual(
+        expect.objectContaining({ path: "README.md", kind: "file" }),
+      );
+    } finally {
+      await rm(tmpRoot, { recursive: true, force: true });
+    }
+  });
+
   it("lists ignored tree entries as ignored and expands them explicitly", async () => {
     const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "vde-monitor-files-tree-"));
     try {

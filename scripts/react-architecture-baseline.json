@@ -6,31 +6,37 @@
     "excluded": ["*.test.*", "*.spec.*", "__tests__"]
   },
   "metrics": {
-    "productionFiles": 344,
-    "useEffect": 92,
-    "useLayoutEffect": 31,
-    "effectTotal": 123,
-    "sessionDetailEffects": 56,
+    "productionFiles": 332,
+    "useEffect": 87,
+    "useLayoutEffect": 33,
+    "effectTotal": 120,
+    "sessionDetailEffects": 53,
     "useMemo": 203,
-    "useCallback": 389,
+    "useCallback": 377,
     "memo": 51,
     "sessionDetailAndLibUseMemo": 114,
-    "sessionDetailAndLibUseCallback": 188,
+    "sessionDetailAndLibUseCallback": 176,
     "visibilityPollingCallerFiles": 8,
-    "sessionDetailOwnershipLines": 1382,
+    "sessionDetailOwnershipLines": 1383,
+    "sessionFilesHookFamilyLines": 2433,
+    "largestSessionFilesHookModuleLines": 936,
     "reactOxlintDisable": 10,
-    "reactDoctorDisable": 45,
+    "reactDoctorDisable": 42,
     "exhaustiveDepsSuppression": 0,
     "useNoMemoDirective": 0
+  },
+  "limits": {
+    "sessionFilesHookFamilyLines": 2450,
+    "largestSessionFilesHookModuleLines": 1000
   },
   "classificationSummary": {
     "derived-state": 4,
     "dom-layout": 23,
     "event-migration": 5,
     "external-sync": 44,
-    "identity-reset": 22,
-    "ref-mirror": 11,
-    "request-bridge": 14
+    "identity-reset": 21,
+    "ref-mirror": 10,
+    "request-bridge": 13
   },
   "inventory": [
     {
@@ -2426,145 +2432,72 @@
       "id": "E098"
     },
     {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-context-reset-effect.ts",
-      "line": 36,
-      "column": 3,
-      "owner": "useSessionFilesContextResetEffect",
-      "hook": "useEffect",
-      "dependencies": [
-        "activeFileContentRequestIdRef",
-        "activeLogResolveRequestIdRef",
-        "activeSearchRequestIdRef",
-        "cancelFileModalCopyTimeout",
-        "contextVersionRef",
-        "dispatch",
-        "fileContentRequestMapRef",
-        "loadTree",
-        "logReferenceLinkableCacheRef",
-        "logReferenceLinkableRequestMapRef",
-        "paneId",
-        "repoRoot",
-        "worktreePath",
-        "searchRequestMapRef",
-        "treePageRequestMapRef",
-        "treePagesRef"
-      ],
-      "fingerprint": "3823565bd805",
-      "category": "identity-reset",
-      "disposition": "key-reset",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { resetSessionFilesRefs({ treePageRequestMapRef, searchRequestMapRef, fileContentRequestMapRef, logReferenceLinkableCacheRef, logReferenceLinkableRequestMapRef, activeSearchR",
-      "id": "E099"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
-      "line": 72,
-      "column": 3,
-      "owner": "useSessionFilesFileModalActions",
-      "hook": "useEffect",
-      "dependencies": ["paneId", "revokePreview", "state.fileModalFile", "state.fileModalOpen"],
-      "fingerprint": "498f072fe365",
-      "category": "external-sync",
-      "disposition": "maintain",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!state.fileModalOpen || !state.fileModalFile?.preview?.token) { return; } const file = state.fileModalFile; return () => revokePreview(paneId, file); }",
-      "id": "E100"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
-      "line": 80,
-      "column": 3,
-      "owner": "useSessionFilesFileModalActions",
-      "hook": "useEffect",
-      "dependencies": ["activeFileContentRequestIdRef"],
-      "fingerprint": "2c1e1c2cb570",
-      "category": "external-sync",
-      "disposition": "maintain",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => () => { activeFileContentRequestIdRef.current += 1; }",
-      "id": "E101"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-search-effects.ts",
-      "line": 42,
-      "column": 3,
-      "owner": "useSessionFilesSearchEffects",
-      "hook": "useEffect",
-      "dependencies": [
-        "activeSearchRequestIdRef",
-        "debounce",
-        "dispatch",
-        "fetchSearchPage",
-        "repoRoot",
-        "resolveSearchErrorMessage",
-        "searchDebounceMs",
-        "searchQuery"
-      ],
-      "fingerprint": "08bd638307a8",
-      "category": "request-bridge",
-      "disposition": "query",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (!repoRoot) { return; } const normalized = searchQuery.trim(); const requestId = createNextSearchRequestId(activeSearchRequestIdRef); resetSearchExpandOverrides(dispatch",
-      "id": "E102"
-    },
-    {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts",
-      "line": 113,
+      "line": 180,
       "column": 3,
       "owner": "useSessionFiles",
-      "hook": "useEffect",
-      "dependencies": ["state.treePages"],
-      "fingerprint": "9fc3f1878009",
-      "category": "ref-mirror",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "committedLifetimeRef",
+        "connected",
+        "contentCleanup",
+        "copyController",
+        "currentState.contentTarget",
+        "filesScopeKey",
+        "getContentQueryKey",
+        "lookupController",
+        "lookupRootKey",
+        "paneId",
+        "previewLeases",
+        "queryClient",
+        "scope"
+      ],
+      "fingerprint": "8934894d30a1",
+      "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
       "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "no",
-        "callbackIdentityIsNotSubscriptionContract": "no",
-        "effectEventIsNotExported": "no"
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
       },
       "testEvidence": {
         "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionFiles.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { treePagesRef.current = state.treePages; }",
-      "id": "E103"
+      "preview": "() => { const previousScope = previousScopeRef.current; const lifetime = { scope, connected, contentTarget: currentState.contentTarget }; committedLifetimeRef.commit(lifetime); syn",
+      "id": "E099"
+    },
+    {
+      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts",
+      "line": 247,
+      "column": 3,
+      "owner": "useSessionFiles",
+      "hook": "useLayoutEffect",
+      "dependencies": [
+        "contentCleanup",
+        "copyController",
+        "filesRootHash",
+        "filesRootKey",
+        "lookupController",
+        "previewLeases",
+        "queryClient"
+      ],
+      "fingerprint": "6d1eec2dde7d",
+      "category": "external-sync",
+      "disposition": "maintain",
+      "confidence": "high",
+      "effectEvent": {
+        "readsLatestReactiveValuesInsideCallback": "not-applicable",
+        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
+        "effectEventIsNotExported": "not-applicable"
+      },
+      "testEvidence": {
+        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionFiles.test.tsx"],
+        "behaviorVerified": false
+      },
+      "preview": "() => { const ownerGeneration = registerFilesOwner(filesRootHash); previewLeases.cancelScheduledRelease(); return () => { resetFilesLookupController(lookupController); if (searchTi",
+      "id": "E100"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
@@ -2587,7 +2520,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { activeScopeRef.current = currentScopeState; interactiveRefreshGenerationRef.current += 1; return () => { if (activeScopeRef.current === currentScopeState) { activeScopeRef.",
-      "id": "E104"
+      "id": "E101"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
@@ -2618,7 +2551,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setScreenLoadingState(initialScreenLoadingState); modeSwitchRef.current = null; screenRef.current = \"\"; imageRef.current = null; cursorRef.current = null; screenLinesRef.cu",
-      "id": "E105"
+      "id": "E102"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
@@ -2641,7 +2574,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (connected) { setScreenError(null); return; } setScreenError(connectionIssue ?? DISCONNECTED_MESSAGE); }",
-      "id": "E106"
+      "id": "E103"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
@@ -2673,7 +2606,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!branchList || !repoRoot) { return; } if (storedVirtualBranch) { if ( (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) || storedVirtualBranch === default",
-      "id": "E107"
+      "id": "E104"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
@@ -2706,7 +2639,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!worktreeList || !normalizedRepoRoot) { return; } if (virtualWorktreePath) { if (virtualWorktreePath === actualWorktreePath) { clearStoredSelection(paneId); setVirtualW",
-      "id": "E108"
+      "id": "E105"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/SessionDetailView.tsx",
@@ -2729,7 +2662,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!shouldDelayMissingState) { return; } missingSessionGraceTimer.set(() => { setGraceState((current) => (current.shouldDelay ? { ...current, elapsed: true } : current)); ",
-      "id": "E109"
+      "id": "E106"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -2752,7 +2685,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { publishedSearchQueryRef.current = initialSearchQuery; }",
-      "id": "E110"
+      "id": "E107"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -2775,7 +2708,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!isFocused) { return; } if (suppressNextDebounceRef.current) { suppressNextDebounceRef.current = false; return; } if (draftSearchQuery === initialSearchQuery) { return;",
-      "id": "E111"
+      "id": "E108"
     },
     {
       "file": "apps/web/src/pages/SessionList/SessionListView.tsx",
@@ -2798,7 +2731,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { return () => { if (reorderScrollFrameRef.current != null) { window.cancelAnimationFrame(reorderScrollFrameRef.current); reorderScrollFrameRef.current = null; } }; }",
-      "id": "E112"
+      "id": "E109"
     },
     {
       "file": "apps/web/src/pages/SessionList/useSessionListVM.ts",
@@ -2821,7 +2754,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { storeSessionListFilter(filter); }",
-      "id": "E113"
+      "id": "E110"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts",
@@ -2844,7 +2777,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E114"
+      "id": "E111"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts",
@@ -2867,7 +2800,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // oxlint-disable-next-line react/set-state-in-effect -- This effect owns initial loading and request guards. void loadDashboard(); }",
-      "id": "E115"
+      "id": "E112"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts",
@@ -2890,7 +2823,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E116"
+      "id": "E113"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -2919,7 +2852,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setFileNavigatorConfig({ autoExpandMatchLimit: 100 }); setWorkspaceTabsDisplayMode(\"all\"); setLaunchConfig(defaultLaunchConfig); setCapabilities({ screenImage: false, launc",
-      "id": "E117"
+      "id": "E114"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -2942,7 +2875,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!hasToken) { notificationTitleFingerprintRef.current = \"\"; return; } const nextEntries = toNotificationSessionTitleEntries(sessions); const nextFingerprint = buildNotif",
-      "id": "E118"
+      "id": "E115"
     },
     {
       "file": "apps/web/src/state/theme-context.tsx",
@@ -2965,7 +2898,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof window === \"undefined\") return; const applyTheme = (nextTheme: Theme) => { document.documentElement.dataset.theme = nextTheme; setResolvedTheme(nextTheme); }; co",
-      "id": "E119"
+      "id": "E116"
     },
     {
       "file": "apps/web/src/state/use-session-polling.ts",
@@ -2988,7 +2921,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled) { return; } void refreshSessions(); }",
-      "id": "E120"
+      "id": "E117"
     },
     {
       "file": "apps/web/src/state/use-session-token.ts",
@@ -3011,7 +2944,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!initialAccess.hasAccessDirective) { return; } if (initialAccess.token) { localStorage.setItem(TOKEN_KEY, initialAccess.token); } else { localStorage.removeItem(TOKEN_K",
-      "id": "E121"
+      "id": "E118"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -3034,7 +2967,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || !token) { transportRef.current = \"polling\"; handleTransportChange(\"polling\"); return; } const normalized = apiBaseUrl?.trim(); const basePath = normalized &",
-      "id": "E122"
+      "id": "E119"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -3057,7 +2990,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || typeof window === \"undefined\") return; const handleResume = () => { // If SSE is already open, nothing to do. if (transportRef.current === \"sse\") return; re",
-      "id": "E123"
+      "id": "E120"
     }
   ]
 }

@@ -189,6 +189,17 @@ describe("createGitRoutes", () => {
       expect(fetchDiffSummary).toHaveBeenCalledWith("/repo", { force: false, mode: "total" });
       expect(resolveBranchDiffScope).not.toHaveBeenCalled();
     });
+
+    it("accepts the current fallback root as an explicit worktree override", async () => {
+      const summary = buildDiffSummary();
+      vi.mocked(fetchDiffSummary).mockResolvedValueOnce(summary);
+      const { app } = buildApp();
+
+      const res = await app.request("/sessions/%13/diff?mode=total&worktreePath=%2Frepo");
+
+      expect(res.status).toBe(200);
+      expect(fetchDiffSummary).toHaveBeenCalledWith("/repo", { force: false, mode: "total" });
+    });
   });
 
   describe("GET /diff/file", () => {

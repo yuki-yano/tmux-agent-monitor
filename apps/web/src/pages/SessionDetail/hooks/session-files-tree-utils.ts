@@ -269,20 +269,32 @@ export const resolveTreeLoadMoreTarget = ({
   treePages: Record<string, RepoFileTreePage>;
   expandedDirSet: Set<string>;
 }) => {
-  const candidates = Object.entries(treePages)
-    .filter(([, page]) => page.nextCursor != null)
-    .map(([path, page]) => ({
-      path,
-      cursor: page.nextCursor as string,
-      priority: path === "." ? 0 : expandedDirSet.has(path) ? 1 : 2,
-    }))
-    .sort((left, right) => {
-      const priorityDiff = left.priority - right.priority;
-      if (priorityDiff !== 0) {
-        return priorityDiff;
-      }
-      return left.path.localeCompare(right.path);
-    });
+  const rootCursor = treePages["."]?.nextCursor;
+  if (rootCursor != null) return { path: ".", cursor: rootCursor };
+  for (const path of expandedDirSet) {
+    const cursor = treePages[path]?.nextCursor;
+    if (cursor != null) return { path, cursor };
+  }
+  return null;
+};
 
-  return candidates[0] ?? null;
+export const collectVisibleExpandedTreeDirectories = ({
+  treePages,
+  expandedDirSet,
+}: {
+  treePages: Record<string, RepoFileTreePage>;
+  expandedDirSet: Set<string>;
+}) => {
+  const visible = new Set<string>();
+  const visit = (path: string) => {
+    const page = treePages[path];
+    if (page == null) return;
+    for (const entry of page.entries) {
+      if (entry.kind !== "directory" || !expandedDirSet.has(entry.path)) continue;
+      visible.add(entry.path);
+      visit(entry.path);
+    }
+  };
+  visit(".");
+  return visible;
 };

@@ -190,6 +190,7 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
   const fileRoot = resolveSessionFileRoot(base.session, virtualWorktree.effectiveWorktreePath);
   const files = useSessionFiles({
     paneId,
+    connected: base.connected,
     repoRoot: fileRoot,
     worktreePath: virtualWorktree.effectiveWorktreePath,
     autoExpandMatchLimit: base.fileNavigatorConfig.autoExpandMatchLimit,

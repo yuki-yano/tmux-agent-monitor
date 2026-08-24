@@ -16,7 +16,7 @@ import {
   IconButton,
 } from "@/components/ui";
 
-import type { LogFileCandidateItem } from "../hooks/useSessionFiles-log-resolve-state";
+import type { LogFileCandidateItem } from "../hooks/useSessionFiles";
 
 type LogFileCandidateModalState = {
   open: boolean;
