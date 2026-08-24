@@ -20,22 +20,23 @@ import { useTimeout } from "@/lib/use-timeout";
 
 import { BranchSection } from "./components/BranchSection";
 import { CommitSection } from "./components/CommitSection";
-import { ControlsPanel } from "./components/ControlsPanel";
 import { DiffSection } from "./components/DiffSection";
 import { FileContentModal } from "./components/FileContentModal";
 import { FileNavigatorSection } from "./components/FileNavigatorSection";
 import { LogFileCandidateModal } from "./components/LogFileCandidateModal";
-import { LogModal } from "@/features/shared-session-ui/components/LogModal";
 import { ConnectedNotesSection } from "./components/NotesSection";
-import { QuickPanel } from "@/features/shared-session-ui/components/QuickPanel";
 import { ScreenPanel } from "./components/ScreenPanel";
 import { SessionDetailMissingState } from "./components/SessionDetailMissingState";
-import { SessionHeader } from "./components/SessionHeader";
-import { SessionSidebar } from "@/features/shared-session-ui/components/SessionSidebar";
+import { ConnectedControlsPanel } from "./components/session-shell/ConnectedControlsPanel";
+import { ConnectedLogModal } from "./components/session-shell/ConnectedLogModal";
+import { ConnectedQuickPanel } from "./components/session-shell/ConnectedQuickPanel";
+import { ConnectedSessionHeader } from "./components/session-shell/ConnectedSessionHeader";
+import { ConnectedSessionSidebar } from "./components/session-shell/ConnectedSessionSidebar";
 import { ConnectedStateTimelineSection } from "./components/StateTimelineSection";
 import { WorktreeSection } from "./components/WorktreeSection";
 import { useSessionDetailContext } from "./SessionDetailProvider";
 import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
+import { SessionDetailTitleProvider } from "./SessionDetailTitleProvider";
 import { SessionDetailTimelineProvider } from "./SessionDetailTimelineProvider";
 import {
   CLOSE_DETAIL_TAB_VALUE,
@@ -47,7 +48,6 @@ import {
 import { useSessionDetailLayoutState } from "./hooks/useSessionDetailLayoutState";
 import { useSessionDetailViewDataSectionProps } from "./hooks/useSessionDetailViewDataSectionProps";
 import { useSessionDetailViewExplorerSectionProps } from "./hooks/useSessionDetailViewExplorerSectionProps";
-import { useSessionDetailViewShellSectionProps } from "./hooks/useSessionDetailViewShellSectionProps";
 import { useSessionDetailViewWorktreeBranchSectionProps } from "./hooks/useSessionDetailViewWorktreeBranchSectionProps";
 
 const MISSING_SESSION_GRACE_MS = 1600;
@@ -80,6 +80,7 @@ const DESKTOP_INSPECTOR_TAB_VALUES: readonly DetailSectionTab[] = [
   "notes",
 ];
 const DEFAULT_DESKTOP_INSPECTOR_TAB: DetailSectionTab = "changes";
+const CONTROLS_PANEL_ALL_SECTION = <ConnectedControlsPanel />;
 
 const isDesktopInspectorTab = (value: DetailSectionTab | typeof CLOSE_DETAIL_TAB_VALUE) =>
   DESKTOP_INSPECTOR_TAB_VALUES.includes(value as DetailSectionTab);
@@ -184,17 +185,10 @@ const SessionDetailViewContent = () => {
     screenPanelProps,
     logFileCandidateModalProps,
   } = useSessionDetailViewExplorerSectionProps();
-  const {
-    quickPanelProps,
-    logModalProps,
-    sessionHeaderProps,
-    sessionSidebarProps,
-    controlsPanelProps,
-  } = useSessionDetailViewShellSectionProps();
   const { worktreeSectionProps, branchSectionProps } =
     useSessionDetailViewWorktreeBranchSectionProps();
   const hasConnectionIssue = splitConnectionIssueLines(connectionIssue).length > 0;
-  const isSessionMissing = !session || !sessionHeaderProps;
+  const isSessionMissing = !session;
   const isInitialSessionLoading =
     isSessionMissing && !hasLoadedInitialSessions && !hasConnectionIssue;
   const shouldDelayMissingState =
@@ -217,13 +211,10 @@ const SessionDetailViewContent = () => {
 
   const controlsPanelKeysSection = (
     <Card className="p-3 sm:p-4">
-      <ControlsPanel {...controlsPanelProps} showComposerSection={false} />
+      <ConnectedControlsPanel showComposerSection={false} />
     </Card>
   );
-  const controlsPanelComposerSection = (
-    <ControlsPanel {...controlsPanelProps} showKeysSection={false} />
-  );
-  const controlsPanelAllSection = <ControlsPanel {...controlsPanelProps} />;
+  const controlsPanelComposerSection = <ConnectedControlsPanel showKeysSection={false} />;
   const sectionTabs: DetailSectionTabDefinition[] = [
     {
       value: "keys",
@@ -302,7 +293,7 @@ const SessionDetailViewContent = () => {
         style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
       >
         <div className="flex min-w-0 flex-col gap-2.5 sm:gap-4">
-          <SessionHeader {...sessionHeaderProps} />
+          <ConnectedSessionHeader />
           {isMobileDetailLayout ? (
             <>
               <ScreenPanel {...screenPanelProps} controls={controlsPanelComposerSection} />
@@ -367,7 +358,7 @@ const SessionDetailViewContent = () => {
                   }
                   style={is2xlUp ? { flexBasis: `${detailSplitRatio * 100}%` } : undefined}
                 >
-                  <ScreenPanel {...screenPanelProps} controls={controlsPanelAllSection} />
+                  <ScreenPanel {...screenPanelProps} controls={CONTROLS_PANEL_ALL_SECTION} />
                 </div>
 
                 <div
@@ -424,20 +415,17 @@ const SessionDetailViewContent = () => {
       </div>
 
       <div className="md:hidden">
-        <QuickPanel {...quickPanelProps} />
+        <ConnectedQuickPanel />
       </div>
 
-      <LogModal {...logModalProps} />
+      <ConnectedLogModal />
       <LogFileCandidateModal {...logFileCandidateModalProps} />
       <FileContentModal {...fileContentModalProps} />
       <div
         className="fixed left-0 top-0 z-40 hidden h-screen md:flex"
         style={{ width: `${sidebarWidth}px` }}
       >
-        <SessionSidebar
-          {...sessionSidebarProps}
-          state={{ ...sessionSidebarProps.state, sidebarWidth }}
-        />
+        <ConnectedSessionSidebar sidebarWidth={sidebarWidth} />
         <div
           role="separator"
           aria-orientation="vertical"
@@ -453,7 +441,9 @@ const SessionDetailViewContent = () => {
 export const SessionDetailView = () => (
   <SessionDetailNotesProvider>
     <SessionDetailTimelineProvider>
-      <SessionDetailViewContent />
+      <SessionDetailTitleProvider>
+        <SessionDetailViewContent />
+      </SessionDetailTitleProvider>
     </SessionDetailTimelineProvider>
   </SessionDetailNotesProvider>
 );

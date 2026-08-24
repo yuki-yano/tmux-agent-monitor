@@ -1,13 +1,14 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, screen } from "@testing-library/react";
+import { act, fireEvent, renderHook, screen } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, memo, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createAppQueryClient } from "@/state/query-client";
 
 import { ConnectedNotesSection } from "./components/NotesSection";
+import { ConnectedControlsPanel } from "./components/session-shell/ConnectedControlsPanel";
 import { useSessionDetailVMState } from "./hooks/useSessionDetailVMState";
 import {
   type SessionContextMockOverrides,
@@ -20,7 +21,17 @@ import {
   createSessionStreamDataMock,
 } from "./session-context-mock";
 import { SessionDetailProvider, useSessionDetailContext } from "./SessionDetailProvider";
+import {
+  useSessionDetailBase,
+  useSessionDetailHeaderActions,
+  useSessionDetailLogModal,
+  useSessionDetailQuickPanel,
+  useSessionDetailRepoPins,
+  useSessionDetailSidebarActions,
+  useSessionDetailTerminal,
+} from "./SessionDetailContexts";
 import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
+import { SessionDetailTitleProvider, useSessionDetailTitle } from "./SessionDetailTitleProvider";
 import { createSessionDetail } from "./test-helpers";
 
 const session = createSessionDetail({ paneId: "pane-1" });
@@ -29,6 +40,7 @@ const setScreenErrorMock = vi.fn();
 const pushNotificationsRenderSpy = vi.fn();
 let mockResolvedTheme: "latte" | "mocha" = "mocha";
 let mockSessionsContext: Record<string, unknown> = {};
+const navigateMock = vi.hoisted(() => vi.fn());
 
 const QueryTestProvider = ({ children }: { children: ReactNode }) => {
   const [queryClient] = useState(createAppQueryClient);
@@ -101,7 +113,7 @@ const buildSessionContext = ({
 });
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock("@/state/session-context", () => ({
@@ -178,32 +190,37 @@ vi.mock("./hooks/useNotesPolling", () => ({
   },
 }));
 
+let sessionControlsCallCount = 0;
+const sessionControlsMockValue = {
+  textInputRef: { current: null },
+  autoEnter: true,
+  shiftHeld: false,
+  ctrlHeld: false,
+  rawMode: false,
+  allowDangerKeys: false,
+  isSendingText: false,
+  handleSendKey: vi.fn(),
+  handleSendPermissionShortcut: vi.fn(),
+  handleKillPane: vi.fn(),
+  handleKillWindow: vi.fn(),
+  handleSendText: vi.fn(),
+  handleUploadImage: vi.fn(),
+  handleRawBeforeInput: vi.fn(),
+  handleRawInput: vi.fn(),
+  handleRawKeyDown: vi.fn(),
+  handleRawCompositionStart: vi.fn(),
+  handleRawCompositionEnd: vi.fn(),
+  toggleAutoEnter: vi.fn(),
+  toggleShift: vi.fn(),
+  toggleCtrl: vi.fn(),
+  toggleRawMode: vi.fn(),
+  toggleAllowDangerKeys: vi.fn(),
+};
 vi.mock("./hooks/useSessionControls", () => ({
-  useSessionControls: () => ({
-    textInputRef: { current: null },
-    autoEnter: true,
-    shiftHeld: false,
-    ctrlHeld: false,
-    rawMode: false,
-    allowDangerKeys: false,
-    isSendingText: false,
-    handleSendKey: vi.fn(),
-    handleSendPermissionShortcut: vi.fn(),
-    handleKillPane: vi.fn(),
-    handleKillWindow: vi.fn(),
-    handleSendText: vi.fn(),
-    handleUploadImage: vi.fn(),
-    handleRawBeforeInput: vi.fn(),
-    handleRawInput: vi.fn(),
-    handleRawKeyDown: vi.fn(),
-    handleRawCompositionStart: vi.fn(),
-    handleRawCompositionEnd: vi.fn(),
-    toggleAutoEnter: vi.fn(),
-    toggleShift: vi.fn(),
-    toggleCtrl: vi.fn(),
-    toggleRawMode: vi.fn(),
-    toggleAllowDangerKeys: vi.fn(),
-  }),
+  useSessionControls: () => {
+    sessionControlsCallCount += 1;
+    return sessionControlsMockValue;
+  },
 }));
 
 // Renders NotesSection through the dedicated notes controller exactly the way
@@ -220,6 +237,35 @@ const NotesProbe = () => {
 const PaneLifetimeProbe = ({ paneId }: { paneId: string }) => {
   const [mountedPaneId] = useState(paneId);
   return <div data-testid="pane-lifetime" data-mounted-pane-id={mountedPaneId} />;
+};
+
+const shellSliceRenderSpy = vi.fn();
+const ShellSliceProbe = memo(() => {
+  const terminal = useSessionDetailTerminal();
+  const quickPanel = useSessionDetailQuickPanel();
+  const logModal = useSessionDetailLogModal();
+  const headerActions = useSessionDetailHeaderActions();
+  const sidebarActions = useSessionDetailSidebarActions();
+  shellSliceRenderSpy({ terminal, quickPanel, logModal, headerActions, sidebarActions });
+  return null;
+});
+ShellSliceProbe.displayName = "ShellSliceProbe";
+
+const TitleProbe = () => {
+  const title = useSessionDetailTitle();
+  return (
+    <>
+      <div data-testid="title-state">
+        {title.titleEditing ? "editing" : "closed"}:{title.titleDraft}
+      </div>
+      <button type="button" onClick={title.openTitleEditor}>
+        Edit title
+      </button>
+      <button type="button" onClick={() => title.updateTitleDraft("Unsaved draft")}>
+        Change draft
+      </button>
+    </>
+  );
 };
 
 const renderContext = (
@@ -257,6 +303,36 @@ describe("SessionDetailProvider", () => {
     );
 
     expect(screen.getByTestId("child").textContent).toBe("child");
+  });
+
+  it("owns one controls controller for multiple connected controls presentations", () => {
+    mockSessionsContext = buildSessionContext({
+      sessions: [session],
+      sessionApi: buildSessionApi(),
+      connected: false,
+    });
+    sessionControlsCallCount = 0;
+
+    const baseline = render(
+      <SessionDetailProvider paneId="pane-1">
+        <div />
+      </SessionDetailProvider>,
+      { wrapper: QueryTestProvider },
+    );
+    const providerCallCount = sessionControlsCallCount;
+    baseline.unmount();
+    sessionControlsCallCount = 0;
+
+    render(
+      <SessionDetailProvider paneId="pane-1">
+        <ConnectedControlsPanel showComposerSection={false} />
+        <ConnectedControlsPanel showKeysSection={false} />
+      </SessionDetailProvider>,
+      { wrapper: QueryTestProvider },
+    );
+
+    expect(providerCallCount).toBeGreaterThan(0);
+    expect(sessionControlsCallCount).toBe(providerCallCount);
   });
 
   it("remounts pane-owned children while keeping push notification ownership outside", () => {
@@ -304,6 +380,144 @@ describe("SessionDetailProvider", () => {
     expect(result.current.base.connectionIssue).toBe("issue");
     expect(result.current.base.session?.paneId).toBe("pane-1");
     expect(result.current.repoPins.sessionGroups).toBe(sessionGroups);
+  });
+
+  it("preserves direct slice identity and projects shell owners to consumed fields", () => {
+    mockSessionsContext = buildSessionContext({
+      sessions: [session],
+      sessionApi: buildSessionApi(),
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryTestProvider>
+        <SessionDetailProvider paneId="pane-1">{children}</SessionDetailProvider>
+      </QueryTestProvider>
+    );
+    const { result } = renderHook(
+      () => ({
+        aggregate: useSessionDetailContext(),
+        base: useSessionDetailBase(),
+        repoPins: useSessionDetailRepoPins(),
+        terminal: useSessionDetailTerminal(),
+        quickPanel: useSessionDetailQuickPanel(),
+        logModal: useSessionDetailLogModal(),
+        headerActions: useSessionDetailHeaderActions(),
+        sidebarActions: useSessionDetailSidebarActions(),
+      }),
+      { wrapper },
+    );
+
+    expect(result.current.base).toBe(result.current.aggregate.base);
+    expect(result.current.repoPins).toBe(result.current.aggregate.repoPins);
+    expect(result.current.terminal).not.toBe(result.current.aggregate.terminal);
+    expect(result.current.terminal.controls.textInputRef).toBe(
+      result.current.aggregate.terminal.controls.textInputRef,
+    );
+    expect(result.current.quickPanel).not.toBe(result.current.aggregate.logsActions);
+    expect(result.current.quickPanel.logs.openLogModal).toBe(
+      result.current.aggregate.logsActions.logs.openLogModal,
+    );
+    expect(result.current.logModal.logs.closeLogModal).toBe(
+      result.current.aggregate.logsActions.logs.closeLogModal,
+    );
+    expect(result.current.headerActions.handleTouchCurrentSession).toBe(
+      result.current.aggregate.logsActions.actions.handleTouchCurrentSession,
+    );
+    expect(result.current.sidebarActions.handleFocusPane).toBe(
+      result.current.aggregate.logsActions.actions.handleFocusPane,
+    );
+  });
+
+  it("does not update shell slice consumers for an unrelated session tick", async () => {
+    const sessionApi = buildSessionApi();
+    mockSessionsContext = buildSessionContext({
+      sessions: [session],
+      sessionApi,
+      connected: false,
+    });
+    shellSliceRenderSpy.mockClear();
+    const view = render(
+      <SessionDetailProvider paneId="pane-1">
+        <ShellSliceProbe />
+      </SessionDetailProvider>,
+      { wrapper: QueryTestProvider },
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(shellSliceRenderSpy).toHaveBeenCalled();
+    const initialShellSlices = shellSliceRenderSpy.mock.lastCall?.[0] as {
+      terminal: unknown;
+      quickPanel: unknown;
+      logModal: unknown;
+      headerActions: unknown;
+      sidebarActions: unknown;
+    };
+    shellSliceRenderSpy.mockClear();
+
+    const updatedSession = createSessionDetail({
+      ...session,
+      lastEventAt: "2026-08-24T00:00:00.000Z",
+    });
+    mockSessionsContext = {
+      ...mockSessionsContext,
+      sessions: [updatedSession],
+      getSessionDetail: (paneId: string) =>
+        paneId === updatedSession.paneId ? toMockSessionDetail(updatedSession) : null,
+    };
+    view.rerender(
+      <SessionDetailProvider paneId="pane-1">
+        <ShellSliceProbe />
+      </SessionDetailProvider>,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(initialShellSlices.terminal).toBeDefined();
+    expect(initialShellSlices.quickPanel).toBeDefined();
+    expect(initialShellSlices.logModal).toBeDefined();
+    expect(initialShellSlices.headerActions).toBeDefined();
+    expect(initialShellSlices.sidebarActions).toBeDefined();
+    expect(shellSliceRenderSpy).not.toHaveBeenCalled();
+  });
+
+  it("resets an unsaved title draft across a keyed pane A -> B -> A transition", () => {
+    const paneA = createSessionDetail({ paneId: "pane-a", customTitle: "Pane A" });
+    const paneB = createSessionDetail({ paneId: "pane-b", customTitle: "Pane B" });
+    mockSessionsContext = buildSessionContext({
+      sessions: [paneA, paneB],
+      sessionApi: buildSessionApi(),
+    });
+    const renderTree = (paneId: string) => (
+      <SessionDetailProvider paneId={paneId}>
+        <SessionDetailTitleProvider>
+          <TitleProbe />
+        </SessionDetailTitleProvider>
+      </SessionDetailProvider>
+    );
+    const view = render(renderTree("pane-a"), { wrapper: QueryTestProvider });
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit title" }));
+    fireEvent.click(screen.getByRole("button", { name: "Change draft" }));
+    expect(screen.getByTestId("title-state").textContent).toBe("editing:Unsaved draft");
+
+    view.rerender(renderTree("pane-b"));
+    expect(screen.getByTestId("title-state").textContent).toBe("closed:Pane B");
+
+    view.rerender(renderTree("pane-a"));
+    expect(screen.getByTestId("title-state").textContent).toBe("closed:Pane A");
+  });
+
+  it.each([
+    ["useSessionDetailBase", useSessionDetailBase],
+    ["useSessionDetailRepoPins", useSessionDetailRepoPins],
+    ["useSessionDetailTerminal", useSessionDetailTerminal],
+    ["useSessionDetailQuickPanel", useSessionDetailQuickPanel],
+    ["useSessionDetailLogModal", useSessionDetailLogModal],
+    ["useSessionDetailHeaderActions", useSessionDetailHeaderActions],
+    ["useSessionDetailSidebarActions", useSessionDetailSidebarActions],
+  ])("requires SessionDetailProvider for %s", (_name, useSlice) => {
+    expect(() => renderHook(() => useSlice())).toThrow("within a SessionDetailProvider");
   });
 
   it("sets screen error when focus pane command fails", async () => {

@@ -187,6 +187,10 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
     expect(screen.getByRole("tablist", { name: "Session inspector sections" })).toBeTruthy();
     expect(requestRepoNotes).toHaveBeenCalledWith("pane-1", expect.any(AbortSignal));
 
+    fireEvent.click(screen.getByRole("button", { name: "Toggle session quick panel" }));
+    expect(screen.getByRole("button", { name: "Close quick panel" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close quick panel" }));
+
     const inspectorSections = [
       ["Changes panel", "Changes"],
       ["Files panel", "File Navigator"],

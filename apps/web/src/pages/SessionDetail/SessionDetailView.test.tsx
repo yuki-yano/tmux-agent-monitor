@@ -20,8 +20,13 @@ import type { SessionDetailContextValue } from "./SessionDetailProvider";
 import { SessionDetailView } from "./SessionDetailView";
 import { createSessionDetail } from "./test-helpers";
 
-vi.mock("./components/SessionSidebar", () => ({
-  SessionSidebar: () => <div data-testid="session-sidebar" />,
+const { sessionSidebarSpy } = vi.hoisted(() => ({ sessionSidebarSpy: vi.fn() }));
+
+vi.mock("@/features/shared-session-ui/components/SessionSidebar", () => ({
+  SessionSidebar: (props: unknown) => {
+    sessionSidebarSpy(props);
+    return <div data-testid="session-sidebar" />;
+  },
 }));
 
 const defaultLaunchResponse: LaunchCommandResponse = {
@@ -55,6 +60,16 @@ const { timelineHookSpy } = vi.hoisted(() => ({ timelineHookSpy: vi.fn() }));
 
 vi.mock("./SessionDetailProvider", () => ({
   useSessionDetailContext: () => mockContextValue,
+}));
+
+vi.mock("./SessionDetailContexts", () => ({
+  useSessionDetailBase: () => mockContextValue.base,
+  useSessionDetailHeaderActions: () => mockContextValue.logsActions.actions,
+  useSessionDetailLogModal: () => mockContextValue.logsActions,
+  useSessionDetailQuickPanel: () => mockContextValue.logsActions,
+  useSessionDetailRepoPins: () => mockContextValue.repoPins,
+  useSessionDetailSidebarActions: () => mockContextValue.logsActions.actions,
+  useSessionDetailTerminal: () => mockContextValue.terminal,
 }));
 
 vi.mock("./hooks/useSessionDetailLayoutState", () => ({
@@ -465,6 +480,7 @@ describe("SessionDetailView", () => {
   beforeEach(() => {
     window.localStorage.clear();
     timelineHookSpy.mockClear();
+    sessionSidebarSpy.mockClear();
   });
 
   it("renders not found state when session remains missing", () => {
@@ -479,6 +495,8 @@ describe("SessionDetailView", () => {
       expect(screen.getByTestId("session-detail-loading-skeleton")).toBeTruthy();
       expect(screen.getByTestId("session-detail-loading-header")).toBeTruthy();
       expect(screen.getByTestId("session-detail-loading-top")).toBeTruthy();
+      expect(screen.queryByLabelText("Toggle session quick panel")).toBeNull();
+      expect(sessionSidebarSpy).not.toHaveBeenCalled();
       const loadingStatus = screen.getByRole("status");
       const loadingSkeleton = screen.getByTestId("session-detail-loading-skeleton");
       expect(loadingSkeleton.getAttribute("aria-busy")).toBe("true");
@@ -554,6 +572,12 @@ describe("SessionDetailView", () => {
 
     expect(screen.getByRole("button", { name: "Edit session title" })).toBeTruthy();
     expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeTruthy();
+    const sidebarCall = sessionSidebarSpy.mock.lastCall;
+    expect(sidebarCall).toBeDefined();
+    if (sidebarCall == null) {
+      throw new Error("SessionSidebar was not rendered");
+    }
+    expect((sidebarCall[0] as { state: { sidebarWidth: number } }).state.sidebarWidth).toBe(240);
     expect(screen.getByRole("tab", { name: "Text" })).toBeTruthy();
     expect(screen.getByText("State Timeline")).toBeTruthy();
     expect(screen.getByRole("tablist", { name: "Session inspector sections" })).toBeTruthy();

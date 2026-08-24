@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
@@ -572,10 +572,12 @@ export const buildArchitectureReport = (): ArchitectureReport => {
     "apps/web/src/pages/SessionDetail/hooks/useSessionDetailViewShellSectionProps.ts",
     "apps/web/src/pages/SessionDetail/hooks/useSessionDetailViewWorktreeBranchSectionProps.ts",
   ];
-  const sessionDetailOwnershipLines = ownershipFiles.reduce(
-    (total, file) => total + readFileSync(path.join(repoRoot, file), "utf8").split("\n").length - 1,
-    0,
-  );
+  const sessionDetailOwnershipLines = ownershipFiles.reduce((total, file) => {
+    const absolutePath = path.join(repoRoot, file);
+    return existsSync(absolutePath)
+      ? total + readFileSync(absolutePath, "utf8").split("\n").length - 1
+      : total;
+  }, 0);
 
   const report: ArchitectureReport = {
     schemaVersion: 1,

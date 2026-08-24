@@ -14,6 +14,7 @@ import { useSessionRepoPins } from "./hooks/useSessionRepoPins";
 import { useSessionVirtualBranch } from "./hooks/useSessionVirtualBranch";
 import { useSessionVirtualWorktree } from "./hooks/useSessionVirtualWorktree";
 import { resolveSessionFileRoot } from "./sessionDetailUtils";
+import { SessionDetailSliceProviders } from "./SessionDetailContexts";
 
 // SessionDetailContext holds the state that genuinely needs to be shared across
 // multiple, non-nested SessionDetail sections (ScreenPanel, BranchSection,
@@ -254,10 +255,11 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
     () => ({ getRepoSortAnchorAt, touchRepoSortAnchor, sessionGroups }),
     [getRepoSortAnchorAt, touchRepoSortAnchor, sessionGroups],
   );
+  const baseContext = useMemo(() => ({ ...base, paneId }), [base, paneId]);
 
   return useMemo(
     () => ({
-      base: { ...base, paneId },
+      base: baseContext,
       repoPins,
       scope,
       diffs,
@@ -267,18 +269,7 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
       terminal,
       pushNotifications,
     }),
-    [
-      base,
-      paneId,
-      repoPins,
-      scope,
-      diffs,
-      files,
-      commits,
-      logsActions,
-      terminal,
-      pushNotifications,
-    ],
+    [baseContext, repoPins, scope, diffs, files, commits, logsActions, terminal, pushNotifications],
   );
 };
 
@@ -301,7 +292,18 @@ const SessionDetailPaneProvider = ({
   pushNotifications,
 }: SessionDetailPaneProviderProps) => {
   const value = useSessionDetailContextValue(paneId, pushNotifications);
-  return <SessionDetailContext.Provider value={value}>{children}</SessionDetailContext.Provider>;
+  return (
+    <SessionDetailContext.Provider value={value}>
+      <SessionDetailSliceProviders
+        base={value.base}
+        repoPins={value.repoPins}
+        terminal={value.terminal}
+        logsActions={value.logsActions}
+      >
+        {children}
+      </SessionDetailSliceProviders>
+    </SessionDetailContext.Provider>
+  );
 };
 
 export const SessionDetailProvider = ({ paneId, children }: SessionDetailProviderProps) => {
