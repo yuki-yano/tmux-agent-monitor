@@ -8,9 +8,9 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { PWA_DISPLAY_MODE_QUERIES, isPwaDisplayMode } from "@/lib/pwa-display-mode";
@@ -74,6 +74,9 @@ const WORKSPACE_TABS_FALLBACK: WorkspaceTabsContextValue = {
 const MISSING_PANE_TAB_DISMISS_GRACE_MS = 5000;
 
 const subscribeToDisplayEnvironment = (update: () => void) => {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
   const mediaList = [...PWA_DISPLAY_MODE_QUERIES, WORKSPACE_TABS_MOBILE_MEDIA_QUERY]
     .map((query) => window.matchMedia?.(query))
     .filter((candidate): candidate is MediaQueryList => candidate != null);
@@ -90,6 +93,21 @@ const subscribeToDisplayEnvironment = (update: () => void) => {
     window.removeEventListener("focus", update);
   };
 };
+
+const PWA_DISPLAY_ENVIRONMENT_BIT = 1;
+const MOBILE_DISPLAY_ENVIRONMENT_BIT = 2;
+
+const getDisplayEnvironmentSnapshot = () => {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+  return (
+    (isPwaDisplayMode() ? PWA_DISPLAY_ENVIRONMENT_BIT : 0) |
+    (isWorkspaceTabsMobileViewport() ? MOBILE_DISPLAY_ENVIRONMENT_BIT : 0)
+  );
+};
+
+const getServerDisplayEnvironmentSnapshot = () => 0;
 
 type WorkspaceTabsTransition = {
   state: WorkspaceTabsState;
@@ -275,18 +293,16 @@ export const WorkspaceTabsProvider = ({ children }: PropsWithChildren) => {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const workspaceTabsDisplayMode = useAtomValue(sessionWorkspaceTabsDisplayModeAtom);
-  const [displayEnvironmentVersion, bumpDisplayEnvironmentVersion] = useReducer(
-    (version: number) => version + 1,
-    0,
+  const displayEnvironment = useSyncExternalStore(
+    subscribeToDisplayEnvironment,
+    getDisplayEnvironmentSnapshot,
+    getServerDisplayEnvironmentSnapshot,
   );
-  const enabled = useMemo(() => {
-    void displayEnvironmentVersion;
-    return resolveWorkspaceTabsEnabled({
-      displayMode: workspaceTabsDisplayMode,
-      pwaDisplayMode: isPwaDisplayMode(),
-      mobileViewport: isWorkspaceTabsMobileViewport(),
-    });
-  }, [displayEnvironmentVersion, workspaceTabsDisplayMode]);
+  const enabled = resolveWorkspaceTabsEnabled({
+    displayMode: workspaceTabsDisplayMode,
+    pwaDisplayMode: (displayEnvironment & PWA_DISPLAY_ENVIRONMENT_BIT) !== 0,
+    mobileViewport: (displayEnvironment & MOBILE_DISPLAY_ENVIRONMENT_BIT) !== 0,
+  });
   const [tabsState, setTabsState] = useState<WorkspaceTabsState>(() =>
     buildInitialState(workspaceTabsDisplayMode),
   );
@@ -334,11 +350,6 @@ export const WorkspaceTabsProvider = ({ children }: PropsWithChildren) => {
     },
     [navigateToWorkspaceTab],
   );
-
-  useEffect(() => {
-    const update = () => bumpDisplayEnvironmentVersion();
-    return subscribeToDisplayEnvironment(update);
-  }, []);
 
   useEffect(() => {
     if (!enabled) {

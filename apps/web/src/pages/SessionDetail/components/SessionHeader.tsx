@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { SessionSummary } from "@vde-monitor/shared";
 import { ArrowLeft, ChevronDown, ChevronUp, Clock, GitBranch, Pin, X } from "lucide-react";
-import { type KeyboardEvent, memo, useEffect, useId, useRef, useState } from "react";
+import { type KeyboardEvent, memo, useId, useState } from "react";
 
 import { GitHubIcon } from "@/components/icons/GitHubIcon";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -80,6 +80,12 @@ type SessionHeaderAlertsProps = {
   connectionIssue: string | null;
 };
 
+const focusAndSelectSessionTitleInput = (input: HTMLInputElement | null) => {
+  if (input == null) return;
+  input.focus();
+  input.select();
+};
+
 type SessionTitleAreaProps = {
   canResetTitle: boolean;
   titleEditing: boolean;
@@ -108,17 +114,6 @@ const SessionTitleInput = ({
   onTitleSave,
   onCloseTitleEditor,
 }: SessionTitleInputProps) => {
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    const input = titleInputRef.current;
-    if (!input) {
-      return;
-    }
-    input.focus();
-    input.select();
-  }, []);
-
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -140,7 +135,7 @@ const SessionTitleInput = ({
 
   return (
     <input
-      ref={titleInputRef}
+      ref={focusAndSelectSessionTitleInput}
       type="text"
       value={titleDraft}
       onChange={(event) => {

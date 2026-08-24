@@ -81,7 +81,6 @@ export const ScreenPanelViewport = ({
         isAtBottom={isAtBottom}
         shouldFollowOutput={shouldFollowOutput}
         onAtBottomChange={onAtBottomChange}
-        onRangeChanged={onRangeChanged}
         scrollerRef={scrollerRef}
         onScrollToBottom={onScrollToBottom}
         onUserScrollStateChange={onUserScrollStateChange}

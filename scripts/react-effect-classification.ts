@@ -14,7 +14,6 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/features/pull-to-refresh/PullToRefreshContainer.tsx::PullToRefreshContainer::useEffect::e9d7ab33ffca::1",
     "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx::useDismissMissingWorkspaceSessionTabs::useEffect::8fcf0bed1565::1",
     "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx::WorkspaceTabsProvider::useEffect::3faf05c31f97::1",
-    "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx::WorkspaceTabsProvider::useEffect::9189f0db7e20::1",
     "apps/web/src/features/shared-session-ui/components/PaneTextComposer.tsx::PaneTextComposer::useEffect::b218bf0d1c11::1",
     "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx::QuickPanel::useEffect::075fa1b6d9a4::1",
     "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx::QuickPanel::useEffect::2a3a2df34ba7::1",
@@ -34,9 +33,9 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/pages/SessionDetail/components/FileContentModal.tsx::FileContentModal::useEffect::5d33b9b75213::1",
     "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx::ShikiCodeBlock::useEffect::e89ce58255b1::1",
     "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx::SmartScreenViewport::useEffect::0ceeaf7c4bc9::1",
+    "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts::useNoteAutoSave::useLayoutEffect::55b73ceff081::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts::useScreenPanelWorktreeSelector::useEffect::0d53964fa26c::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts::useScreenPanelWorktreeSelector::useEffect::37e2ed92c120::1",
-    "apps/web/src/pages/SessionDetail/hooks/useScreenPollingPauseReason.ts::useScreenPollingPauseReason::useEffect::c4ff4b6900ea::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts::useScreenScroll::useEffect::da35a6d38388::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts::useScreenStream::useEffect::16abc7861c1c::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenWrapMode.ts::useScreenWrapMode::useEffect::87b0178108f7::1",
@@ -67,7 +66,6 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewHoverController.ts::useSidebarPreviewHoverController::useEffect::8af13f227a3c::1",
     "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx::ChatGridTile::useEffect::5f9329c7582f::1",
     "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx::useChatGridScreenViewport::useLayoutEffect::56d272f4b5b1::1",
-    "apps/web/src/pages/SessionDetail/components/SessionHeader.tsx::SessionTitleInput::useEffect::b2a516a6e032::1",
     "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx::ShikiCodeBlock::useLayoutEffect::77d6be1a2097::1",
     "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx::ShikiCodeBlock::useLayoutEffect::a879e383542e::1",
     "apps/web/src/pages/SessionDetail/components/ShikiCodeBlock.tsx::ShikiCodeBlock::useLayoutEffect::acc8bd605571::1",
@@ -98,29 +96,22 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/features/shared-session-ui/hooks/useMultiPaneScreenFeed.ts::useMultiPaneScreenFeed::useEffect::6d64e689e2bc::1",
     "apps/web/src/features/shared-session-ui/hooks/useSidebarPreview.ts::useSidebarPreview::useEffect::aa1088ea41c5::1",
     "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache.ts::useSidebarPreviewTimelineCache::useEffect::568e7ec3f4e5::1",
-    "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts::useNoteAutoSave::useEffect::96f8b78d6775::1",
     "apps/web/src/pages/SessionList/useSessionListVM.ts::useSessionListVM::useEffect::856c5c339c73::1",
   ],
   "derived-state": [
-    "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx::ResumeWorktreeDialog::useEffect::7fdbc4714ed5::1",
+    "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx::ResumeWorktreeDialogOpenContent::useEffect::f516d869b546::1",
     "apps/web/src/pages/SessionDetail/components/DiffSection.tsx::<module>::useEffect::de65e42cb91f::1",
-    "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx::SmartScreenViewport::useEffect::978b16c4e7d6::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts::useSessionScreen::useEffect::ecf30f99492b::1",
   ],
   "ref-mirror": [
-    "apps/web/src/features/notifications/use-push-notifications.ts::usePushNotifications::useEffect::c94bf5cf906f::1",
     "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx::AnsiVirtualizedViewport::useLayoutEffect::852dbe412eb2::1",
     "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx::AnsiVirtualizedViewport::useLayoutEffect::b808cf29ed19::1",
     "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts::useRawInputHandlers::useLayoutEffect::3009e1fcea0e::1",
     "apps/web/src/lib/use-debounced-callback.ts::useDebouncedCallback::useLayoutEffect::6c2dae421a81::1",
-    "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts::useNoteAutoSave::useEffect::af6dcf2bb6be::1",
-    "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts::useNoteAutoSave::useEffect::d358dd2415f9::1",
-    "apps/web/src/pages/SessionDetail/hooks/useScreenMode.ts::useScreenMode::useEffect::a54b0ed920f2::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionDetailLogsActions.ts::useSessionDetailLogsActions::useEffect::88096c9c6c5e::1",
     "apps/web/src/pages/SessionList/components/SessionListHeader.tsx::SessionListSearchInput::useEffect::7b3e63f988b9::1",
   ],
   "identity-reset": [
-    "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx::ResumeWorktreeDialog::useEffect::bcc07de459f1::1",
     "apps/web/src/features/notifications/use-push-notifications.ts::usePushNotifications::useLayoutEffect::26cd9672b5d0::1",
     "apps/web/src/features/shared-session-ui/components/LogModal.tsx::LogModal::useLayoutEffect::8c1e882261b9::1",
     "apps/web/src/features/shared-session-ui/hooks/usePaneSendText.ts::usePaneSendText::useLayoutEffect::5cc2c6efbf17::1",
@@ -131,7 +122,7 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch::useEffect::6f46129aafbe::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch::useEffect::ff02e8f42a46::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch::useLayoutEffect::409d7c403917::1",
-    "apps/web/src/pages/SessionDetail/hooks/useScreenMode.ts::useScreenMode::useLayoutEffect::141e2d21a498::1",
+    "apps/web/src/pages/SessionDetail/hooks/useScreenMode.ts::useScreenMode::useLayoutEffect::41d40807a906::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenPanelWorktreeSelector.ts::useScreenPanelWorktreeSelector::useEffect::ca2a447c6a32::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenScroll.ts::useScreenScroll::useLayoutEffect::3657ff2e2eda::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenStream.ts::useScreenStream::useEffect::d4707baece23::1",
@@ -147,6 +138,10 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
 export const reviewedUseEffectEventCandidates = [] as const;
 
 export const reviewedRefMirrorEventMigration = [] as const;
+
+export const reviewedRetainedDerivedStateEffects = [
+  "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx::ResumeWorktreeDialogOpenContent::useEffect::f516d869b546::1",
+] as const;
 
 export const reviewedRetainedIdentityEffects = [
   "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch::useEffect::ff02e8f42a46::1",

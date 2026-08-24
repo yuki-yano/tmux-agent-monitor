@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -78,7 +78,7 @@ describe("useScreenMode", () => {
     expect(dispatchScreenLoading).toHaveBeenCalledWith({ type: "reset" });
   });
 
-  it("tracks mode loaded state and exposes a reset", async () => {
+  it("updates mode loaded state and its imperative ref in the same action", () => {
     const dispatchScreenLoading = vi.fn();
     const modeSwitchRef = { current: null as "text" | "image" | null };
     const cursorRef = { current: null as string | null };
@@ -99,16 +99,17 @@ describe("useScreenMode", () => {
     );
 
     act(() => {
+      // useScreenFetch advances the imperative ref before notifying this hook.
+      result.current.modeLoadedRef.current = { text: true, image: false };
       result.current.markModeLoaded("text");
+      expect(result.current.modeLoadedRef.current).toEqual({ text: true, image: false });
     });
 
-    await waitFor(() => {
-      expect(result.current.modeLoaded.text).toBe(true);
-      expect(result.current.modeLoadedRef.current.text).toBe(true);
-    });
+    expect(result.current.modeLoaded).toEqual({ text: true, image: false });
 
     act(() => {
       result.current.resetModeLoaded();
+      expect(result.current.modeLoadedRef.current).toEqual({ text: false, image: false });
     });
 
     expect(result.current.modeLoaded).toEqual({ text: false, image: false });
@@ -144,7 +145,9 @@ describe("useScreenMode", () => {
 
     act(() => {
       rerender({ paneId: "pane-2" });
+      expect(result.current.modeLoadedRef.current).toEqual({ text: false, image: false });
     });
     expect(result.current.mode).toBe("text");
+    expect(result.current.modeLoaded).toEqual({ text: false, image: false });
   });
 });

@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { SessionSummary } from "@vde-monitor/shared";
+import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { defaultLaunchConfig } from "@/state/launch-agent-options";
@@ -52,6 +53,15 @@ describe("ResumeWorktreeDialog", () => {
   const repoRootEntry = {
     path: "/repo",
     branch: "main",
+    dirty: false,
+    locked: false,
+    lockOwner: null,
+    lockReason: null,
+    merged: false,
+  } as const;
+  const alternateWorktreeEntry = {
+    path: "/repo/.worktree/feature/alternate",
+    branch: "feature/alternate",
     dirty: false,
     locked: false,
     lockOwner: null,
@@ -329,7 +339,78 @@ describe("ResumeWorktreeDialog", () => {
     expect(screen.getByText("path: .")).toBeTruthy();
   });
 
-  it("falls back to an available worktree when the selected target disappears", async () => {
+  it("resets edited form state after close and reopen in StrictMode", async () => {
+    const onLaunchAgentInSession = vi.fn(async () => undefined);
+    const renderDialog = (open: boolean) => (
+      <StrictMode>
+        <ResumeWorktreeDialog
+          open={open}
+          onOpenChange={() => undefined}
+          sessionName="dev-main"
+          sourceSession={buildSession()}
+          launchConfig={defaultLaunchConfig}
+          worktreeEntries={[managedWorktreeEntry]}
+          worktreeRepoRoot="/repo"
+          onLaunchAgentInSession={onLaunchAgentInSession}
+        />
+      </StrictMode>
+    );
+    const { rerender } = render(renderDialog(true));
+
+    fireEvent.change(screen.getByLabelText("Source Pane"), {
+      target: { value: "pane-edited" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Override agent options" }));
+
+    rerender(renderDialog(false));
+    expect(screen.queryByLabelText("Source Pane")).toBeNull();
+
+    rerender(renderDialog(true));
+    expect(screen.getByLabelText("Source Pane")).toHaveProperty("value", "pane-1");
+    expect(screen.getByRole("checkbox", { name: "Override agent options" })).toHaveProperty(
+      "checked",
+      false,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume / Move" }));
+    await waitFor(() => {
+      expect(onLaunchAgentInSession).toHaveBeenCalledWith("dev-main", "codex", {
+        worktreePath: "/repo/.worktree/feature/current",
+        worktreeBranch: "feature/current",
+        resumeFromPaneId: "pane-1",
+      });
+    });
+  });
+
+  it("keeps a selected worktree while it remains in updated candidates", () => {
+    const onLaunchAgentInSession = vi.fn(async () => undefined);
+    const props = {
+      open: true,
+      onOpenChange: () => undefined,
+      sessionName: "dev-main",
+      sourceSession: buildSession(),
+      launchConfig: defaultLaunchConfig,
+      worktreeRepoRoot: "/repo",
+      onLaunchAgentInSession,
+    };
+    const { rerender } = render(
+      <ResumeWorktreeDialog {...props} worktreeEntries={[managedWorktreeEntry, repoRootEntry]} />,
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /repo root \(main\)/i }));
+    rerender(
+      <ResumeWorktreeDialog
+        {...props}
+        worktreeEntries={[alternateWorktreeEntry, repoRootEntry, managedWorktreeEntry]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("radio", { name: /repo root \(main\)/i }).getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("commits a fallback when the selected target disappears and keeps it when the target returns", async () => {
     const onLaunchAgentInSession = vi.fn(async () => undefined);
     const props = {
       open: true,
@@ -362,6 +443,59 @@ describe("ResumeWorktreeDialog", () => {
     expect(
       screen.getByRole("radio", { name: /repo root \(main\)/i }).getAttribute("aria-checked"),
     ).toBe("false");
+  });
+
+  it("uses the latest default when candidates arrive after an initially empty list", () => {
+    const onLaunchAgentInSession = vi.fn(async () => undefined);
+    const props = {
+      open: true,
+      onOpenChange: () => undefined,
+      sessionName: "dev-main",
+      launchConfig: defaultLaunchConfig,
+      worktreeRepoRoot: "/repo",
+      onLaunchAgentInSession,
+    };
+    const { rerender } = render(
+      <ResumeWorktreeDialog {...props} sourceSession={buildSession()} worktreeEntries={[]} />,
+    );
+
+    rerender(
+      <ResumeWorktreeDialog
+        {...props}
+        sourceSession={buildSession({ branch: "main", worktreePath: "/repo" })}
+        worktreeEntries={[]}
+      />,
+    );
+    rerender(
+      <ResumeWorktreeDialog
+        {...props}
+        sourceSession={buildSession({ branch: "main", worktreePath: "/repo" })}
+        worktreeEntries={[managedWorktreeEntry, repoRootEntry]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("radio", { name: /repo root \(main\)/i }).getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("submits the resolved fallback when the selected target disappears", async () => {
+    const onLaunchAgentInSession = vi.fn(async () => undefined);
+    const props = {
+      open: true,
+      onOpenChange: () => undefined,
+      sessionName: "dev-main",
+      sourceSession: buildSession(),
+      launchConfig: defaultLaunchConfig,
+      worktreeRepoRoot: "/repo",
+      onLaunchAgentInSession,
+    };
+    const { rerender } = render(
+      <ResumeWorktreeDialog {...props} worktreeEntries={[managedWorktreeEntry, repoRootEntry]} />,
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /repo root \(main\)/i }));
+    rerender(<ResumeWorktreeDialog {...props} worktreeEntries={[managedWorktreeEntry]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Resume / Move" }));
 
@@ -372,6 +506,75 @@ describe("ResumeWorktreeDialog", () => {
         resumeFromPaneId: "pane-1",
       });
     });
+  });
+
+  it("ignores an old successful submission after close and reopen", async () => {
+    let resolveLaunch: ((value: undefined) => void) | undefined;
+    const onLaunchAgentInSession = vi.fn(
+      () =>
+        new Promise<undefined>((resolve) => {
+          resolveLaunch = resolve;
+        }),
+    );
+    const onOpenChange = vi.fn();
+    const props = {
+      onOpenChange,
+      sessionName: "dev-main",
+      sourceSession: buildSession(),
+      launchConfig: defaultLaunchConfig,
+      worktreeEntries: [managedWorktreeEntry],
+      worktreeRepoRoot: "/repo",
+      onLaunchAgentInSession,
+    };
+    const renderDialog = (open: boolean) => (
+      <StrictMode>
+        <ResumeWorktreeDialog {...props} open={open} />
+      </StrictMode>
+    );
+    const { rerender } = render(renderDialog(true));
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume / Move" }));
+    rerender(renderDialog(false));
+    rerender(renderDialog(true));
+
+    await act(async () => resolveLaunch?.(undefined));
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Resume / Move" })).toHaveProperty("disabled", false);
+  });
+
+  it("ignores an old failed submission after close and reopen", async () => {
+    let rejectLaunch: ((reason: Error) => void) | undefined;
+    const onLaunchAgentInSession = vi.fn(
+      () =>
+        new Promise<undefined>((_resolve, reject) => {
+          rejectLaunch = reject;
+        }),
+    );
+    const props = {
+      onOpenChange: () => undefined,
+      sessionName: "dev-main",
+      sourceSession: buildSession(),
+      launchConfig: defaultLaunchConfig,
+      worktreeEntries: [managedWorktreeEntry],
+      worktreeRepoRoot: "/repo",
+      onLaunchAgentInSession,
+    };
+    const renderDialog = (open: boolean) => (
+      <StrictMode>
+        <ResumeWorktreeDialog {...props} open={open} />
+      </StrictMode>
+    );
+    const { rerender } = render(renderDialog(true));
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume / Move" }));
+    rerender(renderDialog(false));
+    rerender(renderDialog(true));
+
+    await act(async () => rejectLaunch?.(new Error("old failure")));
+
+    expect(screen.queryByText("Failed to launch the agent.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Resume / Move" })).toHaveProperty("disabled", false);
   });
 
   it("disables resume submit when no existing vw worktree is available", () => {

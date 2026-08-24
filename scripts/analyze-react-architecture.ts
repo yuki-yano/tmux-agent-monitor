@@ -10,6 +10,7 @@ import {
   type ReviewedEffectCategory,
   reviewedEffectClassifications,
   reviewedRefMirrorEventMigration,
+  reviewedRetainedDerivedStateEffects,
   reviewedRetainedIdentityEffects,
   reviewedUseEffectEventCandidates,
 } from "./react-effect-classification.ts";
@@ -486,6 +487,7 @@ const applyReviewedClassifications = (sites: SiteDraft[]): SiteDraft[] => {
     new Set(selectors.map((selector) => siteKey(resolveReviewedSelector(selector, sites))));
   const effectEventCandidates = resolveSelectorSet(reviewedUseEffectEventCandidates);
   const refMirrorEventMigration = resolveSelectorSet(reviewedRefMirrorEventMigration);
+  const retainedDerivedStateEffects = resolveSelectorSet(reviewedRetainedDerivedStateEffects);
   const retainedIdentityEffects = resolveSelectorSet(reviewedRetainedIdentityEffects);
 
   return sites.map((site) => {
@@ -503,7 +505,7 @@ const applyReviewedClassifications = (sites: SiteDraft[]): SiteDraft[] => {
         return "event-handler";
       }
       if (category === "derived-state") {
-        return "render-or-reducer";
+        return retainedDerivedStateEffects.has(key) ? "maintain" : "render-or-reducer";
       }
       if (category === "identity-reset") {
         return retainedIdentityEffects.has(key) ? "maintain" : "key-reset";

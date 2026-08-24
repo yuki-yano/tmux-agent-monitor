@@ -1,5 +1,5 @@
 import type { RepoNote } from "@vde-monitor/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useReducer, useRef } from "react";
 
 import { useDebouncedCallback } from "@/lib/use-debounced-callback";
 import { useLazyRef } from "@/lib/use-lazy-ref";
@@ -11,48 +11,56 @@ type UseNoteAutoSaveParams = {
   onSave: (noteId: string, input: { title: string | null; body: string }) => Promise<boolean>;
 };
 
+type EditingState = {
+  noteId: string | null;
+  body: string;
+};
+
+type PendingSave = {
+  noteId: string;
+  body: string;
+  generation: number;
+  promise: Promise<boolean>;
+};
+
+const EMPTY_EDITING_STATE: EditingState = { noteId: null, body: "" };
+const replaceEditingState = (_current: EditingState, next: EditingState) => next;
+
 /**
  * Owns the "currently editing note" state machine: debounced auto-save while
- * typing, serialized save requests, and flush-on-switch/close/unmount so a
- * pending edit is never silently dropped when the user moves away from it.
+ * typing, serialized save requests, flush-on-switch/close, and timer cleanup
+ * on unmount.
  */
 export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editingBody, setEditingBody] = useState("");
-  const editingNoteExists = editingNoteId ? notes.some((note) => note.id === editingNoteId) : false;
+  const [editing, dispatchEditing] = useReducer(replaceEditingState, EMPTY_EDITING_STATE);
+  const editingNoteExists = editing.noteId
+    ? notes.some((note) => note.id === editing.noteId)
+    : false;
 
-  // Mirrors of the state above so timer callbacks (armed against a stale
-  // closure) can always read the latest editing target/body.
-  const editingNoteIdRef = useRef<string | null>(null);
-  const editingBodyRef = useRef("");
+  const editingRef = useRef<EditingState>(EMPTY_EDITING_STATE);
+  const editingSessionGenerationRef = useRef(0);
+  const listedEditingNoteIdRef = useRef<string | null>(null);
   const lastSavedBodyRef = useRef("");
-  const [listedEditingNoteId, setListedEditingNoteId] = useState<string | null>(null);
   const saveQueueRef = useLazyRef<Promise<boolean>>(() => Promise.resolve(true));
-
-  useEffect(() => {
-    editingNoteIdRef.current = editingNoteId;
-  }, [editingNoteId]);
-
-  useEffect(() => {
-    editingBodyRef.current = editingBody;
-  }, [editingBody]);
-
-  // Resets the editing target back to "nothing being edited". Shared by every
-  // call site that clears editing state outright (as opposed to switching to
-  // a different note), so the same three fields never drift out of sync.
-  const clearEditingState = useCallback(() => {
-    setEditingNoteId(null);
-    setEditingBody("");
-    lastSavedBodyRef.current = "";
-    setListedEditingNoteId(null);
-  }, []);
+  const pendingSaveRef = useRef<PendingSave | null>(null);
 
   const runAutoSave = useCallback(
-    (noteId: string, body: string) => {
+    (noteId: string, body: string, generation = editingSessionGenerationRef.current) => {
+      const pendingSave = pendingSaveRef.current;
+      if (
+        pendingSave?.noteId === noteId &&
+        pendingSave.body === body &&
+        pendingSave.generation === generation
+      ) {
+        return pendingSave.promise;
+      }
       const queuedSave = saveQueueRef.current.then(async () => {
+        if (editingSessionGenerationRef.current !== generation) {
+          return true;
+        }
         try {
           const ok = await onSave(noteId, { title: null, body });
-          if (ok && editingNoteIdRef.current === noteId) {
+          if (ok && editingRef.current.noteId === noteId) {
             lastSavedBodyRef.current = body;
           }
           return ok;
@@ -61,75 +69,117 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
         }
       });
       saveQueueRef.current = queuedSave;
+      pendingSaveRef.current = { noteId, body, generation, promise: queuedSave };
+      void queuedSave.then(() => {
+        if (pendingSaveRef.current?.promise === queuedSave) pendingSaveRef.current = null;
+      });
       return queuedSave;
     },
     [onSave, saveQueueRef],
   );
 
   const debouncedSave = useDebouncedCallback((noteId: string, body: string) => {
+    if (
+      editing.noteId !== noteId ||
+      editing.body !== body ||
+      (listedEditingNoteIdRef.current === noteId && !notes.some((note) => note.id === noteId))
+    ) {
+      return;
+    }
     void runAutoSave(noteId, body);
   }, AUTO_SAVE_DEBOUNCE_MS);
 
-  if (editingNoteId && editingNoteExists && listedEditingNoteId !== editingNoteId) {
-    setListedEditingNoteId(editingNoteId);
-  } else if (editingNoteId && !editingNoteExists && listedEditingNoteId === editingNoteId) {
-    setEditingNoteId(null);
-    setEditingBody("");
-    setListedEditingNoteId(null);
-  }
+  const applyEditingTransition = useCallback(
+    (nextEditing: EditingState, lastSavedBody: string, scheduleSave: boolean) => {
+      debouncedSave.cancel();
+      if (editingRef.current.noteId !== nextEditing.noteId) {
+        editingSessionGenerationRef.current += 1;
+        listedEditingNoteIdRef.current =
+          nextEditing.noteId != null && notes.some((note) => note.id === nextEditing.noteId)
+            ? nextEditing.noteId
+            : null;
+      }
+      editingRef.current = nextEditing;
+      lastSavedBodyRef.current = lastSavedBody;
+      dispatchEditing(nextEditing);
 
-  useEffect(() => {
-    if (!editingNoteId) {
-      debouncedSave.cancel();
+      if (scheduleSave && nextEditing.noteId && nextEditing.body !== lastSavedBody) {
+        debouncedSave.run(nextEditing.noteId, nextEditing.body);
+      }
+    },
+    [debouncedSave, notes],
+  );
+
+  const clearEditingState = useCallback(() => {
+    applyEditingTransition(EMPTY_EDITING_STATE, "", false);
+  }, [applyEditingTransition]);
+
+  useLayoutEffect(() => {
+    if (!editing.noteId) return;
+    if (editingNoteExists) {
+      listedEditingNoteIdRef.current = editing.noteId;
       return;
     }
-    if (editingBody === lastSavedBodyRef.current) {
-      debouncedSave.cancel();
-      return;
-    }
-    debouncedSave.run(editingNoteId, editingBody);
-    return debouncedSave.cancel;
-  }, [debouncedSave, editingBody, editingNoteId]);
+    if (listedEditingNoteIdRef.current !== editing.noteId) return;
+    applyEditingTransition(EMPTY_EDITING_STATE, "", false);
+  }, [applyEditingTransition, editing.noteId, editingNoteExists]);
 
   const flushPendingAutoSave = useCallback(async () => {
-    const noteId = editingNoteIdRef.current;
-    if (!noteId) {
+    const currentEditing = editingRef.current;
+    if (!currentEditing.noteId) {
       return true;
     }
     debouncedSave.cancel();
-    const currentBody = editingBodyRef.current;
-    if (currentBody === lastSavedBodyRef.current) {
+    if (
+      listedEditingNoteIdRef.current === currentEditing.noteId &&
+      !notes.some((note) => note.id === currentEditing.noteId)
+    ) {
       return true;
     }
-    return runAutoSave(noteId, currentBody);
-  }, [debouncedSave, runAutoSave]);
+    if (currentEditing.body === lastSavedBodyRef.current) {
+      return true;
+    }
+    return runAutoSave(currentEditing.noteId, currentEditing.body);
+  }, [debouncedSave, notes, runAutoSave]);
 
   // Not declared `async`: when no flush is needed (the common case), the
-  // state updates and `onSwitched` run synchronously in the caller's tick,
-  // matching the pre-split behavior where `beginEdit` only awaited when it
-  // actually had a previous note's edit to flush.
+  // state updates and `onSwitched` run synchronously in the caller's tick.
   const beginEdit = useCallback(
     (note: RepoNote, onSwitched?: () => void): Promise<boolean> => {
-      if (editingNoteIdRef.current && editingNoteIdRef.current !== note.id) {
+      const switchToNote = () => {
+        applyEditingTransition({ noteId: note.id, body: note.body }, note.body, false);
+        onSwitched?.();
+      };
+
+      if (editingRef.current.noteId && editingRef.current.noteId !== note.id) {
         return (async () => {
           const ok = await flushPendingAutoSave();
           if (!ok) {
             return false;
           }
-          setEditingNoteId(note.id);
-          setEditingBody(note.body);
-          lastSavedBodyRef.current = note.body;
-          onSwitched?.();
+          switchToNote();
           return true;
         })();
       }
-      setEditingNoteId(note.id);
-      setEditingBody(note.body);
-      lastSavedBodyRef.current = note.body;
-      onSwitched?.();
+      switchToNote();
       return Promise.resolve(true);
     },
-    [flushPendingAutoSave],
+    [applyEditingTransition, flushPendingAutoSave],
+  );
+
+  const changeEditingBody = useCallback(
+    (body: string) => {
+      const currentEditing = editingRef.current;
+      if (!currentEditing.noteId) {
+        return;
+      }
+      applyEditingTransition(
+        { noteId: currentEditing.noteId, body },
+        lastSavedBodyRef.current,
+        true,
+      );
+    },
+    [applyEditingTransition],
   );
 
   const finishEdit = useCallback(async () => {
@@ -142,14 +192,10 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
   }, [clearEditingState, flushPendingAutoSave]);
 
   // This is the pre-toggle guard for collapsing an open note's accordion, not
-  // a "close/finish editing" action in its own right: when the target note
-  // isn't the one being edited, it just waves the toggle through immediately;
-  // only when it matches does it flush the pending edit before allowing the
-  // collapse. Same non-`async` shape as `beginEdit` so the common (no-flush)
-  // case calls `onGuarded` synchronously in the caller's tick.
+  // a "close/finish editing" action in its own right.
   const guardToggleClose = useCallback(
     (noteId: string, onGuarded?: () => void): Promise<boolean> => {
-      if (editingNoteIdRef.current !== noteId) {
+      if (editingRef.current.noteId !== noteId) {
         onGuarded?.();
         return Promise.resolve(true);
       }
@@ -168,29 +214,26 @@ export const useNoteAutoSave = ({ notes, onSave }: UseNoteAutoSaveParams) => {
 
   const discardEditing = useCallback(
     (noteId: string) => {
-      if (editingNoteIdRef.current !== noteId) {
-        return;
+      if (editingRef.current.noteId === noteId) {
+        clearEditingState();
       }
-      debouncedSave.cancel();
-      clearEditingState();
     },
-    [clearEditingState, debouncedSave],
+    [clearEditingState],
   );
 
-  // New-note auto-edit intentionally skips flushPendingAutoSave: unlike
-  // beginEdit, it switches the editing target immediately without trying to
-  // save whatever was being edited before (matches the pre-split behavior).
-  const forceStartEditing = useCallback((note: RepoNote) => {
-    setEditingNoteId(note.id);
-    setEditingBody(note.body);
-    lastSavedBodyRef.current = note.body;
-    setListedEditingNoteId(null);
-  }, []);
+  // New-note auto-edit intentionally switches immediately without flushing
+  // the previous edit, matching the create-note workflow.
+  const forceStartEditing = useCallback(
+    (note: RepoNote) => {
+      applyEditingTransition({ noteId: note.id, body: note.body }, note.body, false);
+    },
+    [applyEditingTransition],
+  );
 
   return {
-    editingNoteId,
-    editingBody,
-    setEditingBody,
+    editingNoteId: editing.noteId,
+    editingBody: editing.body,
+    changeEditingBody,
     beginEdit,
     finishEdit,
     guardToggleClose,

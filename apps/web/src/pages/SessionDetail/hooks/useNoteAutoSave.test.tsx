@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { RepoNote } from "@vde-monitor/shared";
+import { type ReactNode, useLayoutEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useNoteAutoSave } from "./useNoteAutoSave";
@@ -30,7 +31,7 @@ describe("useNoteAutoSave", () => {
     });
 
     act(() => {
-      result.current.setEditingBody("updated");
+      result.current.changeEditingBody("updated");
     });
 
     await act(async () => {
@@ -57,11 +58,11 @@ describe("useNoteAutoSave", () => {
     });
 
     act(() => {
-      result.current.setEditingBody("first");
+      result.current.changeEditingBody("first");
       vi.advanceTimersByTime(400);
-      result.current.setEditingBody("second");
+      result.current.changeEditingBody("second");
       vi.advanceTimersByTime(400);
-      result.current.setEditingBody("third");
+      result.current.changeEditingBody("third");
     });
 
     expect(onSave).not.toHaveBeenCalled();
@@ -72,6 +73,30 @@ describe("useNoteAutoSave", () => {
     });
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledWith("note-1", { title: null, body: "third" });
+  });
+
+  it("flushes the latest body after multiple changes in the same tick", async () => {
+    vi.useFakeTimers();
+    const onSave = vi.fn(async () => true);
+    const note = buildNote();
+    const { result } = renderHook(() => useNoteAutoSave({ notes: [note], onSave }));
+
+    await act(async () => {
+      await result.current.beginEdit(note);
+    });
+
+    act(() => {
+      result.current.changeEditingBody("first");
+      result.current.changeEditingBody("second");
+      result.current.changeEditingBody("latest");
+    });
+
+    await act(async () => {
+      await result.current.finishEdit();
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith("note-1", { title: null, body: "latest" });
   });
 
   it("does not arm a save when the body matches the last saved body", async () => {
@@ -85,7 +110,7 @@ describe("useNoteAutoSave", () => {
     });
 
     act(() => {
-      result.current.setEditingBody(note.body);
+      result.current.changeEditingBody(note.body);
     });
 
     await act(async () => {
@@ -104,7 +129,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(note);
     });
     act(() => {
-      result.current.setEditingBody("flushed body");
+      result.current.changeEditingBody("flushed body");
     });
 
     await act(async () => {
@@ -128,7 +153,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(noteA);
     });
     act(() => {
-      result.current.setEditingBody("a-draft");
+      result.current.changeEditingBody("a-draft");
     });
 
     await act(async () => {
@@ -140,9 +165,33 @@ describe("useNoteAutoSave", () => {
     expect(result.current.editingBody).toBe("b-body");
   });
 
-  it("keeps editing the current note when the flush save fails during a switch", async () => {
+  it("flushes the latest body when changing and switching notes in the same tick", async () => {
     vi.useFakeTimers();
-    const onSave = vi.fn(async () => false);
+    const onSave = vi.fn(async () => true);
+    const noteA = buildNote({ id: "note-a", body: "a-body" });
+    const noteB = buildNote({ id: "note-b", body: "b-body" });
+    const { result } = renderHook(() => useNoteAutoSave({ notes: [noteA, noteB], onSave }));
+
+    await act(async () => {
+      await result.current.beginEdit(noteA);
+    });
+
+    await act(async () => {
+      result.current.changeEditingBody("same-tick draft");
+      await result.current.beginEdit(noteB);
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith("note-a", {
+      title: null,
+      body: "same-tick draft",
+    });
+    expect(result.current.editingNoteId).toBe("note-b");
+  });
+
+  it("keeps the current draft after a failed switch and retries it on the next switch", async () => {
+    vi.useFakeTimers();
+    const onSave = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     const noteA = buildNote({ id: "note-a", body: "a-body" });
     const noteB = buildNote({ id: "note-b", body: "b-body" });
     const { result } = renderHook(() => useNoteAutoSave({ notes: [noteA, noteB], onSave }));
@@ -151,7 +200,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(noteA);
     });
     act(() => {
-      result.current.setEditingBody("a-draft");
+      result.current.changeEditingBody("a-draft");
     });
 
     let switched = true;
@@ -162,6 +211,15 @@ describe("useNoteAutoSave", () => {
     expect(switched).toBe(false);
     expect(result.current.editingNoteId).toBe("note-a");
     expect(result.current.editingBody).toBe("a-draft");
+
+    await act(async () => {
+      switched = await result.current.beginEdit(noteB);
+    });
+
+    expect(switched).toBe(true);
+    expect(onSave).toHaveBeenCalledTimes(2);
+    expect(onSave).toHaveBeenNthCalledWith(2, "note-a", { title: null, body: "a-draft" });
+    expect(result.current.editingNoteId).toBe("note-b");
   });
 
   it("serializes auto-save requests while a previous save is in flight", async () => {
@@ -186,7 +244,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(note);
     });
     act(() => {
-      result.current.setEditingBody("first");
+      result.current.changeEditingBody("first");
     });
 
     await act(async () => {
@@ -196,7 +254,7 @@ describe("useNoteAutoSave", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
 
     act(() => {
-      result.current.setEditingBody("second");
+      result.current.changeEditingBody("second");
     });
 
     await act(async () => {
@@ -230,7 +288,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(note);
     });
     act(() => {
-      result.current.setEditingBody("about to be deleted");
+      result.current.changeEditingBody("about to be deleted");
     });
 
     act(() => {
@@ -255,7 +313,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(noteA);
     });
     act(() => {
-      result.current.setEditingBody("a-draft");
+      result.current.changeEditingBody("a-draft");
     });
 
     let okForOther = false;
@@ -286,7 +344,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(noteA);
     });
     act(() => {
-      result.current.setEditingBody("a-draft");
+      result.current.changeEditingBody("a-draft");
     });
 
     act(() => {
@@ -324,6 +382,158 @@ describe("useNoteAutoSave", () => {
     expect(result.current.editingNoteId).toBeNull();
   });
 
+  it("invalidates a pending save when the edited note disappears during a refetch", async () => {
+    vi.useFakeTimers();
+    const onSave = vi.fn(async () => true);
+    const note = buildNote();
+    const { result, rerender } = renderHook(
+      ({ notes }: { notes: RepoNote[] }) => useNoteAutoSave({ notes, onSave }),
+      { initialProps: { notes: [note] } },
+    );
+
+    await act(async () => {
+      await result.current.beginEdit(note);
+    });
+    act(() => {
+      result.current.changeEditingBody("removed note draft");
+      rerender({ notes: [] });
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await Promise.resolve();
+    });
+
+    expect(result.current.editingNoteId).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("does not start a queued save after the edited note disappears", async () => {
+    vi.useFakeTimers();
+    let resolveFirst: (value: boolean) => void = () => {};
+    const firstSave = new Promise<boolean>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const onSave = vi
+      .fn<(noteId: string, input: { title: string | null; body: string }) => Promise<boolean>>()
+      .mockImplementationOnce(() => firstSave)
+      .mockResolvedValue(true);
+    const note = buildNote();
+    const { result, rerender } = renderHook(
+      ({ notes }: { notes: RepoNote[] }) => useNoteAutoSave({ notes, onSave }),
+      { initialProps: { notes: [note] } },
+    );
+
+    await act(async () => result.current.beginEdit(note));
+    act(() => result.current.changeEditingBody("first"));
+    await act(async () => vi.advanceTimersByTimeAsync(700));
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.changeEditingBody("queued"));
+    await act(async () => vi.advanceTimersByTimeAsync(700));
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    act(() => rerender({ notes: [] }));
+    await act(async () => Promise.resolve());
+    expect(result.current.editingNoteId).toBeNull();
+    await act(async () => {
+      resolveFirst(true);
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("invalidates a queued save before a parent layout effect settles the active save", async () => {
+    vi.useFakeTimers();
+    let currentNotes = [buildNote()];
+    let resolveFirst: (value: boolean) => void = () => {};
+    const firstSave = new Promise<boolean>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const onSave = vi
+      .fn<(noteId: string, input: { title: string | null; body: string }) => Promise<boolean>>()
+      .mockImplementationOnce(() => firstSave)
+      .mockResolvedValue(true);
+    const Wrapper = ({ children }: { children: ReactNode }) => {
+      const editedNoteIsMissing = currentNotes.length === 0;
+      useLayoutEffect(() => {
+        if (editedNoteIsMissing) resolveFirst(true);
+      }, [editedNoteIsMissing]);
+      return children;
+    };
+    const { result, rerender } = renderHook(
+      () => useNoteAutoSave({ notes: currentNotes, onSave }),
+      { wrapper: Wrapper },
+    );
+
+    await act(async () => result.current.beginEdit(currentNotes[0]!));
+    act(() => result.current.changeEditingBody("first"));
+    await act(async () => vi.advanceTimersByTimeAsync(700));
+    act(() => result.current.changeEditingBody("queued"));
+    await act(async () => vi.advanceTimersByTimeAsync(700));
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    currentNotes = [];
+    act(() => rerender());
+    await act(async () => Promise.resolve());
+
+    expect(result.current.editingNoteId).toBeNull();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses a queued save when finishEdit flushes the same body", async () => {
+    vi.useFakeTimers();
+    let resolveFirst: (value: boolean) => void = () => {};
+    const firstSave = new Promise<boolean>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const onSave = vi
+      .fn<(noteId: string, input: { title: string | null; body: string }) => Promise<boolean>>()
+      .mockImplementationOnce(() => firstSave)
+      .mockResolvedValue(true);
+    const note = buildNote();
+    const { result } = renderHook(() => useNoteAutoSave({ notes: [note], onSave }));
+
+    await act(async () => result.current.beginEdit(note));
+    act(() => result.current.changeEditingBody("first"));
+    await act(async () => vi.advanceTimersByTimeAsync(700));
+    act(() => result.current.changeEditingBody("queued"));
+    await act(async () => vi.advanceTimersByTimeAsync(700));
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    let finishPromise: Promise<boolean> | undefined;
+    act(() => {
+      finishPromise = result.current.finishEdit();
+    });
+    resolveFirst(true);
+    await act(async () => finishPromise);
+
+    expect(onSave).toHaveBeenCalledTimes(2);
+    expect(onSave).toHaveBeenNthCalledWith(2, "note-1", {
+      title: null,
+      body: "queued",
+    });
+    expect(result.current.editingNoteId).toBeNull();
+  });
+
+  it("flushes an optimistic created note before it appears in the notes list", async () => {
+    const onSave = vi.fn(async () => true);
+    const note = buildNote({ id: "new-note", body: "" });
+    const { result } = renderHook(() => useNoteAutoSave({ notes: [], onSave }));
+
+    act(() => {
+      result.current.forceStartEditing(note);
+      result.current.changeEditingBody("optimistic draft");
+    });
+    await act(async () => result.current.finishEdit());
+
+    expect(onSave).toHaveBeenCalledWith("new-note", {
+      title: null,
+      body: "optimistic draft",
+    });
+  });
+
   it("does not restore stale editing state when a deleted note id reappears", async () => {
     vi.useFakeTimers();
     const onSave = vi.fn(async () => true);
@@ -337,7 +547,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(note);
     });
     act(() => {
-      result.current.setEditingBody("stale draft");
+      result.current.changeEditingBody("stale draft");
     });
 
     act(() => {
@@ -363,7 +573,7 @@ describe("useNoteAutoSave", () => {
       await result.current.beginEdit(note);
     });
     act(() => {
-      result.current.setEditingBody("never saved");
+      result.current.changeEditingBody("never saved");
     });
 
     unmount();
@@ -372,5 +582,39 @@ describe("useNoteAutoSave", () => {
       vi.advanceTimersByTime(5000);
     });
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("does not cancel an already-started save on unmount", async () => {
+    vi.useFakeTimers();
+    let resolveFirst: (value: boolean) => void = () => {};
+    const firstSave = new Promise<boolean>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const onSave = vi
+      .fn<(noteId: string, input: { title: string | null; body: string }) => Promise<boolean>>()
+      .mockImplementationOnce(() => firstSave);
+    const note = buildNote();
+    const { result, unmount } = renderHook(() => useNoteAutoSave({ notes: [note], onSave }));
+
+    await act(async () => {
+      await result.current.beginEdit(note);
+    });
+    act(() => {
+      result.current.changeEditingBody("first");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    unmount();
+    await act(async () => {
+      resolveFirst(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 });

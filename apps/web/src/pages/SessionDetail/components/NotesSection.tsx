@@ -50,7 +50,7 @@ export const NotesSection = memo(({ state, actions }: NotesSectionProps) => {
   const {
     editingNoteId,
     editingBody,
-    setEditingBody,
+    changeEditingBody,
     beginEdit: autoSaveBeginEdit,
     finishEdit: autoSaveFinishEdit,
     guardToggleClose,
@@ -238,7 +238,7 @@ export const NotesSection = memo(({ state, actions }: NotesSectionProps) => {
                 onCopyNote={handleCopyNote}
                 onOpenDeleteDialog={openDeleteDialog}
                 onBeginEdit={beginEdit}
-                onSetEditingBody={setEditingBody}
+                onSetEditingBody={changeEditingBody}
                 onFinishEdit={finishEdit}
                 formatPreviewBody={formatPreviewBody}
                 emptyNotePreview={EMPTY_NOTE_PREVIEW}

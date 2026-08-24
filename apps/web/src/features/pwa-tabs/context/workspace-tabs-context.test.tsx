@@ -43,6 +43,7 @@ const Probe = () => {
     <>
       <div data-testid="active-tab">{workspaceTabs.activeTabId}</div>
       <div data-testid="tab-order">{workspaceTabs.tabs.map((tab) => tab.id).join(",")}</div>
+      <div data-testid="tabs-enabled">{String(workspaceTabs.enabled)}</div>
       <button type="button" onClick={() => workspaceTabs.closeTab("session:pane-a")}>
         Close active tab
       </button>
@@ -129,6 +130,10 @@ const seedSessionTabs = () => {
 
 describe("WorkspaceTabsProvider", () => {
   let originalMatchMedia: PropertyDescriptor | undefined;
+  let mediaQueryMatches: boolean;
+  let mediaQueryChangeListeners: Set<EventListenerOrEventListenerObject>;
+  let mediaQueryAddEventListener: ReturnType<typeof vi.fn>;
+  let mediaQueryRemoveEventListener: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     navigateMock.mockClear();
@@ -136,13 +141,31 @@ describe("WorkspaceTabsProvider", () => {
     sessionStreamState.connected = false;
     localStorage.clear();
     originalMatchMedia = Object.getOwnPropertyDescriptor(window, "matchMedia");
+    mediaQueryMatches = true;
+    mediaQueryChangeListeners = new Set();
+    mediaQueryAddEventListener = vi.fn(
+      (type: string, listener: EventListenerOrEventListenerObject) => {
+        if (type === "change") {
+          mediaQueryChangeListeners.add(listener);
+        }
+      },
+    );
+    mediaQueryRemoveEventListener = vi.fn(
+      (type: string, listener: EventListenerOrEventListenerObject) => {
+        if (type === "change") {
+          mediaQueryChangeListeners.delete(listener);
+        }
+      },
+    );
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
-      value: vi.fn().mockReturnValue({
-        matches: true,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-      }),
+      value: vi.fn().mockImplementation(() => ({
+        get matches() {
+          return mediaQueryMatches;
+        },
+        addEventListener: mediaQueryAddEventListener,
+        removeEventListener: mediaQueryRemoveEventListener,
+      })),
     });
   });
 
@@ -169,6 +192,81 @@ describe("WorkspaceTabsProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close active tab" }));
 
     expect(navigateMock).toHaveBeenCalledWith({ href: "/" });
+  });
+
+  it("tracks display environment events through a primitive external-store snapshot", () => {
+    const view = render(
+      <WorkspaceTabsProvider>
+        <Probe />
+      </WorkspaceTabsProvider>,
+    );
+
+    expect(screen.getByTestId("tabs-enabled").textContent).toBe("true");
+
+    mediaQueryMatches = false;
+    act(() => {
+      window.dispatchEvent(new Event("pageshow"));
+    });
+    expect(screen.getByTestId("tabs-enabled").textContent).toBe("false");
+
+    mediaQueryMatches = true;
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(screen.getByTestId("tabs-enabled").textContent).toBe("true");
+
+    mediaQueryMatches = false;
+    act(() => {
+      mediaQueryChangeListeners.forEach((listener) => {
+        if (typeof listener === "function") {
+          listener(new Event("change"));
+        } else {
+          listener.handleEvent(new Event("change"));
+        }
+      });
+    });
+    expect(screen.getByTestId("tabs-enabled").textContent).toBe("false");
+
+    view.unmount();
+    expect(mediaQueryChangeListeners.size).toBe(0);
+  });
+
+  it("keeps one active display-environment subscription during StrictMode replay", () => {
+    const windowAddEventListener = vi.spyOn(window, "addEventListener");
+    const windowRemoveEventListener = vi.spyOn(window, "removeEventListener");
+    const view = render(
+      <StrictMode>
+        <WorkspaceTabsProvider>
+          <Probe />
+        </WorkspaceTabsProvider>
+      </StrictMode>,
+    );
+
+    const countActiveWindowListeners = (type: "pageshow" | "focus") => {
+      const active = new Set<EventListenerOrEventListenerObject>();
+      windowAddEventListener.mock.calls.forEach(([eventType, listener]) => {
+        if (eventType === type) {
+          active.add(listener);
+        }
+      });
+      windowRemoveEventListener.mock.calls.forEach(([eventType, listener]) => {
+        if (eventType === type) {
+          active.delete(listener);
+        }
+      });
+      return active.size;
+    };
+
+    expect(mediaQueryChangeListeners.size).toBe(1);
+    expect(countActiveWindowListeners("pageshow")).toBe(1);
+    expect(countActiveWindowListeners("focus")).toBe(1);
+
+    view.unmount();
+    expect(mediaQueryChangeListeners.size).toBe(0);
+    expect(countActiveWindowListeners("pageshow")).toBe(0);
+    expect(countActiveWindowListeners("focus")).toBe(0);
+    expect(mediaQueryAddEventListener).toHaveBeenCalled();
+    expect(mediaQueryRemoveEventListener).toHaveBeenCalled();
   });
 
   it("persists a StrictMode transition once and skips no-op transition writes", async () => {

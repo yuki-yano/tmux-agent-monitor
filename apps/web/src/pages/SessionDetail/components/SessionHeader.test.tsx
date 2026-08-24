@@ -32,11 +32,20 @@ describe("SessionHeader", () => {
       routeTree: rootRoute.addChildren([indexRoute]),
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
-    return render(
+    const renderResult = render(
       <RouterContextProvider router={router}>
         <ThemeProvider>{ui}</ThemeProvider>
       </RouterContextProvider>,
     );
+    return {
+      ...renderResult,
+      rerenderWithRouter: (nextUi: ReactNode) =>
+        renderResult.rerender(
+          <RouterContextProvider router={router}>
+            <ThemeProvider>{nextUi}</ThemeProvider>
+          </RouterContextProvider>,
+        ),
+    };
   };
 
   type SessionHeaderState = Parameters<typeof SessionHeader>[0]["state"];
@@ -157,8 +166,11 @@ describe("SessionHeader", () => {
 
     renderWithRouter(<SessionHeader state={state} actions={actions} />);
 
-    const input = screen.getByLabelText("Custom session title");
+    const input = screen.getByLabelText("Custom session title") as HTMLInputElement;
     expect(input.className).toContain("font-ident");
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
     fireEvent.change(input, { target: { value: "Updated Title" } });
     expect(onTitleDraftChange).toHaveBeenCalledWith("Updated Title");
 
@@ -167,6 +179,25 @@ describe("SessionHeader", () => {
 
     fireEvent.keyDown(input, { key: "Escape" });
     expect(onCloseTitleEditor).toHaveBeenCalled();
+  });
+
+  it("does not select the title again during an unrelated rerender", () => {
+    const session = createSessionDetail({ customTitle: "Custom Title" });
+    const state = buildState({ session, titleDraft: "Custom Title", titleEditing: true });
+    const actions = buildActions();
+    const { rerenderWithRouter } = renderWithRouter(
+      <SessionHeader state={state} actions={actions} />,
+    );
+    const input = screen.getByLabelText("Custom session title") as HTMLInputElement;
+    input.setSelectionRange(3, 3);
+
+    rerenderWithRouter(
+      <SessionHeader state={{ ...state, nowMs: state.nowMs + 1000 }} actions={actions} />,
+    );
+
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(3);
   });
 
   it("calls touch handler when pin button is pressed", () => {

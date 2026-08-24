@@ -4,6 +4,7 @@ import { Provider as JotaiProvider, createStore } from "jotai";
 import type { ReactNode, SetStateAction } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import {
   type ScreenLoadingEvent,
   type ScreenMode,
@@ -406,6 +407,65 @@ describe("useScreenFetch", () => {
 
     expect(requestScreen).toHaveBeenCalledTimes(2);
     expect(result.current.pollingPauseReason).toBeNull();
+  });
+
+  it("does not poll while offline and requests once when connectivity resumes", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const { result, requestScreen } = setup();
+
+    await act(async () => {});
+    expect(requestScreen).toHaveBeenCalledTimes(1);
+    requestScreen.mockClear();
+
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+      vi.advanceTimersByTime(2000);
+    });
+    expect(requestScreen).not.toHaveBeenCalled();
+    expect(result.current.pollingPauseReason).toBe("offline");
+
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(requestScreen).toHaveBeenCalledTimes(1);
+    expect(result.current.pollingPauseReason).toBeNull();
+  });
+
+  it("does not request on browser events while disconnected or unauthorized", async () => {
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const disconnected = setup({ connected: false, connectionIssue: null });
+    const unauthorized = setup({ connectionIssue: API_ERROR_MESSAGES.unauthorized });
+
+    await waitFor(() => {
+      expect(unauthorized.requestScreen).toHaveBeenCalledTimes(1);
+    });
+    disconnected.requestScreen.mockClear();
+    unauthorized.requestScreen.mockClear();
+
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+      document.dispatchEvent(new Event("visibilitychange"));
+      window.dispatchEvent(new Event("focus"));
+    });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+      document.dispatchEvent(new Event("visibilitychange"));
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(disconnected.requestScreen).not.toHaveBeenCalled();
+    expect(unauthorized.requestScreen).not.toHaveBeenCalled();
+    expect(disconnected.result.current.pollingPauseReason).toBe("disconnected");
+    expect(unauthorized.result.current.pollingPauseReason).toBe("unauthorized");
   });
 
   it("resets loading and sets disconnected error when disconnected without issue", async () => {

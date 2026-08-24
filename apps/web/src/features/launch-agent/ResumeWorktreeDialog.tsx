@@ -1,7 +1,7 @@
 import type { LaunchConfig, SessionSummary, WorktreeListEntry } from "@vde-monitor/shared";
 import { GitBranch } from "lucide-react";
 import type { Dispatch, FormEvent } from "react";
-import { useEffect, useMemo, useReducer, useRef } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 
 import {
   Dialog,
@@ -77,7 +77,6 @@ type ResumeWorktreeFormState = {
 };
 
 type ResumeWorktreeFormAction =
-  | { type: "reset"; state: ResumeWorktreeFormState }
   | { type: "setOverrideAgentOptions"; overrideAgentOptions: boolean }
   | { type: "setAgentOptionsText"; agentOptionsText: string }
   | { type: "setSelectedWorktreePath"; selectedWorktreePath: string }
@@ -124,8 +123,6 @@ const resumeWorktreeFormReducer = (
   action: ResumeWorktreeFormAction,
 ): ResumeWorktreeFormState => {
   switch (action.type) {
-    case "reset":
-      return action.state;
     case "setOverrideAgentOptions":
       return { ...state, overrideAgentOptions: action.overrideAgentOptions };
     case "setAgentOptionsText":
@@ -140,7 +137,7 @@ const resumeWorktreeFormReducer = (
       return { ...state, sessionIdOverride: action.sessionIdOverride };
     case "syncTargetWorktrees": {
       if (action.targetWorktrees.length === 0) {
-        return { ...state, selectedWorktreePath: "" };
+        return state.selectedWorktreePath === "" ? state : { ...state, selectedWorktreePath: "" };
       }
       if (action.targetWorktrees.some((entry) => entry.path === state.selectedWorktreePath)) {
         return state;
@@ -193,6 +190,7 @@ type ResumeWorktreeDialogBodyProps = {
   worktreeRepoRoot: string | null;
   existingWorktreeOptions: ResumeWorktreeOption[];
   launchOptionsDefaultOneLine: string;
+  resolvedSelectedWorktreePath: string;
   state: ResumeWorktreeFormState;
   dispatch: Dispatch<ResumeWorktreeFormAction>;
   className?: string;
@@ -210,6 +208,7 @@ const ResumeWorktreeDialogBody = ({
   worktreeRepoRoot,
   existingWorktreeOptions,
   launchOptionsDefaultOneLine,
+  resolvedSelectedWorktreePath,
   state,
   dispatch,
   className,
@@ -219,7 +218,6 @@ const ResumeWorktreeDialogBody = ({
   const {
     overrideAgentOptions,
     agentOptionsText,
-    selectedWorktreePath,
     resumeTarget,
     sourcePaneId,
     sessionIdOverride,
@@ -418,7 +416,7 @@ const ResumeWorktreeDialogBody = ({
                     name={`resume-worktree-${sessionName}`}
                     className="pr-1"
                     optionClassName="py-1.5"
-                    value={selectedWorktreePath}
+                    value={resolvedSelectedWorktreePath}
                     onValueChange={(nextPath) =>
                       dispatch({
                         type: "setSelectedWorktreePath",
@@ -480,8 +478,9 @@ const ResumeWorktreeDialogBody = ({
   );
 };
 
-export const ResumeWorktreeDialog = ({
-  open,
+type ResumeWorktreeDialogOpenContentProps = Omit<ResumeWorktreeDialogProps, "open">;
+
+const ResumeWorktreeDialogOpenContent = ({
   onOpenChange,
   sessionName,
   sourceSession,
@@ -490,8 +489,7 @@ export const ResumeWorktreeDialog = ({
   worktreeRepoRoot,
   onLaunchAgentInSession,
   className,
-}: ResumeWorktreeDialogProps) => {
-  const initializedForOpenRef = useRef(false);
+}: ResumeWorktreeDialogOpenContentProps) => {
   const inheritedAgent: "codex" | "claude" = sourceSession.agent === "claude" ? "claude" : "codex";
   const isClaudeAgent = inheritedAgent === "claude";
 
@@ -518,8 +516,19 @@ export const ResumeWorktreeDialog = ({
     () => (launchConfig.agents[inheritedAgent]?.options ?? []).join(" "),
     [inheritedAgent, launchConfig],
   );
-  const [formState, dispatchFormState] = useReducer(resumeWorktreeFormReducer, undefined, () =>
-    buildResumeWorktreeFormState(sourceSession, targetWorktrees, launchOptionsDefaultText),
+  const [formState, dispatchFormState] = useReducer(
+    resumeWorktreeFormReducer,
+    { sourceSession, targetWorktrees, launchOptionsDefaultText },
+    ({
+      sourceSession: initialSourceSession,
+      targetWorktrees: initialTargetWorktrees,
+      launchOptionsDefaultText: initialLaunchOptionsDefaultText,
+    }) =>
+      buildResumeWorktreeFormState(
+        initialSourceSession,
+        initialTargetWorktrees,
+        initialLaunchOptionsDefaultText,
+      ),
   );
 
   const {
@@ -530,21 +539,6 @@ export const ResumeWorktreeDialog = ({
     sourcePaneId,
     sessionIdOverride,
   } = formState;
-
-  useEffect(() => {
-    if (!open) {
-      initializedForOpenRef.current = false;
-      return;
-    }
-    if (initializedForOpenRef.current) {
-      return;
-    }
-    initializedForOpenRef.current = true;
-    dispatchFormState({
-      type: "reset",
-      state: buildResumeWorktreeFormState(sourceSession, targetWorktrees, launchOptionsDefaultText),
-    });
-  }, [launchOptionsDefaultText, open, sourceSession, targetWorktrees]);
 
   const selectedWorktree = useMemo(
     () => targetWorktrees.find((entry) => entry.path === selectedWorktreePath) ?? null,
@@ -578,18 +572,19 @@ export const ResumeWorktreeDialog = ({
   }, [targetWorktrees, worktreeRepoRoot]);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
     dispatchFormState({
       type: "syncTargetWorktrees",
       targetWorktrees,
       defaultWorktreePath: sourceSession.worktreePath?.trim(),
     });
-  }, [open, sourceSession.worktreePath, targetWorktrees]);
+  }, [sourceSession.worktreePath, targetWorktrees]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+    selectedWorktree: WorktreeListEntry | null,
+  ) => {
     event.preventDefault();
+    const submissionForm = event.currentTarget;
 
     let parsedOptions: string[] | undefined;
     if (overrideAgentOptions) {
@@ -661,7 +656,7 @@ export const ResumeWorktreeDialog = ({
     dispatchFormState({ type: "startSubmitting" });
     try {
       const launchResult = await onLaunchAgentInSession(sessionName, inheritedAgent, launchOptions);
-      if (isFailedLaunchResponse(launchResult)) {
+      if (submissionForm.isConnected && isFailedLaunchResponse(launchResult)) {
         const requiredReason = launchResult.resume?.failureReason;
         const requiredReasonMessages = isClaudeAgent
           ? CLAUDE_REQUIRED_REASON_MESSAGE
@@ -675,42 +670,59 @@ export const ResumeWorktreeDialog = ({
         });
         return;
       }
-      dispatchFormState({ type: "finishSubmitting" });
-      onOpenChange(false);
+      if (submissionForm.isConnected) {
+        dispatchFormState({ type: "finishSubmitting" });
+        onOpenChange(false);
+      }
     } catch {
-      dispatchFormState({
-        type: "finishSubmitting",
-        submitError: "Failed to launch the agent.",
-      });
+      if (submissionForm.isConnected) {
+        dispatchFormState({
+          type: "finishSubmitting",
+          submitError: "Failed to launch the agent.",
+        });
+      }
     }
   };
 
   return (
+    <DialogContent className="top-[50%] flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-3rem)] w-[min(760px,calc(100vw-1rem))] max-w-none translate-y-[-50%] flex-col overflow-hidden sm:w-[min(760px,calc(100vw-1.5rem))]">
+      <DialogHeader>
+        <DialogTitle>Resume / Move Worktree</DialogTitle>
+        <DialogDescription>
+          Session <span className="font-mono">{sessionName}</span>
+        </DialogDescription>
+      </DialogHeader>
+      <ResumeWorktreeDialogBody
+        sessionName={sessionName}
+        sourceSession={sourceSession}
+        inheritedAgent={inheritedAgent}
+        hasSourcePane={hasSourcePane}
+        selectedWorktree={selectedWorktree}
+        selectedWorktreeRelativePath={selectedWorktreeRelativePath}
+        worktreeRepoRoot={worktreeRepoRoot}
+        existingWorktreeOptions={existingWorktreeOptions}
+        launchOptionsDefaultOneLine={launchOptionsDefaultOneLine}
+        resolvedSelectedWorktreePath={selectedWorktreePath}
+        state={formState}
+        dispatch={dispatchFormState}
+        className={className}
+        onSubmit={(event) => handleSubmit(event, selectedWorktree)}
+        onCancel={() => onOpenChange(false)}
+      />
+    </DialogContent>
+  );
+};
+
+export const ResumeWorktreeDialog = ({
+  open,
+  onOpenChange,
+  ...openContentProps
+}: ResumeWorktreeDialogProps) => {
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="top-[50%] flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-3rem)] w-[min(760px,calc(100vw-1rem))] max-w-none translate-y-[-50%] flex-col overflow-hidden sm:w-[min(760px,calc(100vw-1.5rem))]">
-        <DialogHeader>
-          <DialogTitle>Resume / Move Worktree</DialogTitle>
-          <DialogDescription>
-            Session <span className="font-mono">{sessionName}</span>
-          </DialogDescription>
-        </DialogHeader>
-        <ResumeWorktreeDialogBody
-          sessionName={sessionName}
-          sourceSession={sourceSession}
-          inheritedAgent={inheritedAgent}
-          hasSourcePane={hasSourcePane}
-          selectedWorktree={selectedWorktree}
-          selectedWorktreeRelativePath={selectedWorktreeRelativePath}
-          worktreeRepoRoot={worktreeRepoRoot}
-          existingWorktreeOptions={existingWorktreeOptions}
-          launchOptionsDefaultOneLine={launchOptionsDefaultOneLine}
-          state={formState}
-          dispatch={dispatchFormState}
-          className={className}
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-        />
-      </DialogContent>
+      {open ? (
+        <ResumeWorktreeDialogOpenContent {...openContentProps} onOpenChange={onOpenChange} />
+      ) : null}
     </Dialog>
   );
 };

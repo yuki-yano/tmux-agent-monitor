@@ -31,7 +31,6 @@ type SmartScreenViewportProps = {
   isAtBottom: boolean;
   shouldFollowOutput: boolean;
   onAtBottomChange: (value: boolean) => void;
-  onRangeChanged: (range: { startIndex: number; endIndex: number }) => void;
   scrollerRef: RefObject<HTMLDivElement | null>;
   onScrollToBottom: (behavior: "auto" | "smooth") => void;
   onUserScrollStateChange: (value: boolean) => void;
@@ -66,7 +65,6 @@ export const SmartScreenViewport = ({
   isAtBottom,
   shouldFollowOutput,
   onAtBottomChange,
-  onRangeChanged,
   scrollerRef,
   onScrollToBottom,
   onUserScrollStateChange,
@@ -95,13 +93,6 @@ export const SmartScreenViewport = ({
       };
     });
   }, [decoratedLines]);
-
-  useEffect(() => {
-    if (lines.length === 0) {
-      return;
-    }
-    onRangeChanged({ startIndex: 0, endIndex: lines.length - 1 });
-  }, [lines.length, onRangeChanged]);
 
   useLayoutEffect(() => {
     if (!shouldFollowOutput) {

@@ -34,6 +34,7 @@ const readRequestUrl = (input: RequestInfo | URL): string => {
 const installPushSubscription = () => {
   const subscription = {
     endpoint: "https://push.example/subscription",
+    unsubscribe: vi.fn().mockResolvedValue(true),
     toJSON: () => ({
       endpoint: "https://push.example/subscription",
       expirationTime: null,
@@ -482,5 +483,31 @@ describe("usePushNotifications", () => {
     expect(result.current.isPaneEnabled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(readPostedPaneIds(fetchMock)).toEqual([["%1"]]);
+  });
+
+  it("revokes the latest subscription immediately after subscribing", async () => {
+    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    vi.stubGlobal("PushManager", class PushManager {});
+    vi.stubGlobal("Notification", { permission: "granted" });
+    installPushSubscription();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createSettingsResponse())
+      .mockResolvedValueOnce(Response.json({ subscriptionId: "latest-subscription" }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => usePushNotifications({ paneId: "%1" }));
+    await waitFor(() => expect(result.current.isSubscribed).toBe(true));
+
+    await act(async () => {
+      await result.current.disableNotifications();
+    });
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/notifications/subscriptions/latest-subscription",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(result.current.isSubscribed).toBe(false);
   });
 });

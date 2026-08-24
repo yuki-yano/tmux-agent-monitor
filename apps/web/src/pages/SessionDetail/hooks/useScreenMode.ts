@@ -1,12 +1,5 @@
 import { useAtom } from "jotai";
-import {
-  type Dispatch,
-  type MutableRefObject,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { type Dispatch, type MutableRefObject, useCallback, useLayoutEffect, useRef } from "react";
 
 import type { ScreenLoadingEvent, ScreenMode } from "@/lib/screen-loading";
 
@@ -35,32 +28,34 @@ export const useScreenMode = ({
   const [modeLoaded, setModeLoaded] = useAtom(screenModeLoadedAtom);
   const modeLoadedRef = useRef(modeLoaded);
 
-  useEffect(() => {
-    modeLoadedRef.current = modeLoaded;
-  }, [modeLoaded]);
+  const updateModeLoaded = useCallback(
+    (next: typeof initialModeLoaded) => {
+      modeLoadedRef.current = next;
+      setModeLoaded(next);
+    },
+    [setModeLoaded],
+  );
 
   // Keep pane mode state in sync before useScreenFetch starts its passive request.
   useLayoutEffect(() => {
-    modeLoadedRef.current = initialModeLoaded;
     setMode("text");
-    setModeLoaded(initialModeLoaded);
-  }, [paneId, setMode, setModeLoaded]);
+    updateModeLoaded(initialModeLoaded);
+  }, [paneId, setMode, updateModeLoaded]);
 
   const markModeLoaded = useCallback(
     (value: ScreenMode) => {
-      setModeLoaded((prev) => {
-        if (prev[value]) {
-          return prev;
-        }
-        return { ...prev, [value]: true };
+      setModeLoaded((previous) => {
+        const next = previous[value] ? previous : { ...previous, [value]: true };
+        modeLoadedRef.current = next;
+        return next;
       });
     },
     [setModeLoaded],
   );
 
   const resetModeLoaded = useCallback(() => {
-    setModeLoaded(initialModeLoaded);
-  }, [setModeLoaded]);
+    updateModeLoaded(initialModeLoaded);
+  }, [updateModeLoaded]);
 
   const handleModeChange = useCallback(
     (value: ScreenMode) => {

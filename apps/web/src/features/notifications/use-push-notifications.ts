@@ -121,20 +121,13 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
   const [status, setStatus] = useState<PushUiStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [enabledPaneIds, setEnabledPaneIds] = useState<string[]>(() => readEnabledPaneIds());
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(() =>
-    localStorage.getItem(SUBSCRIPTION_ID_STORAGE_KEY),
-  );
-  const subscriptionIdRef = useRef(subscriptionId);
+  const subscriptionIdRef = useLazyRef(() => localStorage.getItem(SUBSCRIPTION_ID_STORAGE_KEY));
   const [isSubscribed, setIsSubscribed] = useState(false);
   const deviceIdRef = useLazyRef(() => readOrCreateDeviceId());
   const enabledPaneIdsRef = useRef(enabledPaneIds);
   const confirmedPaneIdsRef = useRef(enabledPaneIds);
   const paneScopePostQueueRef = useLazyRef<Promise<void>>(() => Promise.resolve());
   const paneScopeSyncVersionRef = useRef(0);
-
-  useEffect(() => {
-    subscriptionIdRef.current = subscriptionId;
-  }, [subscriptionId, subscriptionIdRef]);
 
   const apiBasePath = useMemo(() => {
     const normalized = apiBaseUrl?.trim();
@@ -234,7 +227,6 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
       if (data.subscriptionId) {
         localStorage.setItem(SUBSCRIPTION_ID_STORAGE_KEY, data.subscriptionId);
         subscriptionIdRef.current = data.subscriptionId;
-        setSubscriptionId(data.subscriptionId);
       }
       setErrorMessage(null);
       setStatus("subscribed");
@@ -319,7 +311,6 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
         if (!isCurrent()) return;
         localStorage.removeItem(SUBSCRIPTION_ID_STORAGE_KEY);
         subscriptionIdRef.current = null;
-        setSubscriptionId(null);
         setIsSubscribed(false);
         setStatus("idle");
         return;
@@ -342,7 +333,6 @@ export const usePushNotifications = ({ paneId }: UsePushNotificationsArgs) => {
         if (isCurrent()) {
           localStorage.removeItem(SUBSCRIPTION_ID_STORAGE_KEY);
           subscriptionIdRef.current = null;
-          setSubscriptionId(null);
           setIsSubscribed(false);
           setStatus("idle");
         }
