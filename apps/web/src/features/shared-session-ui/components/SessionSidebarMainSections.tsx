@@ -1,12 +1,19 @@
-import { Link } from "@tanstack/react-router";
-import { memo } from "react";
+import { Link, useRouter } from "@tanstack/react-router";
+import { useStore } from "jotai";
+import { type UIEvent, memo, useCallback, useRef } from "react";
 
 import { FilterToggleGroup, TagPill } from "@/components/ui";
+import {
+  SIDEBAR_LIST_SCROLL_RESTORATION_ID,
+  sidebarListNavigationPendingAtom,
+  sidebarListScrollTopAtom,
+} from "@/features/shared-session-ui/atoms/sidebarUiAtoms";
 import {
   DEFAULT_SESSION_LIST_FILTER,
   SESSION_LIST_FILTER_VALUES,
   type SessionListFilter,
 } from "@/features/shared-session-ui/model/session-list-filters";
+import { useLazyRef } from "@/lib/use-lazy-ref";
 import type { LaunchConfig, WorktreeList } from "@vde-monitor/shared";
 
 import type { SidebarRepoGroup } from "../hooks/useSessionSidebarGroups";
@@ -116,34 +123,78 @@ type SessionSidebarListSectionProps = {
   list: SessionSidebarListSectionViewModel;
 };
 
-const SessionSidebarListSection = ({ list }: SessionSidebarListSectionProps) => (
-  <div
-    className="custom-scrollbar -mr-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-2"
-    onScroll={list.onListScroll}
-  >
-    <SessionSidebarGroupList
-      sidebarGroups={list.sidebarGroups}
-      sidebarWidth={list.sidebarWidth}
-      nowMs={list.nowMs}
-      currentPaneId={list.currentPaneId}
-      focusPendingPaneIds={list.focusPendingPaneIds}
-      launchPendingSessions={list.launchPendingSessions}
-      launchConfig={list.launchConfig}
-      launchAgentAvailable={list.launchAgentAvailable}
-      requestWorktrees={list.requestWorktrees}
-      onHoverStart={list.onHoverStart}
-      onHoverEnd={list.onHoverEnd}
-      onFocus={list.onFocus}
-      onBlur={list.onBlur}
-      onSelect={list.onSelect}
-      onFocusPane={list.onFocusPane}
-      onLaunchAgentInSession={list.onLaunchAgentInSession}
-      onTouchSession={list.onTouchSession}
-      onTouchRepoPin={list.onTouchRepoPin}
-      registerItemRef={list.registerItemRef}
-    />
-  </div>
-);
+const SessionSidebarListSection = ({ list }: SessionSidebarListSectionProps) => {
+  const store = useStore();
+  const router = useRouter();
+  const initialScrollTopRef = useLazyRef(() => store.get(sidebarListScrollTopAtom));
+  const restoringScrollRef = useRef(true);
+  const restoreScrollTop = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node) {
+        const scrollTop = initialScrollTopRef.current;
+        node.scrollTop = scrollTop;
+        requestAnimationFrame(() => {
+          // TanStack Router restores destination scroll after descendants mount. Re-apply the
+          // browser-lifetime sidebar position once that navigation lifecycle has completed.
+          if (node.isConnected) {
+            node.scrollTop = scrollTop;
+            restoringScrollRef.current = false;
+          }
+        });
+      }
+    },
+    [initialScrollTopRef, restoringScrollRef],
+  );
+  const handleScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      list.onListScroll();
+      // Router navigation also emits scroll events while replacing/restoring the destination.
+      // Keep those lifecycle writes from overwriting the browser-lifetime sidebar position.
+      if (
+        store.get(sidebarListNavigationPendingAtom) ||
+        router.state.status === "pending" ||
+        (restoringScrollRef.current &&
+          initialScrollTopRef.current > 0 &&
+          event.currentTarget.scrollTop === 0)
+      ) {
+        return;
+      }
+      store.set(sidebarListScrollTopAtom, event.currentTarget.scrollTop);
+    },
+    [initialScrollTopRef, list, restoringScrollRef, router, store],
+  );
+
+  return (
+    <div
+      ref={restoreScrollTop}
+      data-scroll-restoration-id={SIDEBAR_LIST_SCROLL_RESTORATION_ID}
+      className="custom-scrollbar -mr-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-2"
+      onScroll={handleScroll}
+    >
+      <SessionSidebarGroupList
+        sidebarGroups={list.sidebarGroups}
+        sidebarWidth={list.sidebarWidth}
+        nowMs={list.nowMs}
+        currentPaneId={list.currentPaneId}
+        focusPendingPaneIds={list.focusPendingPaneIds}
+        launchPendingSessions={list.launchPendingSessions}
+        launchConfig={list.launchConfig}
+        launchAgentAvailable={list.launchAgentAvailable}
+        requestWorktrees={list.requestWorktrees}
+        onHoverStart={list.onHoverStart}
+        onHoverEnd={list.onHoverEnd}
+        onFocus={list.onFocus}
+        onBlur={list.onBlur}
+        onSelect={list.onSelect}
+        onFocusPane={list.onFocusPane}
+        onLaunchAgentInSession={list.onLaunchAgentInSession}
+        onTouchSession={list.onTouchSession}
+        onTouchRepoPin={list.onTouchRepoPin}
+        registerItemRef={list.registerItemRef}
+      />
+    </div>
+  );
+};
 
 type SessionSidebarMainSectionsProps = {
   viewModel: SessionSidebarMainSectionsViewModel;

@@ -7,9 +7,15 @@ import type {
   SessionStateTimelineScope,
   WorktreeList,
 } from "@vde-monitor/shared";
+import { useStore } from "jotai";
 import { memo, useCallback } from "react";
 
 import { Card } from "@/components/ui";
+import {
+  SIDEBAR_LIST_SCROLL_RESTORATION_ID,
+  sidebarListNavigationPendingAtom,
+  sidebarListScrollTopAtom,
+} from "@/features/shared-session-ui/atoms/sidebarUiAtoms";
 import { SessionSidebarMainSections } from "@/features/shared-session-ui/components/SessionSidebarMainSections";
 import { SessionSidebarPreviewPopover } from "@/features/shared-session-ui/components/SessionSidebarPreviewPopover";
 import type { SessionSidebarMainSectionsViewModel } from "@/features/shared-session-ui/components/SessionSidebarMainSections";
@@ -73,6 +79,7 @@ const SidebarBackdrop = memo(() => (
 SidebarBackdrop.displayName = "SidebarBackdrop";
 
 export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
+  const store = useStore();
   const {
     sessionGroups,
     getRepoSortAnchorAt,
@@ -139,10 +146,20 @@ export const SessionSidebar = ({ state, actions }: SessionSidebarProps) => {
 
   const handleSelect = useCallback(
     (paneId: string) => {
+      const listElement = document.querySelector<HTMLElement>(
+        `[data-scroll-restoration-id="${SIDEBAR_LIST_SCROLL_RESTORATION_ID}"]`,
+      );
+      if (listElement) {
+        store.set(sidebarListScrollTopAtom, listElement.scrollTop);
+      }
+      store.set(sidebarListNavigationPendingAtom, true);
       handleSelectSession(paneId);
       handlePreviewSelect();
+      requestAnimationFrame(() => {
+        store.set(sidebarListNavigationPendingAtom, false);
+      });
     },
-    [handlePreviewSelect, handleSelectSession],
+    [handlePreviewSelect, handleSelectSession, store],
   );
   const mainSectionsViewModel: SessionSidebarMainSectionsViewModel = {
     header: {

@@ -114,6 +114,7 @@ export const useSessionTimeline = ({
   } = state;
   const previousConnectedRef = useRef<boolean | null>(null);
   const activePaneIdRef = useRef(paneId);
+  const paneStateKeyRef = useRef(`${paneId}\0${mobileDefaultCollapsed}`);
   const timelineRequestIdRef = useRef(0);
   const pendingInteractiveLoadsRef = useRef(0);
   const [scopeAvailability, setScopeAvailability] = useState(() => ({
@@ -138,6 +139,10 @@ export const useSessionTimeline = ({
   }
   useLayoutEffect(() => {
     activePaneIdRef.current = paneId;
+    return () => {
+      activePaneIdRef.current = "";
+      timelineRequestIdRef.current += 1;
+    };
   }, [paneId]);
   const timelineScope = currentScopeAvailability.downgraded ? DEFAULT_SCOPE : storedTimelineScope;
 
@@ -188,8 +193,16 @@ export const useSessionTimeline = ({
   );
 
   useEffect(() => {
+    const paneStateKey = `${paneId}\0${mobileDefaultCollapsed}`;
     void loadTimeline();
-  }, [loadTimeline]);
+    if (paneStateKeyRef.current !== paneStateKey) {
+      // Preserve the legacy direct-prop fallback: a pane switch clears stale data without
+      // flashing the loading state. Production pane changes remount at SessionDetailProvider.
+      paneStateKeyRef.current = paneStateKey;
+      pendingInteractiveLoadsRef.current = 0;
+      dispatch({ type: "resetPane", expanded: !mobileDefaultCollapsed });
+    }
+  }, [loadTimeline, mobileDefaultCollapsed, paneId]);
 
   useEffect(() => {
     if (previousConnectedRef.current === false && connected) {
@@ -197,11 +210,6 @@ export const useSessionTimeline = ({
     }
     previousConnectedRef.current = connected;
   }, [connected, loadTimeline]);
-
-  useEffect(() => {
-    pendingInteractiveLoadsRef.current = 0;
-    dispatch({ type: "resetPane", expanded: !mobileDefaultCollapsed });
-  }, [mobileDefaultCollapsed, paneId]);
 
   const pollTimeline = useCallback(() => {
     void loadTimeline({ silent: true });

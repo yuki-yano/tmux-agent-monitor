@@ -22,7 +22,9 @@ import { resolveSessionFileRoot } from "./sessionDetailUtils";
 // checkout has to refresh diffs/commits/worktrees together).
 // Sections backed by an independent, single-consumer subhook (notes, title)
 // call that subhook directly at their point of use instead of storing it here.
-const useSessionDetailContextValue = (paneId: string) => {
+type PushNotifications = ReturnType<typeof usePushNotifications>;
+
+const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNotifications) => {
   const base = useSessionDetailVMState(paneId);
   useSessionDoneAcknowledgement({
     paneId,
@@ -187,8 +189,6 @@ const useSessionDetailContextValue = (paneId: string) => {
     currentRepoRoot,
   });
 
-  const pushNotifications = usePushNotifications({ paneId });
-
   // Only the fields consumers actually read are exposed here. The raw
   // checkoutBranch/createBranch/deleteBranch/selectVirtualBranch/
   // selectVirtualWorktree from the underlying subhooks are intentionally
@@ -293,9 +293,29 @@ type SessionDetailProviderProps = {
   children: ReactNode;
 };
 
-export const SessionDetailProvider = ({ paneId, children }: SessionDetailProviderProps) => {
-  const value = useSessionDetailContextValue(paneId);
+type SessionDetailPaneProviderProps = SessionDetailProviderProps & {
+  pushNotifications: PushNotifications;
+};
+
+const SessionDetailPaneProvider = ({
+  paneId,
+  children,
+  pushNotifications,
+}: SessionDetailPaneProviderProps) => {
+  const value = useSessionDetailContextValue(paneId, pushNotifications);
   return <SessionDetailContext.Provider value={value}>{children}</SessionDetailContext.Provider>;
+};
+
+export const SessionDetailProvider = ({ paneId, children }: SessionDetailProviderProps) => {
+  // Push subscription state belongs to the browser/device lifetime. Keep it outside the keyed
+  // pane lifetime so navigating A -> B -> A does not repeat settings/subscription reconciliation.
+  const pushNotifications = usePushNotifications({ paneId });
+
+  return (
+    <SessionDetailPaneProvider key={paneId} paneId={paneId} pushNotifications={pushNotifications}>
+      {children}
+    </SessionDetailPaneProvider>
+  );
 };
 
 export const useSessionDetailContext = (): SessionDetailContextValue => {

@@ -3,6 +3,35 @@ import { useEffect } from "react";
 
 const ACKNOWLEDGEMENT_RETRY_DELAYS_MS = [250, 750] as const;
 
+type AcknowledgeSessionView = (paneId: string, epoch: string, throughSeq: number) => Promise<void>;
+
+const acknowledgementRequests = new WeakMap<AcknowledgeSessionView, Map<string, Promise<void>>>();
+
+const requestAcknowledgement = (
+  acknowledgeSessionView: AcknowledgeSessionView,
+  paneId: string,
+  epoch: string,
+  completedSeq: number,
+) => {
+  let requests = acknowledgementRequests.get(acknowledgeSessionView);
+  if (!requests) {
+    requests = new Map();
+    acknowledgementRequests.set(acknowledgeSessionView, requests);
+  }
+  const key = `${paneId}\0${epoch}\0${completedSeq}`;
+  const inFlight = requests.get(key);
+  if (inFlight) {
+    return inFlight;
+  }
+  const request = acknowledgeSessionView(paneId, epoch, completedSeq).finally(() => {
+    if (requests.get(key) === request) {
+      requests.delete(key);
+    }
+  });
+  requests.set(key, request);
+  return request;
+};
+
 export const useSessionDoneAcknowledgement = ({
   paneId,
   session,
@@ -10,7 +39,7 @@ export const useSessionDoneAcknowledgement = ({
 }: {
   paneId: string;
   session: SessionDetail | null;
-  acknowledgeSessionView: (paneId: string, epoch: string, throughSeq: number) => Promise<void>;
+  acknowledgeSessionView: AcknowledgeSessionView;
 }) => {
   const completion = session?.paneId === paneId ? (session.completion ?? null) : null;
   const epoch = completion?.epoch ?? null;
@@ -43,7 +72,7 @@ export const useSessionDoneAcknowledgement = ({
         return;
       }
       inFlight = true;
-      void acknowledgeSessionView(paneId, epoch, completedSeq)
+      void requestAcknowledgement(acknowledgeSessionView, paneId, epoch, completedSeq)
         .catch(() => {
           if (cancelled || document.visibilityState !== "visible") {
             return;

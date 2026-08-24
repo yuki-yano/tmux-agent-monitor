@@ -24,8 +24,7 @@ type BranchesState = {
 };
 
 type BranchesAction =
-  | { type: "resetPane"; paneId: string }
-  | { type: "fetchStart"; resetEntries: boolean; showLoading: boolean }
+  | { type: "fetchStart"; paneId: string; resetEntries: boolean; showLoading: boolean }
   | { type: "fetchSuccess"; branchList: BranchList; showLoading: boolean }
   | { type: "fetchFailure"; error: string; resetEntries: boolean; showLoading: boolean }
   | { type: "mutationStart"; kind: BranchMutationKind; name: string }
@@ -44,9 +43,10 @@ const createInitialBranchesState = (paneId: string): BranchesState => ({
 
 const branchesReducer = (state: BranchesState, action: BranchesAction): BranchesState => {
   switch (action.type) {
-    case "resetPane":
-      return createInitialBranchesState(action.paneId);
     case "fetchStart":
+      if (state.paneId !== action.paneId) {
+        state = createInitialBranchesState(action.paneId);
+      }
       return {
         ...state,
         branchList: action.resetEntries ? null : state.branchList,
@@ -109,19 +109,22 @@ export const useSessionBranches = ({
   const { branchList, loading, error, mutating, mutationError } = currentState;
 
   useLayoutEffect(() => {
-    if (activePaneRef.current.paneId === paneId) {
-      return;
+    if (activePaneRef.current.paneId !== paneId) {
+      activePaneRef.current = {
+        paneId,
+        generation: activePaneRef.current.generation + 1,
+      };
     }
-    activePaneRef.current = {
-      paneId,
-      generation: activePaneRef.current.generation + 1,
+    const activePane = activePaneRef.current;
+    return () => {
+      if (activePaneRef.current === activePane) {
+        activePaneRef.current = {
+          paneId: "",
+          generation: activePane.generation + 1,
+        };
+        latestRequestIdRef.current += 1;
+      }
     };
-  }, [paneId]);
-
-  useEffect(() => {
-    latestRequestIdRef.current += 1;
-    hasLoadedRef.current = false;
-    dispatch({ type: "resetPane", paneId });
   }, [paneId]);
 
   const fetchBranches = useCallback(
@@ -136,6 +139,7 @@ export const useSessionBranches = ({
       }
       dispatch({
         type: "fetchStart",
+        paneId: targetPaneId,
         resetEntries: shouldReset,
         showLoading: shouldShowLoading,
       });

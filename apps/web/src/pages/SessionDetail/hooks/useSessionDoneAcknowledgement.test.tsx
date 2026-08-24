@@ -1,5 +1,6 @@
 import type { SessionDetail } from "@vde-monitor/shared";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, render, renderHook, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useSessionDoneAcknowledgement } from "./useSessionDoneAcknowledgement";
@@ -22,6 +23,19 @@ const setVisibility = (visibilityState: DocumentVisibilityState) => {
   });
 };
 
+const DoneAcknowledgementProbe = ({
+  paneId,
+  value,
+  acknowledgeSessionView,
+}: {
+  paneId: string;
+  value: SessionDetail;
+  acknowledgeSessionView: (paneId: string, epoch: string, throughSeq: number) => Promise<void>;
+}) => {
+  useSessionDoneAcknowledgement({ paneId, session: value, acknowledgeSessionView });
+  return null;
+};
+
 afterEach(() => {
   vi.useRealTimers();
   setVisibility("visible");
@@ -42,6 +56,25 @@ describe("useSessionDoneAcknowledgement", () => {
 
     await waitFor(() => {
       expect(acknowledgeSessionView).toHaveBeenCalledWith("%1", "epoch-1", 2);
+    });
+  });
+
+  it("coalesces StrictMode replay into one acknowledgement request", async () => {
+    setVisibility("visible");
+    const acknowledgeSessionView = vi.fn(async () => undefined);
+
+    renderHook(
+      () =>
+        useSessionDoneAcknowledgement({
+          paneId: "%1",
+          session: session(2, 1),
+          acknowledgeSessionView,
+        }),
+      { wrapper: StrictMode },
+    );
+
+    await waitFor(() => {
+      expect(acknowledgeSessionView).toHaveBeenCalledOnce();
     });
   });
 
@@ -239,5 +272,65 @@ describe("useSessionDoneAcknowledgement", () => {
 
     rerender({ paneId: "%2", value: session(1, 0, "epoch-2", "%2") });
     await waitFor(() => expect(acknowledgeSessionView).toHaveBeenCalledWith("%2", "epoch-2", 1));
+  });
+
+  it("bounds acknowledgement requests across keyed A to B to A remounts", async () => {
+    vi.useFakeTimers();
+    setVisibility("visible");
+    let rejectInitialPaneA: ((reason?: unknown) => void) | undefined;
+    const acknowledgeSessionView = vi.fn((paneId: string) =>
+      paneId === "%1" && acknowledgeSessionView.mock.calls.length === 1
+        ? new Promise<void>((_resolve, reject) => {
+            rejectInitialPaneA = reject;
+          })
+        : Promise.resolve(),
+    );
+    const view = render(
+      <StrictMode>
+        <DoneAcknowledgementProbe
+          key="pane-a:first"
+          paneId="%1"
+          value={session(1, 0)}
+          acknowledgeSessionView={acknowledgeSessionView}
+        />
+      </StrictMode>,
+    );
+    expect(acknowledgeSessionView).toHaveBeenCalledTimes(1);
+
+    view.rerender(
+      <StrictMode>
+        <DoneAcknowledgementProbe
+          key="pane-b"
+          paneId="%2"
+          value={session(1, 0, "epoch-2", "%2")}
+          acknowledgeSessionView={acknowledgeSessionView}
+        />
+      </StrictMode>,
+    );
+    view.rerender(
+      <StrictMode>
+        <DoneAcknowledgementProbe
+          key="pane-a:revisit"
+          paneId="%1"
+          value={session(1, 0)}
+          acknowledgeSessionView={acknowledgeSessionView}
+        />
+      </StrictMode>,
+    );
+    expect(acknowledgeSessionView.mock.calls).toEqual([
+      ["%1", "epoch-1", 1],
+      ["%2", "epoch-2", 1],
+    ]);
+
+    rejectInitialPaneA?.(new Error("obsolete request"));
+    await act(async () => {
+      await Promise.resolve();
+      await vi.runAllTimersAsync();
+    });
+    expect(acknowledgeSessionView.mock.calls).toEqual([
+      ["%1", "epoch-1", 1],
+      ["%2", "epoch-2", 1],
+      ["%1", "epoch-1", 1],
+    ]);
   });
 });

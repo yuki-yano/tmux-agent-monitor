@@ -1,6 +1,6 @@
 import type { ScreenResponse } from "@vde-monitor/shared";
-import { useAtom } from "jotai";
-import { useCallback, useEffect, useRef } from "react";
+import { useAtom, useStore } from "jotai";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveResultErrorMessage, resolveUnknownErrorMessage } from "@/lib/api-utils";
@@ -42,7 +42,31 @@ type FetchRequestArgs = {
   paneId: string;
   options: FetchOptions;
   requestId: number;
+  requestOwner: symbol;
 };
+
+type ScreenCacheStore = ReturnType<typeof useStore>;
+
+const loadingRequestOwners = new WeakMap<ScreenCacheStore, Map<string, symbol>>();
+
+const getLoadingRequestOwners = (store: ScreenCacheStore) => {
+  const existing = loadingRequestOwners.get(store);
+  if (existing) {
+    return existing;
+  }
+  const created = new Map<string, symbol>();
+  loadingRequestOwners.set(store, created);
+  return created;
+};
+
+const buildLoadingOwnerKey = (cacheKey: string, paneId: string) => `${cacheKey}\0${paneId}`;
+
+const isCurrentLoadingOwner = (
+  store: ScreenCacheStore,
+  cacheKey: string,
+  paneId: string,
+  requestOwner: symbol,
+) => getLoadingRequestOwners(store).get(buildLoadingOwnerKey(cacheKey, paneId)) === requestOwner;
 
 const shouldUseCachedResponse = ({
   cached,
@@ -92,24 +116,64 @@ export const useScreenCache = ({
   const [cache, setCache] = useAtom(getScreenCacheAtom(cacheKey));
   const [loading, setLoading] = useAtom(getScreenCacheLoadingAtom(cacheKey));
   const [error, setError] = useAtom(getScreenCacheErrorAtom(cacheKey));
+  const store = useStore();
 
   const cacheRef = useRef<Record<string, ScreenCacheEntry>>({});
   const inflightRef = useLazyRef(() => new Set<string>());
+  const ownedLoadingRequestsRef = useLazyRef(() => new Map<string, symbol>());
   const requestIdRef = useRef(0);
   const latestRequestRef = useRef<Record<string, number>>({});
+  const activeRef = useRef(true);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    activeRef.current = true;
     cacheRef.current = cache;
-  }, [cache]);
+    const ownedLoadingRequests = ownedLoadingRequestsRef.current;
+
+    return () => {
+      activeRef.current = false;
+      const ownedRequests = [...ownedLoadingRequests];
+      queueMicrotask(() => {
+        // React Strict Mode and cache updates replay this lifecycle on the same mount.
+        // Only a mount that stayed inactive may release its global loading ownership.
+        if (activeRef.current) {
+          return;
+        }
+        const owners = getLoadingRequestOwners(store);
+        const releasedPaneIds = ownedRequests.flatMap(([paneId, requestOwner]) => {
+          const ownerKey = buildLoadingOwnerKey(cacheKey, paneId);
+          if (owners.get(ownerKey) !== requestOwner) {
+            return [];
+          }
+          owners.delete(ownerKey);
+          return [paneId];
+        });
+        if (releasedPaneIds.length === 0) {
+          return;
+        }
+        setLoading((prev) => {
+          const next = { ...prev };
+          for (const paneId of releasedPaneIds) {
+            next[paneId] = false;
+          }
+          return next;
+        });
+      });
+    };
+  }, [cache, cacheKey, ownedLoadingRequestsRef, setLoading, store]);
 
   const executeFetchRequest = useCallback(
-    async ({ paneId, options, requestId }: FetchRequestArgs) => {
+    async ({ paneId, options, requestId, requestOwner }: FetchRequestArgs) => {
       try {
         const response = await requestScreen(paneId, {
           mode,
           lines: resolveRequestLines(options, lines),
         });
-        if (!isLatestRequest(latestRequestRef.current, paneId, requestId)) {
+        if (
+          !activeRef.current ||
+          !isLatestRequest(latestRequestRef.current, paneId, requestId) ||
+          !isCurrentLoadingOwner(store, cacheKey, paneId, requestOwner)
+        ) {
           return;
         }
         if (!response.ok) {
@@ -124,7 +188,11 @@ export const useScreenCache = ({
           [paneId]: buildScreenCacheEntry(response),
         }));
       } catch (err) {
-        if (!isLatestRequest(latestRequestRef.current, paneId, requestId)) {
+        if (
+          !activeRef.current ||
+          !isLatestRequest(latestRequestRef.current, paneId, requestId) ||
+          !isCurrentLoadingOwner(store, cacheKey, paneId, requestOwner)
+        ) {
           return;
         }
         setError((prev) => ({
@@ -133,21 +201,30 @@ export const useScreenCache = ({
         }));
       } finally {
         inflightRef.current.delete(paneId);
-        if (isLatestRequest(latestRequestRef.current, paneId, requestId)) {
+        if (ownedLoadingRequestsRef.current.get(paneId) === requestOwner) {
+          ownedLoadingRequestsRef.current.delete(paneId);
+        }
+        const owners = getLoadingRequestOwners(store);
+        const ownerKey = buildLoadingOwnerKey(cacheKey, paneId);
+        if (owners.get(ownerKey) === requestOwner) {
+          owners.delete(ownerKey);
           setLoading((prev) => ({ ...prev, [paneId]: false }));
         }
       }
     },
     [
       lines,
+      cacheKey,
       inflightRef,
       loadErrorMessage,
       mode,
+      ownedLoadingRequestsRef,
       requestFailedMessage,
       requestScreen,
       setCache,
       setError,
       setLoading,
+      store,
     ],
   );
 
@@ -170,14 +247,28 @@ export const useScreenCache = ({
       }
       inflightRef.current.add(paneId);
       const requestId = (requestIdRef.current += 1);
+      const requestOwner = Symbol(paneId);
       latestRequestRef.current[paneId] = requestId;
+      ownedLoadingRequestsRef.current.set(paneId, requestOwner);
+      getLoadingRequestOwners(store).set(buildLoadingOwnerKey(cacheKey, paneId), requestOwner);
       if (shouldShowLoadingState(options, cached)) {
         setLoading((prev) => ({ ...prev, [paneId]: true }));
       }
       setError((prev) => ({ ...prev, [paneId]: null }));
-      await executeFetchRequest({ paneId, options, requestId });
+      await executeFetchRequest({ paneId, options, requestId, requestOwner });
     },
-    [connected, connectionIssue, executeFetchRequest, inflightRef, setError, setLoading, ttlMs],
+    [
+      cacheKey,
+      connected,
+      connectionIssue,
+      executeFetchRequest,
+      inflightRef,
+      ownedLoadingRequestsRef,
+      setError,
+      setLoading,
+      store,
+      ttlMs,
+    ],
   );
 
   const clearCache = useCallback(

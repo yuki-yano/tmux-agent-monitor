@@ -1,13 +1,26 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ScreenResponse } from "@vde-monitor/shared";
 import { Provider as JotaiProvider, createStore } from "jotai";
-import type { ReactNode } from "react";
+import type { ReactNode, SetStateAction } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ScreenMode } from "@/lib/screen-loading";
+import {
+  type ScreenLoadingEvent,
+  type ScreenMode,
+  initialScreenLoadingState,
+  screenLoadingReducer,
+} from "@/lib/screen-loading";
 import { HttpResponse, http, server } from "@/test/msw/server";
 
-import { screenErrorAtom, screenFallbackReasonAtom } from "../atoms/screenAtoms";
+import {
+  screenContentContextKeyAtom,
+  screenErrorAtom,
+  screenFallbackReasonAtom,
+  screenImageAtom,
+  screenLoadingAtom,
+  screenModeLoadedAtom,
+  screenTextAtom,
+} from "../atoms/screenAtoms";
 import { DISCONNECTED_MESSAGE } from "../sessionDetailUtils";
 import { useScreenFetch } from "./useScreenFetch";
 
@@ -259,6 +272,111 @@ describe("useScreenFetch", () => {
     });
     expect(screenRef.current).toBe("new-pane");
     expect(setScreen).toHaveBeenCalledWith("new-pane");
+  });
+
+  it("does not let an unmounted pane response overwrite the next keyed mount", async () => {
+    let resolvePaneOne!: (value: ScreenResponse) => void;
+    let resolvePaneTwo!: (value: ScreenResponse) => void;
+    const requestScreen = vi.fn(
+      (paneId: string) =>
+        new Promise<ScreenResponse>((resolve) => {
+          if (paneId === "pane-1") {
+            resolvePaneOne = resolve;
+          } else {
+            resolvePaneTwo = resolve;
+          }
+        }),
+    );
+    const store = createStore();
+    store.set(screenErrorAtom, null);
+    store.set(screenFallbackReasonAtom, null);
+    store.set(screenLoadingAtom, initialScreenLoadingState);
+    store.set(screenModeLoadedAtom, { text: false, image: false });
+    store.set(screenTextAtom, "");
+    store.set(screenImageAtom, null);
+    store.set(screenContentContextKeyAtom, null);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <JotaiProvider store={store}>{children}</JotaiProvider>
+    );
+    const dispatchScreenLoading = vi.fn((event: ScreenLoadingEvent) => {
+      store.set(screenLoadingAtom, screenLoadingReducer(store.get(screenLoadingAtom), event));
+    });
+    const buildParams = (paneId: string) => ({
+      paneId,
+      connected: true,
+      connectionIssue: null,
+      requestScreen,
+      mode: "text" as const,
+      isUserScrollingRef: { current: false },
+      modeLoadedRef: { current: { text: false, image: false } },
+      modeSwitchRef: { current: null as ScreenMode | null },
+      screenRef: { current: "" },
+      imageRef: { current: null as string | null },
+      cursorRef: { current: null as string | null },
+      screenLinesRef: { current: [] as string[] },
+      pendingScreenRef: { current: null as string | null },
+      setScreen: (screen: SetStateAction<string>) => {
+        store.set(screenTextAtom, screen);
+      },
+      setImageBase64: (image: SetStateAction<string | null>) => {
+        store.set(screenImageAtom, image);
+      },
+      setScreenContentContextKey: (contextKey: SetStateAction<string | null>) => {
+        store.set(screenContentContextKeyAtom, contextKey);
+      },
+      dispatchScreenLoading,
+      onModeLoaded: (mode: ScreenMode) => {
+        store.set(screenModeLoadedAtom, (loaded) => ({ ...loaded, [mode]: true }));
+      },
+    });
+
+    const paneOneParams = buildParams("pane-1");
+    const paneOne = renderHook(() => useScreenFetch(paneOneParams), { wrapper });
+    await waitFor(() => {
+      expect(requestScreen).toHaveBeenCalledWith("pane-1", { mode: "text" });
+    });
+    paneOne.unmount();
+
+    const paneTwoParams = buildParams("pane-2");
+    renderHook(() => useScreenFetch(paneTwoParams), { wrapper });
+    await waitFor(() => {
+      expect(requestScreen).toHaveBeenCalledWith("pane-2", { mode: "text" });
+    });
+    await act(async () => {
+      resolvePaneTwo({
+        ok: true,
+        paneId: "pane-2",
+        mode: "text",
+        capturedAt: new Date(2_000).toISOString(),
+        screen: "new-pane",
+        fallbackReason: "image_disabled",
+      });
+    });
+    await waitFor(() => {
+      expect(store.get(screenTextAtom)).toBe("new-pane");
+      expect(store.get(screenFallbackReasonAtom)).toBe("image_disabled");
+      expect(store.get(screenContentContextKeyAtom)).toBe("pane-2\0text");
+      expect(dispatchScreenLoading).toHaveBeenCalledWith({ type: "finish", mode: "text" });
+      expect(store.get(screenLoadingAtom)).toEqual(initialScreenLoadingState);
+    });
+    dispatchScreenLoading.mockClear();
+
+    await act(async () => {
+      resolvePaneOne({
+        ok: true,
+        paneId: "pane-1",
+        mode: "text",
+        capturedAt: new Date(3_000).toISOString(),
+        screen: "stale-pane",
+        fallbackReason: "image_failed",
+      });
+    });
+
+    expect(store.get(screenTextAtom)).toBe("new-pane");
+    expect(store.get(screenFallbackReasonAtom)).toBe("image_disabled");
+    expect(store.get(screenContentContextKeyAtom)).toBe("pane-2\0text");
+    expect(store.get(screenLoadingAtom)).toEqual(initialScreenLoadingState);
+    expect(dispatchScreenLoading).not.toHaveBeenCalled();
   });
 
   it("skips polling while document is hidden", async () => {

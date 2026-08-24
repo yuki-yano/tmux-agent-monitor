@@ -1,10 +1,11 @@
+import { useAtom } from "jotai";
 import { useCallback, useState } from "react";
 
+import { sidebarListFilterAtom } from "@/features/shared-session-ui/atoms/sidebarUiAtoms";
 import { useLazyRef } from "@/lib/use-lazy-ref";
 
 import {
   DEFAULT_SESSION_LIST_FILTER,
-  type SessionListFilter,
   isSessionListFilter,
 } from "@/features/shared-session-ui/model/session-list-filters";
 import type { LaunchAgentHandler } from "@/state/launch-agent-options";
@@ -24,7 +25,7 @@ export const useSessionSidebarActions = ({
   onTouchSession,
   onTouchRepoPin,
 }: UseSessionSidebarActionsArgs) => {
-  const [filter, setFilter] = useState<SessionListFilter>(DEFAULT_SESSION_LIST_FILTER);
+  const [filter, setFilter] = useAtom(sidebarListFilterAtom);
   const [focusPendingPaneIds, setFocusPendingPaneIds] = useState<Set<string>>(() => new Set());
   const [launchPendingSessions, setLaunchPendingSessions] = useState<Set<string>>(() => new Set());
   const launchPendingRef = useLazyRef(() => new Set<string>());
@@ -90,13 +91,16 @@ export const useSessionSidebarActions = ({
     [launchPendingRef, onLaunchAgentInSession],
   );
 
-  const handleFilterChange = useCallback((next: string) => {
-    if (!isSessionListFilter(next)) {
-      setFilter(DEFAULT_SESSION_LIST_FILTER);
-      return;
-    }
-    setFilter(next);
-  }, []);
+  const handleFilterChange = useCallback(
+    (next: string) => {
+      if (!isSessionListFilter(next)) {
+        setFilter(DEFAULT_SESSION_LIST_FILTER);
+        return;
+      }
+      setFilter(next);
+    },
+    [setFilter],
+  );
 
   const handleTouchRepoPin = useCallback(
     (repoRoot: string | null) => {

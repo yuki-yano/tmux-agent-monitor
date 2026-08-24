@@ -100,6 +100,19 @@ export const usePaneSendText = ({
       sendTextInFlightRef.current = false;
       lastFailedSendTextRef.current = null;
     }
+
+    const activePane = activePaneRef.current;
+    return () => {
+      if (activePaneRef.current !== activePane) {
+        return;
+      }
+      activePaneRef.current = {
+        paneId,
+        generation: activePane.generation + 1,
+      };
+      sendTextInFlightRef.current = false;
+      lastFailedSendTextRef.current = null;
+    };
   }, [paneId]);
   const visibleState = state.paneId === paneId ? state : buildPaneSendTextState(paneId);
 

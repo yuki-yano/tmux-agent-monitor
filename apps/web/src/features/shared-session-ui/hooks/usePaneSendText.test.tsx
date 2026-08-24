@@ -154,4 +154,83 @@ describe("usePaneSendText", () => {
     expect(onPaneBSuccess).toHaveBeenCalledOnce();
     expect(scrollToBottom).toHaveBeenCalledOnce();
   });
+
+  it("ignores a successful send completion after unmount", async () => {
+    let resolveSend: ((value: { ok: boolean }) => void) | undefined;
+    const sendText = vi.fn(
+      () =>
+        new Promise<{ ok: boolean }>((resolve) => {
+          resolveSend = resolve;
+        }),
+    );
+    const setScreenError = vi.fn();
+    const scrollToBottom = vi.fn();
+    const onSuccess = vi.fn();
+
+    const { result, unmount } = renderHook(() =>
+      usePaneSendText({
+        paneId: "pane-1",
+        mode: "text",
+        sendText,
+        setScreenError,
+        scrollToBottom,
+      }),
+    );
+
+    let sendPromise: Promise<boolean> | undefined;
+    act(() => {
+      sendPromise = result.current.send({ text: "echo stale", enter: true, onSuccess });
+    });
+    unmount();
+
+    await act(async () => {
+      resolveSend?.({ ok: true });
+      await sendPromise;
+    });
+
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(scrollToBottom).not.toHaveBeenCalled();
+    expect(setScreenError).not.toHaveBeenCalled();
+  });
+
+  it("ignores a failed send completion after unmount", async () => {
+    let resolveSend:
+      | ((value: { ok: false; error: { code: "INTERNAL"; message: string } }) => void)
+      | undefined;
+    const sendText = vi.fn(
+      () =>
+        new Promise<{ ok: false; error: { code: "INTERNAL"; message: string } }>((resolve) => {
+          resolveSend = resolve;
+        }),
+    );
+    const setScreenError = vi.fn();
+    const scrollToBottom = vi.fn();
+
+    const { result, unmount } = renderHook(() =>
+      usePaneSendText({
+        paneId: "pane-1",
+        mode: "text",
+        sendText,
+        setScreenError,
+        scrollToBottom,
+      }),
+    );
+
+    let sendPromise: Promise<boolean> | undefined;
+    act(() => {
+      sendPromise = result.current.send({ text: "echo stale", enter: true });
+    });
+    unmount();
+
+    await act(async () => {
+      resolveSend?.({
+        ok: false,
+        error: { code: "INTERNAL", message: "stale failure" },
+      });
+      await sendPromise;
+    });
+
+    expect(setScreenError).not.toHaveBeenCalled();
+    expect(scrollToBottom).not.toHaveBeenCalled();
+  });
 });

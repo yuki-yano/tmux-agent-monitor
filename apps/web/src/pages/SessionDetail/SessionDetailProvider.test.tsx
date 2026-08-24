@@ -1,7 +1,7 @@
 import { act, renderHook, screen } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { NotesSection } from "./components/NotesSection";
@@ -23,6 +23,7 @@ import { createSessionDetail } from "./test-helpers";
 const session = createSessionDetail({ paneId: "pane-1" });
 const sessionGroups = [{ repoRoot: null, sessions: [session] }];
 const setScreenErrorMock = vi.fn();
+const pushNotificationsRenderSpy = vi.fn();
 let mockResolvedTheme: "latte" | "mocha" = "mocha";
 let mockSessionsContext: Record<string, unknown> = {};
 
@@ -114,16 +115,19 @@ vi.mock("@/state/theme-context", () => ({
 }));
 
 vi.mock("@/features/notifications/use-push-notifications", () => ({
-  usePushNotifications: () => ({
-    status: "idle",
-    pushEnabled: true,
-    isSubscribed: false,
-    isPaneEnabled: false,
-    errorMessage: null,
-    requestPermissionAndSubscribe: vi.fn(async () => undefined),
-    disableNotifications: vi.fn(async () => undefined),
-    togglePaneEnabled: vi.fn(async () => undefined),
-  }),
+  usePushNotifications: ({ paneId }: { paneId: string }) => {
+    pushNotificationsRenderSpy(paneId);
+    return {
+      status: "idle",
+      pushEnabled: true,
+      isSubscribed: false,
+      isPaneEnabled: false,
+      errorMessage: null,
+      requestPermissionAndSubscribe: vi.fn(async () => undefined),
+      disableNotifications: vi.fn(async () => undefined),
+      togglePaneEnabled: vi.fn(async () => undefined),
+    };
+  },
 }));
 
 vi.mock("@/lib/session-group", () => ({
@@ -202,6 +206,11 @@ const NotesProbe = () => {
   return <NotesSection {...notesSectionProps} />;
 };
 
+const PaneLifetimeProbe = ({ paneId }: { paneId: string }) => {
+  const [mountedPaneId] = useState(paneId);
+  return <div data-testid="pane-lifetime" data-mounted-pane-id={mountedPaneId} />;
+};
+
 const renderContext = (
   sessions: Array<typeof session>,
   sessionApi: SessionApiMockOverrides,
@@ -234,6 +243,41 @@ describe("SessionDetailProvider", () => {
     );
 
     expect(screen.getByTestId("child").textContent).toBe("child");
+  });
+
+  it("remounts pane-owned children while keeping push notification ownership outside", () => {
+    const pane2 = createSessionDetail({ paneId: "pane-2" });
+    mockSessionsContext = buildSessionContext({
+      sessions: [session, pane2],
+      sessionApi: buildSessionApi(),
+    });
+    pushNotificationsRenderSpy.mockClear();
+
+    const view = render(
+      <SessionDetailProvider paneId="pane-1">
+        <PaneLifetimeProbe paneId="pane-1" />
+      </SessionDetailProvider>,
+    );
+    expect(screen.getByTestId("pane-lifetime").dataset.mountedPaneId).toBe("pane-1");
+
+    view.rerender(
+      <SessionDetailProvider paneId="pane-2">
+        <PaneLifetimeProbe paneId="pane-2" />
+      </SessionDetailProvider>,
+    );
+    expect(screen.getByTestId("pane-lifetime").dataset.mountedPaneId).toBe("pane-2");
+
+    view.rerender(
+      <SessionDetailProvider paneId="pane-1">
+        <PaneLifetimeProbe paneId="pane-1" />
+      </SessionDetailProvider>,
+    );
+    expect(screen.getByTestId("pane-lifetime").dataset.mountedPaneId).toBe("pane-1");
+    expect(pushNotificationsRenderSpy.mock.calls.map(([paneId]) => paneId)).toEqual([
+      "pane-1",
+      "pane-2",
+      "pane-1",
+    ]);
   });
 
   it("exposes base state via context", () => {

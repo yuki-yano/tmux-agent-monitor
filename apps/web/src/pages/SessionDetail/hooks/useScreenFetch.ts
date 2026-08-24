@@ -153,14 +153,20 @@ export const useScreenFetch = ({
     paneId,
     mode,
   });
+  const refreshLifecycleRef = useRef(initialScreenFetchLifecycleState);
   useLayoutEffect(() => {
     currentContextRef.current = { key: screenContextKey, paneId, mode };
+    return () => {
+      currentContextRef.current = { key: "", paneId: "", mode };
+      refreshLifecycleRef.current = screenFetchLifecycleReducer(refreshLifecycleRef.current, {
+        type: "reset",
+      });
+    };
   }, [mode, paneId, screenContextKey]);
   const pollingPauseReason = useScreenPollingPauseReason({
     connected,
     connectionIssue,
   });
-  const refreshLifecycleRef = useRef(initialScreenFetchLifecycleState);
   const latestAppliedResponseRef = useRef<AppliedScreenResponse>({
     contextKey: "",
     capturedAtMs: Number.NEGATIVE_INFINITY,

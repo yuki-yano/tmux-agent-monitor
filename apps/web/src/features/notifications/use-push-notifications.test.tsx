@@ -454,4 +454,33 @@ describe("usePushNotifications", () => {
 
     expect(localStorage.getItem("vde-monitor-push-enabled-pane-ids:v1")).toBe('["%1"]');
   });
+
+  it("reuses device reconciliation while the active pane changes A to B to A", async () => {
+    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    vi.stubGlobal("PushManager", class PushManager {});
+    vi.stubGlobal("Notification", { permission: "granted" });
+    installPushSubscription();
+    localStorage.setItem("vde-monitor-push-enabled-pane-ids:v1", '["%1"]');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createSettingsResponse())
+      .mockResolvedValueOnce(Response.json({ subscriptionId: "subscription-1" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result, rerender } = renderHook(({ paneId }) => usePushNotifications({ paneId }), {
+      initialProps: { paneId: "%1" },
+    });
+    await waitFor(() => {
+      expect(result.current.isSubscribed).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    expect(result.current.isPaneEnabled).toBe(true);
+
+    rerender({ paneId: "%2" });
+    expect(result.current.isPaneEnabled).toBe(false);
+    rerender({ paneId: "%1" });
+    expect(result.current.isPaneEnabled).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(readPostedPaneIds(fetchMock)).toEqual([["%1"]]);
+  });
 });

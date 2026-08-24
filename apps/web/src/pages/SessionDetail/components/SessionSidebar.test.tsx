@@ -6,6 +6,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { Provider as JotaiProvider, createStore } from "jotai";
 import type { ReactNode } from "react";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -81,7 +82,11 @@ describe("SessionSidebar", () => {
       routeTree: rootRoute.addChildren([sessionRoute]),
       history: createMemoryHistory({ initialEntries: ["/sessions/pane-1"] }),
     });
-    return render(<RouterContextProvider router={router}>{ui}</RouterContextProvider>);
+    return render(
+      <RouterContextProvider router={router}>
+        <JotaiProvider store={createStore()}>{ui}</JotaiProvider>
+      </RouterContextProvider>,
+    );
   };
 
   const buildState = (overrides: Partial<SessionSidebarState> = {}): SessionSidebarState => ({

@@ -23,8 +23,7 @@ describe("useSessionDiffs", () => {
     Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
   });
 
-  const createWrapper = () => {
-    const store = createStore();
+  const createWrapper = (store = createStore()) => {
     store.set(diffSummaryAtom, null);
     store.set(diffErrorAtom, null);
     store.set(diffLoadingAtom, false);
@@ -930,5 +929,56 @@ describe("useSessionDiffs", () => {
       expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
     });
     expect(requestDiffFile).toHaveBeenCalledTimes(3);
+  });
+
+  it("ignores a previous mount response after revisiting the same scope", async () => {
+    const staleSummaryDeferred = createDeferred<ReturnType<typeof createDiffSummary>>();
+    const staleSummary = createDiffSummary({ rev: "rev-stale" });
+    const freshSummary = createDiffSummary({ rev: "rev-fresh" });
+    const freshFile = createDiffFile({ rev: "rev-fresh", patch: "fresh" });
+    const requestDiffSummary = vi
+      .fn()
+      .mockImplementationOnce(() => staleSummaryDeferred.promise)
+      .mockResolvedValueOnce(freshSummary);
+    const requestDiffFile = vi.fn().mockResolvedValue(freshFile);
+    const store = createStore();
+    const wrapper = createWrapper(store);
+    const renderDiffHook = () =>
+      renderHook(
+        () =>
+          useSessionDiffs({
+            paneId: "pane-a",
+            connected: true,
+            requestDiffSummary,
+            requestDiffFile,
+          }),
+        { wrapper },
+      );
+
+    const staleMount = renderDiffHook();
+    await waitFor(() => {
+      expect(requestDiffSummary).toHaveBeenCalledTimes(1);
+    });
+    staleMount.unmount();
+
+    const freshMount = renderDiffHook();
+    await waitFor(() => {
+      expect(freshMount.result.current.diffSummary?.rev).toBe("rev-fresh");
+    });
+    act(() => {
+      freshMount.result.current.toggleDiff("src/index.ts");
+    });
+    await waitFor(() => {
+      expect(freshMount.result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
+    });
+
+    await act(async () => {
+      staleSummaryDeferred.resolve(staleSummary);
+      await staleSummaryDeferred.promise;
+      await Promise.resolve();
+    });
+
+    expect(store.get(diffSummaryAtom)?.rev).toBe("rev-fresh");
+    expect(store.get(diffFilesAtom)["src/index.ts"]?.patch).toBe("fresh");
   });
 });

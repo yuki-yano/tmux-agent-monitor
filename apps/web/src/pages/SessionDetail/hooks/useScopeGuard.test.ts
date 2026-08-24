@@ -76,6 +76,28 @@ describe("useScopeGuard", () => {
     expect(result.current.activeScopeRef.current).toBe("pane-b:__default__:__no_branch__");
   });
 
+  it("invalidates activeScopeRef.current when the owning mount unmounts", () => {
+    const onReconnectRef = { current: noop };
+    const pollTickRef = { current: noop };
+
+    const { result, unmount } = renderHook(() =>
+      useScopeGuard({
+        paneId: "pane-a",
+        worktreePath: null,
+        connected: true,
+        onReconnectRef,
+        pollTickRef,
+        pollIntervalMs: 5000,
+      }),
+    );
+    const activeScopeRef = result.current.activeScopeRef;
+    const mountedScopeKey = activeScopeRef.current;
+
+    unmount();
+
+    expect(activeScopeRef.current).not.toBe(mountedScopeKey);
+  });
+
   it("calls onReconnectRef.current when connected transitions false→true", () => {
     const onReconnect = vi.fn();
     const onReconnectRef = { current: onReconnect };

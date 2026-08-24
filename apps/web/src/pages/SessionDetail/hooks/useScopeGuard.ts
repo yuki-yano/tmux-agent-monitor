@@ -57,6 +57,11 @@ export const useScopeGuard = ({
   // requests. Render stays pure if React replays or discards it.
   useLayoutEffect(() => {
     activeScopeRef.current = scopeKey;
+    return () => {
+      // A keyed remount creates a new guard ref, so invalidate this mount's ref
+      // before any request it started can settle into shared atom state.
+      activeScopeRef.current = "";
+    };
   }, [scopeKey]);
 
   // Re-fetch when the connection is restored after a disconnect.
