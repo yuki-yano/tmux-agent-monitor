@@ -18,6 +18,21 @@ type DiffSummaryKeyParams = {
   branch: string | null;
 };
 
+type CommitScopeKeyParams = {
+  repoRoot: string | null;
+  worktreePath: string | null;
+  branch: string | null;
+};
+
+type CommitLogHeadKeyParams = CommitScopeKeyParams & {
+  limit: number;
+};
+
+type CommitLogTailKeyParams = CommitLogHeadKeyParams & {
+  expectedRev: string | null;
+  headSnapshot: string | null;
+};
+
 export const sessionDetailQueryKeys = {
   all: ["session-detail"] as const,
   pane: (paneId: string) => [...sessionDetailQueryKeys.all, paneId] as const,
@@ -38,4 +53,15 @@ export const sessionDetailQueryKeys = {
   diffSummaryRoot: (paneId: string) => sessionDetailQueryKeys.resource(paneId, "diff-summary"),
   diffSummary: (paneId: string, params: DiffSummaryKeyParams) =>
     [...sessionDetailQueryKeys.diffSummaryRoot(paneId), params] as const,
+  commitsRoot: (paneId: string) => sessionDetailQueryKeys.resource(paneId, "commits"),
+  commitLogRoot: (paneId: string) =>
+    [...sessionDetailQueryKeys.commitsRoot(paneId), "log"] as const,
+  commitLogHead: (paneId: string, params: CommitLogHeadKeyParams) =>
+    [...sessionDetailQueryKeys.commitLogRoot(paneId), "head", params] as const,
+  commitLogTail: (paneId: string, params: CommitLogTailKeyParams) =>
+    [...sessionDetailQueryKeys.commitLogRoot(paneId), "tail", params] as const,
+  commitDetail: (paneId: string, params: CommitScopeKeyParams & { hash: string }) =>
+    [...sessionDetailQueryKeys.commitsRoot(paneId), "detail", params] as const,
+  commitFile: (paneId: string, params: CommitScopeKeyParams & { hash: string; path: string }) =>
+    [...sessionDetailQueryKeys.commitsRoot(paneId), "file", params] as const,
 };

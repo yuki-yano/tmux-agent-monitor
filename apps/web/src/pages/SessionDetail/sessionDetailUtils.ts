@@ -1,6 +1,7 @@
 import { type CommitLog, type DiffSummary, type SessionSummary } from "@vde-monitor/shared";
 
 export const AUTO_REFRESH_INTERVAL_MS = 10_000;
+export const COMMIT_PAGE_SIZE = 10;
 export const MAX_DIFF_LINES = 1200;
 export const PREVIEW_DIFF_LINES = 240;
 export const DISCONNECTED_MESSAGE = "Disconnected. Reconnecting...";

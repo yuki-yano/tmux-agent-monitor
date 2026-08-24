@@ -177,6 +177,25 @@ const expectSingleGitScopeObservers = (queryClient: ReturnType<typeof createAppQ
       .find({ queryKey: worktreeQueryKey, exact: true })
       ?.getObserversCount(),
   ).toBe(1);
+  const activeCommitHeadQueries = queryClient
+    .getQueryCache()
+    .findAll({ queryKey: sessionDetailQueryKeys.commitsRoot("pane-1") })
+    .filter(
+      (query) => query.queryKey[3] === "log" && query.queryKey[4] === "head" && query.isActive(),
+    );
+  expect(activeCommitHeadQueries).toHaveLength(1);
+  expect(activeCommitHeadQueries[0]?.getObserversCount()).toBe(1);
+  const commitTailQueries = queryClient
+    .getQueryCache()
+    .findAll({ queryKey: sessionDetailQueryKeys.commitsRoot("pane-1") })
+    .filter(
+      (query) =>
+        query.queryKey[3] === "log" &&
+        query.queryKey[4] === "tail" &&
+        query.getObserversCount() > 0,
+    );
+  expect(commitTailQueries).toHaveLength(1);
+  expect(commitTailQueries[0]?.getObserversCount()).toBe(1);
 };
 
 describe("SessionDetail Provider <-> View wiring (smoke)", () => {

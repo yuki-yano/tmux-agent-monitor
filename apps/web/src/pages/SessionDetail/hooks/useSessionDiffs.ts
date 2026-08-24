@@ -281,8 +281,16 @@ export const useSessionDiffs = ({
     refetchIntervalInBackground: false,
   });
   const subscribeQueryCache = useCallback(
-    (onStoreChange: () => void) => queryClient.getQueryCache().subscribe(onStoreChange),
-    [queryClient],
+    (onStoreChange: () => void) => {
+      const queryCache = queryClient.getQueryCache();
+      return queryCache.subscribe((event) => {
+        const currentQuery = queryCache.find({ queryKey, exact: true });
+        if (event.query === currentQuery) {
+          onStoreChange();
+        }
+      });
+    },
+    [queryClient, queryKey],
   );
   const getDataUpdateCount = useCallback(
     () => queryClient.getQueryState(queryKey)?.dataUpdateCount ?? 0,

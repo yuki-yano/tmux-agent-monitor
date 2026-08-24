@@ -1,5 +1,5 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, renderHook, screen } from "@testing-library/react";
+import { QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
 import { type ReactNode, memo, useState } from "react";
@@ -21,6 +21,7 @@ import {
   createSessionStreamDataMock,
 } from "./session-context-mock";
 import { SessionDetailProvider, useSessionDetailContext } from "./SessionDetailProvider";
+import { useSessionDetailCommits } from "./SessionDetailCommitsProvider";
 import {
   useSessionDetailBase,
   useSessionDetailHeaderActions,
@@ -33,6 +34,8 @@ import {
 } from "./SessionDetailContexts";
 import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
 import { SessionDetailTitleProvider, useSessionDetailTitle } from "./SessionDetailTitleProvider";
+import { sessionDetailQueryKeys } from "./session-detail-query-keys";
+import { COMMIT_PAGE_SIZE } from "./sessionDetailUtils";
 import { createSessionDetail } from "./test-helpers";
 
 const session = createSessionDetail({ paneId: "pane-1" });
@@ -43,9 +46,17 @@ let mockResolvedTheme: "latte" | "mocha" = "mocha";
 let mockSessionsContext: Record<string, unknown> = {};
 const navigateMock = vi.hoisted(() => vi.fn());
 
-const QueryTestProvider = ({ children }: { children: ReactNode }) => {
-  const [queryClient] = useState(createAppQueryClient);
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+const QueryTestProvider = ({
+  children,
+  queryClient,
+}: {
+  children: ReactNode;
+  queryClient?: ReturnType<typeof createAppQueryClient>;
+}) => {
+  const [defaultQueryClient] = useState(createAppQueryClient);
+  return (
+    <QueryClientProvider client={queryClient ?? defaultQueryClient}>{children}</QueryClientProvider>
+  );
 };
 
 // Mirrors use-session-store.ts's real toSessionDetail cache: the same
@@ -82,7 +93,22 @@ type SessionApiMockOverrides = Pick<
 // caller didn't override.
 const buildSessionApi = (overrides: SessionApiMockOverrides = {}) => ({
   ...createSessionCoreApiMock(overrides.core),
-  ...createSessionBranchesApiMock(overrides.branches),
+  ...createSessionBranchesApiMock({
+    requestDiffSummary: vi.fn(async () => ({
+      repoRoot: session.repoRoot,
+      rev: "HEAD",
+      generatedAt: new Date(0).toISOString(),
+      files: [],
+    })),
+    requestCommitLog: vi.fn(async () => ({
+      repoRoot: session.repoRoot,
+      rev: "HEAD",
+      generatedAt: new Date(0).toISOString(),
+      commits: [],
+      totalCount: 0,
+    })),
+    ...overrides.branches,
+  }),
   ...createSessionFilesApiMock(overrides.files),
   ...createSessionNotesApiMock(overrides.notes),
   ...createSessionLaunchApiMock(overrides.launch),
@@ -259,6 +285,22 @@ const ScopeSliceProbe = memo(() => {
 });
 ScopeSliceProbe.displayName = "ScopeSliceProbe";
 
+const commitsSliceRenderSpy = vi.fn();
+const CommitsSliceProbe = memo(() => {
+  commitsSliceRenderSpy(useSessionDetailCommits());
+  return null;
+});
+CommitsSliceProbe.displayName = "CommitsSliceProbe";
+
+const FilesTickProbe = () => {
+  const { files } = useSessionDetailContext();
+  return (
+    <button type="button" onClick={() => files.onSearchQueryChange("unrelated-file-tick")}>
+      Tick files
+    </button>
+  );
+};
+
 const TitleProbe = () => {
   const title = useSessionDetailTitle();
   return (
@@ -279,22 +321,24 @@ const TitleProbe = () => {
 const renderContext = (
   sessions: Array<typeof session>,
   sessionApi: SessionApiMockOverrides,
-  options: { connectionIssue?: string | null } = {},
+  options: { connected?: boolean; connectionIssue?: string | null } = {},
 ) => {
   const store = createStore();
+  const queryClient = createAppQueryClient();
   mockSessionsContext = buildSessionContext({
     sessions,
     sessionApi: buildSessionApi(sessionApi),
+    connected: options.connected ?? true,
     connectionIssue: options.connectionIssue ?? null,
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryTestProvider>
+    <QueryTestProvider queryClient={queryClient}>
       <JotaiProvider store={store}>
         <SessionDetailProvider paneId="pane-1">{children}</SessionDetailProvider>
       </JotaiProvider>
     </QueryTestProvider>
   );
-  return renderHook(() => useSessionDetailContext(), { wrapper });
+  return { ...renderHook(() => useSessionDetailContext(), { wrapper }), queryClient };
 };
 
 describe("SessionDetailProvider", () => {
@@ -699,7 +743,7 @@ describe("SessionDetailProvider", () => {
         })),
       },
     };
-    const { result } = renderContext([session], sessionApi);
+    const { result, queryClient } = renderContext([session], sessionApi);
 
     await act(async () => {
       await Promise.resolve();
@@ -708,6 +752,50 @@ describe("SessionDetailProvider", () => {
     const worktreeCallsBeforeCheckout = requestWorktrees.mock.calls.length;
     const diffCallsBeforeCheckout = requestDiffSummary.mock.calls.length;
     const commitCallsBeforeCheckout = requestCommitLog.mock.calls.length;
+    const headKey = sessionDetailQueryKeys.commitLogHead("pane-1", {
+      repoRoot: session.repoRoot,
+      worktreePath: null,
+      branch: null,
+      limit: COMMIT_PAGE_SIZE,
+    });
+    await waitFor(() => expect(queryClient.getQueryData(headKey)).toBeDefined());
+    const tailKey = queryClient
+      .getQueryCache()
+      .findAll({ queryKey: sessionDetailQueryKeys.commitLogRoot("pane-1") })
+      .find((query) => query.queryKey[4] === "tail")?.queryKey;
+    expect(tailKey).toBeDefined();
+    const detailKey = sessionDetailQueryKeys.commitDetail("pane-1", {
+      repoRoot: session.repoRoot,
+      worktreePath: null,
+      branch: null,
+      hash: "cached-detail",
+    });
+    const fileKey = sessionDetailQueryKeys.commitFile("pane-1", {
+      repoRoot: session.repoRoot,
+      worktreePath: null,
+      branch: null,
+      hash: "cached-detail",
+      path: "src/cached.ts",
+    });
+    const tailData = {
+      pages: [
+        {
+          repoRoot: "/repo",
+          rev: "HEAD",
+          generatedAt: new Date(0).toISOString(),
+          commits: [],
+          totalCount: 0,
+        },
+      ],
+      pageParams: [0],
+    };
+    const detailData = { marker: "detail" };
+    const fileData = { marker: "file" };
+    queryClient.setQueryData(tailKey!, tailData);
+    queryClient.setQueryData(detailKey, detailData);
+    queryClient.setQueryData(fileKey, fileData);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const refetchSpy = vi.spyOn(queryClient, "refetchQueries");
 
     let ok: boolean | undefined;
     await act(async () => {
@@ -719,6 +807,78 @@ describe("SessionDetailProvider", () => {
     expect(requestDiffSummary.mock.calls.length).toBeGreaterThan(diffCallsBeforeCheckout);
     expect(requestCommitLog.mock.calls.length).toBeGreaterThan(commitCallsBeforeCheckout);
     expect(requestWorktrees.mock.calls.length).toBeGreaterThan(worktreeCallsBeforeCheckout);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: headKey,
+      exact: true,
+      refetchType: "none",
+    });
+    expect(refetchSpy).toHaveBeenCalledWith({ queryKey: headKey, exact: true, type: "active" });
+    expect(
+      invalidateSpy.mock.calls.filter(([filters]) => filters?.queryKey?.[2] === "commits"),
+    ).toEqual([[{ queryKey: headKey, exact: true, refetchType: "none" }]]);
+    expect(
+      refetchSpy.mock.calls.filter(([filters]) => filters?.queryKey?.[2] === "commits"),
+    ).toEqual([[{ queryKey: headKey, exact: true, type: "active" }]]);
+    expect(queryClient.getQueryData(tailKey!)).toBe(tailData);
+    expect(queryClient.getQueryData(detailKey)).toBe(detailData);
+    expect(queryClient.getQueryData(fileKey)).toBe(fileData);
+  });
+
+  it("only marks the exact commit head stale for offline or disconnected checkout", async () => {
+    const cases = [
+      { name: "offline", connected: true, online: false },
+      { name: "disconnected", connected: false, online: true },
+    ] as const;
+    for (const testCase of cases) {
+      const requestBranchCheckout = vi.fn(async () => undefined);
+      const sessionApi: SessionApiMockOverrides = {
+        branches: {
+          requestBranchCheckout,
+          requestWorktrees: vi.fn(async () => ({
+            repoRoot: session.repoRoot,
+            currentPath: null,
+            entries: [],
+          })),
+          requestBranches: vi.fn(async () => ({
+            repoRoot: session.repoRoot,
+            defaultBranch: "main",
+            currentBranch: "main",
+            entries: [],
+          })),
+        },
+      };
+      const rendered = renderContext([session], sessionApi, { connected: testCase.connected });
+      await act(async () => Promise.resolve());
+      onlineManager.setOnline(testCase.online);
+      const invalidateSpy = vi.spyOn(rendered.queryClient, "invalidateQueries");
+      const refetchSpy = vi.spyOn(rendered.queryClient, "refetchQueries");
+      const headKey = sessionDetailQueryKeys.commitLogHead("pane-1", {
+        repoRoot: session.repoRoot,
+        worktreePath: null,
+        branch: null,
+        limit: COMMIT_PAGE_SIZE,
+      });
+
+      await act(async () => rendered.result.current.scope.checkoutBranch("feature/a"));
+
+      expect(invalidateSpy, testCase.name).toHaveBeenCalledWith({
+        queryKey: headKey,
+        exact: true,
+        refetchType: "none",
+      });
+      expect(
+        invalidateSpy.mock.calls.filter(([filters]) => filters?.queryKey?.[2] === "commits"),
+        testCase.name,
+      ).toEqual([[{ queryKey: headKey, exact: true, refetchType: "none" }]]);
+      expect(
+        refetchSpy.mock.calls.filter(
+          ([filters]) => filters?.queryKey?.[2] === "commits" && filters.queryKey[4] === "head",
+        ),
+        testCase.name,
+      ).toEqual([]);
+      rendered.unmount();
+      onlineManager.setOnline(true);
+    }
   });
 
   it("does not explicitly refresh the stale virtual branch scope after checkout", async () => {
@@ -793,7 +953,7 @@ describe("SessionDetailProvider", () => {
         requestBranches,
       },
     };
-    const { result } = renderContext([session], sessionApi);
+    const { result, queryClient } = renderContext([session], sessionApi);
 
     await act(async () => {
       await Promise.resolve();
@@ -805,6 +965,8 @@ describe("SessionDetailProvider", () => {
       await Promise.resolve();
     });
     expect(result.current.scope.virtualBranch.virtualBranch).toBe("feature/a");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const refetchSpy = vi.spyOn(queryClient, "refetchQueries");
     const diffCallCount = requestDiffSummary.mock.calls.length;
     const commitCallCount = requestCommitLog.mock.calls.length;
     const worktreeCallCount = requestWorktrees.mock.calls.length;
@@ -845,6 +1007,12 @@ describe("SessionDetailProvider", () => {
       expect.any(AbortSignal),
     );
     expect(requestWorktrees.mock.calls.length).toBeGreaterThan(worktreeCallCount);
+    expect(
+      invalidateSpy.mock.calls.filter(([filters]) => filters?.queryKey?.[2] === "commits"),
+    ).toEqual([]);
+    expect(
+      refetchSpy.mock.calls.filter(([filters]) => filters?.queryKey?.[2] === "commits"),
+    ).toEqual([]);
   });
 
   // Render-suppression regression coverage for T15a. useSessionDetailVMState's
@@ -868,6 +1036,53 @@ describe("SessionDetailProvider", () => {
     rerender();
 
     expect(result.current).toBe(first);
+  });
+
+  it("keeps the commits context stable across unrelated session and files ticks", async () => {
+    commitsSliceRenderSpy.mockClear();
+    const requestCommitLog = vi.fn(async () => ({
+      repoRoot: session.repoRoot,
+      rev: "HEAD",
+      generatedAt: new Date(0).toISOString(),
+      commits: [],
+      totalCount: 0,
+    }));
+    const requestDiffSummary = vi.fn(async () => ({
+      repoRoot: session.repoRoot,
+      rev: "HEAD",
+      generatedAt: new Date(0).toISOString(),
+      files: [],
+    }));
+    const sessionApi = buildSessionApi({
+      branches: { requestCommitLog, requestDiffSummary },
+    });
+    mockSessionsContext = buildSessionContext({ sessions: [session], sessionApi });
+    const view = (
+      <SessionDetailProvider paneId="pane-1">
+        <CommitsSliceProbe />
+        <FilesTickProbe />
+      </SessionDetailProvider>
+    );
+    const rendered = render(view, { wrapper: QueryTestProvider });
+    await waitFor(() =>
+      expect(commitsSliceRenderSpy.mock.lastCall?.[0].commitLog?.rev).toBe("HEAD"),
+    );
+    const settledRenderCount = commitsSliceRenderSpy.mock.calls.length;
+    const settledValue = commitsSliceRenderSpy.mock.lastCall?.[0] as Record<string, unknown>;
+
+    fireEvent.click(screen.getByRole("button", { name: "Tick files" }));
+    await act(async () => Promise.resolve());
+    const filesTickValue = commitsSliceRenderSpy.mock.lastCall?.[0] as Record<string, unknown>;
+    expect(
+      Object.keys(settledValue).filter((key) => settledValue[key] !== filesTickValue[key]),
+    ).toEqual([]);
+    expect(commitsSliceRenderSpy).toHaveBeenCalledTimes(settledRenderCount);
+
+    const tickedSession = { ...session, lastEventAt: "2026-01-01T00:00:02.000Z" };
+    mockSessionsContext = buildSessionContext({ sessions: [tickedSession], sessionApi });
+    rendered.rerender(view);
+    await act(async () => Promise.resolve());
+    expect(commitsSliceRenderSpy).toHaveBeenCalledTimes(settledRenderCount);
   });
 
   it("does not re-render the memoized NotesSection when an unrelated sessions tick updates base state (T15a)", async () => {

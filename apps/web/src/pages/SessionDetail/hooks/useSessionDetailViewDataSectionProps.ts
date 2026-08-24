@@ -5,7 +5,7 @@ import { useSessionDetailContext } from "../SessionDetailProvider";
 import { resolveSessionFileRoot } from "../sessionDetailUtils";
 
 export const useSessionDetailViewDataSectionProps = () => {
-  const { base, scope, diffs, files, commits } = useSessionDetailContext();
+  const { base, scope, diffs, files } = useSessionDetailContext();
   const { paneId, session } = base;
   // Mirrors the old VM's `screen.effectiveBranch` / `screen.effectiveWorktreePath`:
   // these are the worktree selector's effective values, independent from the
@@ -29,25 +29,6 @@ export const useSessionDetailViewDataSectionProps = () => {
     toggleDiff,
   } = diffs;
   const { onOpenFileModal, onResolveLogFileReference, onResolveLogFileReferenceCandidates } = files;
-  const {
-    commitLog,
-    commitError,
-    commitLoading,
-    commitLoadingMore,
-    commitHasMore,
-    commitDetails,
-    commitFileDetails,
-    commitFileOpen,
-    commitFileLoading,
-    commitOpen,
-    commitLoadingDetails,
-    copiedHash,
-    refreshCommitLog,
-    loadMoreCommits,
-    toggleCommit,
-    toggleCommitFile,
-    copyHash,
-  } = commits;
   const sessionBranch = screenEffectiveBranch ?? session?.branch ?? null;
   const virtualBranch = scope.virtualBranch.virtualBranch;
   const onClearVirtualBranch = scope.virtualBranch.clearVirtualBranch;
@@ -141,63 +122,7 @@ export const useSessionDetailViewDataSectionProps = () => {
     ],
   );
 
-  const commitSectionProps = useMemo(
-    () => ({
-      state: {
-        commitLog,
-        commitError,
-        commitLoading,
-        commitLoadingMore,
-        commitHasMore,
-        commitDetails,
-        commitFileDetails,
-        commitFileOpen,
-        commitFileLoading,
-        commitOpen,
-        commitLoadingDetails,
-        copiedHash,
-        commitBranch: virtualBranch ?? sessionBranch,
-        virtualBranch,
-      },
-      actions: {
-        onRefresh: refreshCommitLog,
-        onLoadMore: loadMoreCommits,
-        onToggleCommit: toggleCommit,
-        onToggleCommitFile: toggleCommitFile,
-        onCopyHash: copyHash,
-        onClearVirtualBranch,
-        onResolveFileReference: handleResolveFileReference,
-        onResolveFileReferenceCandidates: handleResolveFileReferenceCandidates,
-      },
-    }),
-    [
-      commitLog,
-      sessionBranch,
-      virtualBranch,
-      commitError,
-      commitLoading,
-      commitLoadingMore,
-      commitHasMore,
-      commitDetails,
-      commitFileDetails,
-      commitFileOpen,
-      commitFileLoading,
-      commitOpen,
-      commitLoadingDetails,
-      copiedHash,
-      refreshCommitLog,
-      loadMoreCommits,
-      toggleCommit,
-      toggleCommitFile,
-      copyHash,
-      onClearVirtualBranch,
-      handleResolveFileReference,
-      handleResolveFileReferenceCandidates,
-    ],
-  );
-
   return {
     diffSectionProps,
-    commitSectionProps,
   };
 };

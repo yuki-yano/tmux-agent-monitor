@@ -62,6 +62,10 @@ vi.mock("./SessionDetailProvider", () => ({
   useSessionDetailContext: () => mockContextValue,
 }));
 
+vi.mock("./SessionDetailCommitsProvider", () => ({
+  ConnectedCommitSection: () => <h2>Commit Log</h2>,
+}));
+
 vi.mock("./SessionDetailContexts", () => ({
   useSessionDetailBase: () => mockContextValue.base,
   useSessionDetailHeaderActions: () => mockContextValue.logsActions.actions,
@@ -331,25 +335,6 @@ const buildDefaultContextValue = () => {
       onCloseLogFileCandidateModal: vi.fn(),
       onLoadMoreTreeRoot: vi.fn(),
       onLoadMoreSearch: vi.fn(),
-    },
-    commits: {
-      commitLog: null,
-      commitError: null,
-      commitLoading: false,
-      commitLoadingMore: false,
-      commitHasMore: false,
-      commitDetails: {},
-      commitFileDetails: {},
-      commitFileOpen: {},
-      commitFileLoading: {},
-      commitOpen: {},
-      commitLoadingDetails: {},
-      copiedHash: null,
-      refreshCommitLog: vi.fn(),
-      loadMoreCommits: vi.fn(),
-      toggleCommit: vi.fn(),
-      toggleCommitFile: vi.fn(),
-      copyHash: vi.fn(),
     },
     logsActions: {
       logs: {

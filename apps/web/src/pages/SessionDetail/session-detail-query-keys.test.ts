@@ -74,4 +74,46 @@ describe("sessionDetailQueryKeys", () => {
 
     expect(branchKey.slice(0, -1)).toEqual(sessionDetailQueryKeys.branchesRoot("pane-1"));
   });
+
+  it("separates commit head, revision-fixed tail, detail, and file resources", () => {
+    const scope = {
+      repoRoot: "/repo/a",
+      worktreePath: "/repo/worktree-a",
+      branch: null,
+    };
+    const head = sessionDetailQueryKeys.commitLogHead("pane-1", { ...scope, limit: 10 });
+    const tail = sessionDetailQueryKeys.commitLogTail("pane-1", {
+      ...scope,
+      expectedRev: "rev-1",
+      headSnapshot: "snapshot-1",
+      limit: 10,
+    });
+    const detail = sessionDetailQueryKeys.commitDetail("pane-1", { ...scope, hash: "abc123" });
+    const file = sessionDetailQueryKeys.commitFile("pane-1", {
+      ...scope,
+      hash: "abc123",
+      path: "src/index.ts",
+    });
+
+    expect(head).toEqual([
+      "session-detail",
+      "pane-1",
+      "commits",
+      "log",
+      "head",
+      { ...scope, limit: 10 },
+    ]);
+    expect(tail).not.toEqual(head);
+    expect(tail).not.toEqual(
+      sessionDetailQueryKeys.commitLogTail("pane-1", {
+        ...scope,
+        expectedRev: "rev-1",
+        headSnapshot: "snapshot-2",
+        limit: 10,
+      }),
+    );
+    expect(detail).not.toEqual(file);
+    expect(head.slice(0, 3)).toEqual(sessionDetailQueryKeys.commitsRoot("pane-1"));
+    expect(head.slice(0, 4)).toEqual(sessionDetailQueryKeys.commitLogRoot("pane-1"));
+  });
 });

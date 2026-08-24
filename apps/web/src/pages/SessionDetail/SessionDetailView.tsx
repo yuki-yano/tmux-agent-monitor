@@ -19,7 +19,6 @@ import { cn } from "@/lib/cn";
 import { useTimeout } from "@/lib/use-timeout";
 
 import { ConnectedBranchSection } from "./components/BranchSection";
-import { CommitSection } from "./components/CommitSection";
 import { DiffSection } from "./components/DiffSection";
 import { FileContentModal } from "./components/FileContentModal";
 import { FileNavigatorSection } from "./components/FileNavigatorSection";
@@ -35,6 +34,7 @@ import { ConnectedSessionSidebar } from "./components/session-shell/ConnectedSes
 import { ConnectedStateTimelineSection } from "./components/StateTimelineSection";
 import { ConnectedWorktreeSection } from "./components/WorktreeSection";
 import { useSessionDetailContext } from "./SessionDetailProvider";
+import { ConnectedCommitSection } from "./SessionDetailCommitsProvider";
 import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
 import { SessionDetailTitleProvider } from "./SessionDetailTitleProvider";
 import { SessionDetailTimelineProvider } from "./SessionDetailTimelineProvider";
@@ -177,7 +177,7 @@ const SessionDetailViewContent = () => {
   } = useSessionDetailSectionTabs({
     scope: { repoRoot: session?.repoRoot, branch: session?.branch },
   });
-  const { diffSectionProps, commitSectionProps } = useSessionDetailViewDataSectionProps();
+  const { diffSectionProps } = useSessionDetailViewDataSectionProps();
   const {
     fileNavigatorSectionProps,
     fileContentModalProps,
@@ -253,7 +253,7 @@ const SessionDetailViewContent = () => {
       ariaLabel: "Commits panel",
       label: "Commits",
       icon: GitCommitHorizontal,
-      render: () => <CommitSection {...commitSectionProps} />,
+      render: () => <ConnectedCommitSection />,
     },
     {
       value: "branches",

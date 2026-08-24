@@ -1,9 +1,9 @@
+import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, use, useCallback, useMemo } from "react";
 
 import { usePushNotifications } from "@/features/notifications/use-push-notifications";
 
 import { useSessionBranches } from "./hooks/useSessionBranches";
-import { useSessionCommits } from "./hooks/useSessionCommits";
 import { useSessionDetailScreenControls } from "./hooks/useSessionDetailScreenControls";
 import { useSessionDetailLogsActions } from "./hooks/useSessionDetailLogsActions";
 import { useSessionDoneAcknowledgement } from "./hooks/useSessionDoneAcknowledgement";
@@ -13,7 +13,9 @@ import { useSessionFiles } from "./hooks/useSessionFiles";
 import { useSessionRepoPins } from "./hooks/useSessionRepoPins";
 import { useSessionVirtualBranch } from "./hooks/useSessionVirtualBranch";
 import { useSessionVirtualWorktree } from "./hooks/useSessionVirtualWorktree";
-import { resolveSessionFileRoot } from "./sessionDetailUtils";
+import { COMMIT_PAGE_SIZE, resolveSessionFileRoot } from "./sessionDetailUtils";
+import { sessionDetailQueryKeys } from "./session-detail-query-keys";
+import { SessionDetailCommitsProvider } from "./SessionDetailCommitsProvider";
 import { SessionDetailSliceProviders } from "./SessionDetailContexts";
 
 // SessionDetailContext holds the state that genuinely needs to be shared across
@@ -26,6 +28,7 @@ import { SessionDetailSliceProviders } from "./SessionDetailContexts";
 type PushNotifications = ReturnType<typeof usePushNotifications>;
 
 const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNotifications) => {
+  const queryClient = useQueryClient();
   const base = useSessionDetailVMState(paneId);
   useSessionDoneAcknowledgement({
     paneId,
@@ -110,19 +113,19 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
     requestDiffFile: base.requestDiffFile,
   });
 
-  const commits = useSessionCommits({
-    paneId,
-    connected: base.connected,
-    worktreePath: effectiveWorktreeScope,
-    branch: effectiveBranchScope,
-    requestCommitLog: base.requestCommitLog,
-    requestCommitDetail: base.requestCommitDetail,
-    requestCommitFile: base.requestCommitFile,
-  });
   const { checkoutBranch: checkout, createBranch: create, deleteBranch: remove } = branches;
   const refreshDiff = diffs.refreshDiff;
-  const refreshCommits = commits.refreshCommitLog;
   const virtualBranchActive = effectiveBranchScope != null;
+  const commitHeadQueryKey = useMemo(
+    () =>
+      sessionDetailQueryKeys.commitLogHead(paneId, {
+        repoRoot: base.session?.repoRoot ?? null,
+        worktreePath: effectiveWorktreeScope,
+        branch: effectiveBranchScope,
+        limit: COMMIT_PAGE_SIZE,
+      }),
+    [base.session?.repoRoot, effectiveBranchScope, effectiveWorktreeScope, paneId],
+  );
 
   const checkoutBranch = useCallback(
     async (name: string) => {
@@ -133,13 +136,33 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
         // so refresh only when the scope stays the same.
         if (!virtualBranchActive) {
           void refreshDiff();
-          void refreshCommits();
+          void queryClient.invalidateQueries({
+            queryKey: commitHeadQueryKey,
+            exact: true,
+            refetchType: "none",
+          });
+          if (base.connected && onlineManager.isOnline()) {
+            void queryClient.refetchQueries({
+              queryKey: commitHeadQueryKey,
+              exact: true,
+              type: "active",
+            });
+          }
         }
         void refreshTrees();
       }
       return ok;
     },
-    [checkout, clearVirtualBranch, refreshCommits, refreshDiff, refreshTrees, virtualBranchActive],
+    [
+      base.connected,
+      checkout,
+      clearVirtualBranch,
+      commitHeadQueryKey,
+      queryClient,
+      refreshDiff,
+      refreshTrees,
+      virtualBranchActive,
+    ],
   );
 
   const createBranch = useCallback(
@@ -268,12 +291,11 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
       scope,
       diffs,
       files,
-      commits,
       logsActions,
       terminal,
       pushNotifications,
     }),
-    [baseContext, repoPins, scope, diffs, files, commits, logsActions, terminal, pushNotifications],
+    [baseContext, repoPins, scope, diffs, files, logsActions, terminal, pushNotifications],
   );
 };
 
@@ -305,7 +327,32 @@ const SessionDetailPaneProvider = ({
         scope={value.scope}
         logsActions={value.logsActions}
       >
-        {children}
+        <SessionDetailCommitsProvider
+          paneId={value.base.paneId}
+          repoRoot={value.base.session?.repoRoot ?? null}
+          connected={value.base.connected}
+          worktreePath={value.scope.effectiveWorktreeScope}
+          branch={value.scope.effectiveBranchScope}
+          commitBranch={
+            value.scope.virtualBranch.virtualBranch ??
+            value.scope.virtualWorktree.effectiveBranch ??
+            value.base.session?.branch ??
+            null
+          }
+          virtualBranch={value.scope.virtualBranch.virtualBranch}
+          sourceRepoRoot={resolveSessionFileRoot(
+            value.base.session,
+            value.scope.virtualWorktree.effectiveWorktreePath,
+          )}
+          requestCommitLog={value.base.requestCommitLog}
+          requestCommitDetail={value.base.requestCommitDetail}
+          requestCommitFile={value.base.requestCommitFile}
+          onClearVirtualBranch={value.scope.virtualBranch.clearVirtualBranch}
+          onResolveLogFileReference={value.files.onResolveLogFileReference}
+          onResolveLogFileReferenceCandidates={value.files.onResolveLogFileReferenceCandidates}
+        >
+          {children}
+        </SessionDetailCommitsProvider>
       </SessionDetailSliceProviders>
     </SessionDetailContext.Provider>
   );
