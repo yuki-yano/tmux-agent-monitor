@@ -53,6 +53,34 @@ describe("sessionDetailQueryKeys", () => {
     expect(worktreeKey).not.toEqual(branchKey);
   });
 
+  it("captures every diff-file response dimension", () => {
+    const params = {
+      repoRoot: "/repo/a",
+      worktreePath: "/repo/worktree-a",
+      branch: null,
+      mode: "total" as const,
+      revision: "rev-1",
+      summarySnapshot: "snapshot-1",
+      path: "src/index.ts",
+    };
+    const key = sessionDetailQueryKeys.diffFile("pane-1", params);
+
+    expect(key).toEqual(["session-detail", "pane-1", "diff-file", params]);
+    expect(key).not.toEqual(sessionDetailQueryKeys.diffFile("pane-2", params));
+    for (const changed of [
+      { repoRoot: "/repo/b" },
+      { worktreePath: "/repo/worktree-b" },
+      { branch: "feature/a", mode: "committed" as const },
+      { mode: "uncommitted" as const },
+      { revision: "rev-2" },
+      { summarySnapshot: "snapshot-2" },
+      { path: "src/other.ts" },
+    ]) {
+      expect(key).not.toEqual(sessionDetailQueryKeys.diffFile("pane-1", { ...params, ...changed }));
+    }
+    expect(key.slice(0, -1)).toEqual(sessionDetailQueryKeys.diffFileRoot("pane-1"));
+  });
+
   it("separates timeline and diff data when a pane changes repositories", () => {
     const timelineScope = { scope: "pane", range: "1h" } as const;
     const diffScope = { mode: "total", worktreePath: null, branch: null } as const;

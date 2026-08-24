@@ -6,20 +6,20 @@
     "excluded": ["*.test.*", "*.spec.*", "__tests__"]
   },
   "metrics": {
-    "productionFiles": 343,
-    "useEffect": 93,
-    "useLayoutEffect": 33,
-    "effectTotal": 126,
-    "sessionDetailEffects": 59,
-    "useMemo": 200,
-    "useCallback": 388,
+    "productionFiles": 344,
+    "useEffect": 92,
+    "useLayoutEffect": 31,
+    "effectTotal": 123,
+    "sessionDetailEffects": 56,
+    "useMemo": 203,
+    "useCallback": 389,
     "memo": 51,
-    "sessionDetailAndLibUseMemo": 111,
-    "sessionDetailAndLibUseCallback": 187,
+    "sessionDetailAndLibUseMemo": 114,
+    "sessionDetailAndLibUseCallback": 188,
     "visibilityPollingCallerFiles": 8,
     "sessionDetailOwnershipLines": 1382,
     "reactOxlintDisable": 10,
-    "reactDoctorDisable": 46,
+    "reactDoctorDisable": 45,
     "exhaustiveDepsSuppression": 0,
     "useNoMemoDirective": 0
   },
@@ -28,9 +28,9 @@
     "dom-layout": 23,
     "event-migration": 5,
     "external-sync": 44,
-    "identity-reset": 23,
-    "ref-mirror": 12,
-    "request-bridge": 15
+    "identity-reset": 22,
+    "ref-mirror": 11,
+    "request-bridge": 14
   },
   "inventory": [
     {
@@ -2342,12 +2342,12 @@
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 385,
+      "line": 342,
       "column": 3,
       "owner": "useSessionDiffs",
       "hook": "useLayoutEffect",
       "dependencies": ["scope"],
-      "fingerprint": "159183b19b7e",
+      "fingerprint": "4c5ca6974476",
       "category": "identity-reset",
       "disposition": "key-reset",
       "confidence": "high",
@@ -2360,17 +2360,25 @@
         "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { activeScopeRef.current = scope; diffScopeGenerationRef.current += 1; diffSnapshotRef.current = null; diffSummaryRevRef.current = null; lastUiForceHydrationDataUpdateCountRe",
+      "preview": "() => { activeScopeRef.current = scope; const activeScope = scope; return () => { if (activeScopeRef.current === activeScope) { activeScopeRef.current = null; refreshGenerationRef.",
       "id": "E096"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 404,
+      "line": 353,
       "column": 3,
       "owner": "useSessionDiffs",
       "hook": "useLayoutEffect",
-      "dependencies": ["connected", "queryClient", "queryKey", "setFileError"],
-      "fingerprint": "d252b02043d6",
+      "dependencies": [
+        "committedFileLifetimeRef",
+        "connected",
+        "diffFileRootQueryKey",
+        "queryClient",
+        "scope",
+        "summaryQueryKey",
+        "summarySnapshot"
+      ],
+      "fingerprint": "61e34e25dd2a",
       "category": "external-sync",
       "disposition": "maintain",
       "confidence": "high",
@@ -2383,93 +2391,8 @@
         "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
         "behaviorVerified": false
       },
-      "preview": "() => { const wasConnected = previousConnectedRef.current; previousConnectedRef.current = connected; if (wasConnected && !connected) { refreshGenerationRef.current += 1; forceHydra",
+      "preview": "() => { const lifetime = { scope, summarySnapshot, connected }; committedFileLifetimeRef.commit(lifetime); const wasConnected = previousConnectedRef.current; previousConnectedRef.c",
       "id": "E097"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 417,
-      "column": 3,
-      "owner": "useSessionDiffs",
-      "hook": "useLayoutEffect",
-      "dependencies": [
-        "branch",
-        "diffMode",
-        "paneId",
-        "scope",
-        "setDiffFiles",
-        "setDiffLoadingFiles",
-        "setDiffOpen",
-        "setFileError",
-        "worktreePath"
-      ],
-      "fingerprint": "43d87a695538",
-      "category": "identity-reset",
-      "disposition": "key-reset",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { setDiffFiles({}); setDiffOpen({}); setDiffLoadingFiles({}); setFileError(null); return () => { clearDiffFileCacheForPane(paneId, worktreePath, branch, diffMode); }; }",
-      "id": "E098"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 554,
-      "column": 3,
-      "owner": "useSessionDiffs",
-      "hook": "useLayoutEffect",
-      "dependencies": [
-        "applyDiffSummary",
-        "currentSummaryUiState",
-        "dataUpdateCount",
-        "querySummary",
-        "scope"
-      ],
-      "fingerprint": "bcceb0c13ed3",
-      "category": "request-bridge",
-      "disposition": "query",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { if (querySummary == null || activeScopeRef.current !== scope) { return; } const marker = forceHydrationRef.current; const forceHydrate = (marker != null && marker.scope ===",
-      "id": "E099"
-    },
-    {
-      "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts",
-      "line": 681,
-      "column": 3,
-      "owner": "useSessionDiffs",
-      "hook": "useEffect",
-      "dependencies": ["diffOpen"],
-      "fingerprint": "c5cc34a77de6",
-      "category": "ref-mirror",
-      "disposition": "maintain",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "no",
-        "callbackIdentityIsNotSubscriptionContract": "no",
-        "effectEventIsNotExported": "no"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { diffOpenRef.current = diffOpen; }",
-      "id": "E100"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionDoneAcknowledgement.ts",
@@ -2500,7 +2423,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { let cancelled = false; let inFlight = false; let retryIndex = 0; let retryTimer: ReturnType<typeof setTimeout> | null = null; const clearRetry = () => { if (retryTimer != n",
-      "id": "E101"
+      "id": "E098"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-context-reset-effect.ts",
@@ -2540,7 +2463,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { resetSessionFilesRefs({ treePageRequestMapRef, searchRequestMapRef, fileContentRequestMapRef, logReferenceLinkableCacheRef, logReferenceLinkableRequestMapRef, activeSearchR",
-      "id": "E102"
+      "id": "E099"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
@@ -2563,7 +2486,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!state.fileModalOpen || !state.fileModalFile?.preview?.token) { return; } const file = state.fileModalFile; return () => revokePreview(paneId, file); }",
-      "id": "E103"
+      "id": "E100"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-file-modal-actions.ts",
@@ -2586,7 +2509,7 @@
         "behaviorVerified": false
       },
       "preview": "() => () => { activeFileContentRequestIdRef.current += 1; }",
-      "id": "E104"
+      "id": "E101"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-search-effects.ts",
@@ -2618,7 +2541,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!repoRoot) { return; } const normalized = searchQuery.trim(); const requestId = createNextSearchRequestId(activeSearchRequestIdRef); resetSearchExpandOverrides(dispatch",
-      "id": "E105"
+      "id": "E102"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts",
@@ -2641,7 +2564,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { treePagesRef.current = state.treePages; }",
-      "id": "E106"
+      "id": "E103"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts",
@@ -2664,7 +2587,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { activeScopeRef.current = currentScopeState; interactiveRefreshGenerationRef.current += 1; return () => { if (activeScopeRef.current === currentScopeState) { activeScopeRef.",
-      "id": "E107"
+      "id": "E104"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
@@ -2695,7 +2618,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setScreenLoadingState(initialScreenLoadingState); modeSwitchRef.current = null; screenRef.current = \"\"; imageRef.current = null; cursorRef.current = null; screenLinesRef.cu",
-      "id": "E108"
+      "id": "E105"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionScreen.ts",
@@ -2718,7 +2641,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (connected) { setScreenError(null); return; } setScreenError(connectionIssue ?? DISCONNECTED_MESSAGE); }",
-      "id": "E109"
+      "id": "E106"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualBranch.ts",
@@ -2750,7 +2673,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!branchList || !repoRoot) { return; } if (storedVirtualBranch) { if ( (branchNames.size > 0 && !branchNames.has(storedVirtualBranch)) || storedVirtualBranch === default",
-      "id": "E110"
+      "id": "E107"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useSessionVirtualWorktree.ts",
@@ -2783,7 +2706,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!worktreeList || !normalizedRepoRoot) { return; } if (virtualWorktreePath) { if (virtualWorktreePath === actualWorktreePath) { clearStoredSelection(paneId); setVirtualW",
-      "id": "E111"
+      "id": "E108"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/SessionDetailView.tsx",
@@ -2806,7 +2729,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!shouldDelayMissingState) { return; } missingSessionGraceTimer.set(() => { setGraceState((current) => (current.shouldDelay ? { ...current, elapsed: true } : current)); ",
-      "id": "E112"
+      "id": "E109"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -2829,7 +2752,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { publishedSearchQueryRef.current = initialSearchQuery; }",
-      "id": "E113"
+      "id": "E110"
     },
     {
       "file": "apps/web/src/pages/SessionList/components/SessionListHeader.tsx",
@@ -2852,7 +2775,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!isFocused) { return; } if (suppressNextDebounceRef.current) { suppressNextDebounceRef.current = false; return; } if (draftSearchQuery === initialSearchQuery) { return;",
-      "id": "E114"
+      "id": "E111"
     },
     {
       "file": "apps/web/src/pages/SessionList/SessionListView.tsx",
@@ -2875,7 +2798,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { return () => { if (reorderScrollFrameRef.current != null) { window.cancelAnimationFrame(reorderScrollFrameRef.current); reorderScrollFrameRef.current = null; } }; }",
-      "id": "E115"
+      "id": "E112"
     },
     {
       "file": "apps/web/src/pages/SessionList/useSessionListVM.ts",
@@ -2898,7 +2821,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { storeSessionListFilter(filter); }",
-      "id": "E116"
+      "id": "E113"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts",
@@ -2921,7 +2844,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E117"
+      "id": "E114"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts",
@@ -2944,7 +2867,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // oxlint-disable-next-line react/set-state-in-effect -- This effect owns initial loading and request guards. void loadDashboard(); }",
-      "id": "E118"
+      "id": "E115"
     },
     {
       "file": "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts",
@@ -2967,7 +2890,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E119"
+      "id": "E116"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -2996,7 +2919,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setFileNavigatorConfig({ autoExpandMatchLimit: 100 }); setWorkspaceTabsDisplayMode(\"all\"); setLaunchConfig(defaultLaunchConfig); setCapabilities({ screenImage: false, launc",
-      "id": "E120"
+      "id": "E117"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -3019,7 +2942,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!hasToken) { notificationTitleFingerprintRef.current = \"\"; return; } const nextEntries = toNotificationSessionTitleEntries(sessions); const nextFingerprint = buildNotif",
-      "id": "E121"
+      "id": "E118"
     },
     {
       "file": "apps/web/src/state/theme-context.tsx",
@@ -3042,7 +2965,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof window === \"undefined\") return; const applyTheme = (nextTheme: Theme) => { document.documentElement.dataset.theme = nextTheme; setResolvedTheme(nextTheme); }; co",
-      "id": "E122"
+      "id": "E119"
     },
     {
       "file": "apps/web/src/state/use-session-polling.ts",
@@ -3065,7 +2988,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled) { return; } void refreshSessions(); }",
-      "id": "E123"
+      "id": "E120"
     },
     {
       "file": "apps/web/src/state/use-session-token.ts",
@@ -3088,7 +3011,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!initialAccess.hasAccessDirective) { return; } if (initialAccess.token) { localStorage.setItem(TOKEN_KEY, initialAccess.token); } else { localStorage.removeItem(TOKEN_K",
-      "id": "E124"
+      "id": "E121"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -3111,7 +3034,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || !token) { transportRef.current = \"polling\"; handleTransportChange(\"polling\"); return; } const normalized = apiBaseUrl?.trim(); const basePath = normalized &",
-      "id": "E125"
+      "id": "E122"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -3134,7 +3057,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || typeof window === \"undefined\") return; const handleResume = () => { // If SSE is already open, nothing to do. if (transportRef.current === \"sse\") return; re",
-      "id": "E126"
+      "id": "E123"
     }
   ]
 }

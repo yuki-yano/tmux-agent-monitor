@@ -18,6 +18,12 @@ type DiffSummaryKeyParams = {
   branch: string | null;
 };
 
+type DiffFileKeyParams = DiffSummaryKeyParams & {
+  revision: string | null;
+  summarySnapshot: string | null;
+  path: string;
+};
+
 type CommitScopeKeyParams = {
   repoRoot: string | null;
   worktreePath: string | null;
@@ -53,6 +59,9 @@ export const sessionDetailQueryKeys = {
   diffSummaryRoot: (paneId: string) => sessionDetailQueryKeys.resource(paneId, "diff-summary"),
   diffSummary: (paneId: string, params: DiffSummaryKeyParams) =>
     [...sessionDetailQueryKeys.diffSummaryRoot(paneId), params] as const,
+  diffFileRoot: (paneId: string) => sessionDetailQueryKeys.resource(paneId, "diff-file"),
+  diffFile: (paneId: string, params: DiffFileKeyParams) =>
+    [...sessionDetailQueryKeys.diffFileRoot(paneId), params] as const,
   commitsRoot: (paneId: string) => sessionDetailQueryKeys.resource(paneId, "commits"),
   commitLogRoot: (paneId: string) =>
     [...sessionDetailQueryKeys.commitsRoot(paneId), "log"] as const,

@@ -1,1567 +1,838 @@
 import { QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { Provider as JotaiProvider, createStore } from "jotai";
 import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAppQueryClient } from "@/state/query-client";
 
-import {
-  diffErrorAtom,
-  diffFilesAtom,
-  diffLoadingFilesAtom,
-  diffOpenAtom,
-} from "../atoms/diffAtoms";
 import { sessionDetailQueryKeys } from "../session-detail-query-keys";
-import { AUTO_REFRESH_INTERVAL_MS } from "../sessionDetailUtils";
-import { createDeferred, createDiffFile, createDiffSummary } from "../test-helpers";
-import { useSessionDiffs as useSessionDiffsBase } from "./useSessionDiffs";
+import { AUTO_REFRESH_INTERVAL_MS, buildDiffSummarySnapshot } from "../sessionDetailUtils";
+import { createDiffFile, createDiffSummary } from "../test-helpers";
+import { type UseSessionDiffsParams, useSessionDiffs } from "./useSessionDiffs";
 
-const useSessionDiffs = (
-  params: Omit<Parameters<typeof useSessionDiffsBase>[0], "repoRoot"> & {
-    repoRoot?: string | null;
-  },
-) => useSessionDiffsBase({ repoRoot: "/repo", ...params });
+type HookProps = {
+  paneId: string;
+  repoRoot: string | null;
+  worktreePath: string | null;
+  branch: string | null;
+  connected: boolean;
+};
 
-describe("useSessionDiffs", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-    onlineManager.setOnline(true);
-    Object.defineProperty(document, "hidden", { value: false, configurable: true });
-    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+const createControllable = <T,>() => {
+  let resolve: ((value: T) => void) | undefined;
+  let reject: ((error: unknown) => void) | undefined;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
   });
-
-  const createHarness = (store = createStore(), strict = false) => {
-    const queryClient = createAppQueryClient();
-    store.set(diffErrorAtom, null);
-    store.set(diffFilesAtom, {});
-    store.set(diffOpenAtom, {});
-    store.set(diffLoadingFilesAtom, {});
-    const Wrapper = ({ children }: { children: ReactNode }) => {
-      const content = (
-        <QueryClientProvider client={queryClient}>
-          <JotaiProvider store={store}>{children}</JotaiProvider>
-        </QueryClientProvider>
-      );
-      return strict ? <StrictMode>{content}</StrictMode> : content;
-    };
-    return { queryClient, Wrapper };
+  return {
+    promise,
+    resolve: (value: T) => resolve?.(value),
+    reject: (error: unknown) => reject?.(error),
   };
-  const createWrapper = (store = createStore(), strict = false) =>
-    createHarness(store, strict).Wrapper;
+};
 
-  it("loads diff summary on mount", async () => {
-    const diffSummary = createDiffSummary();
-    const requestDiffSummary = vi.fn().mockResolvedValue(diffSummary);
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary).not.toBeNull();
-    });
-
-    expect(requestDiffSummary).toHaveBeenCalledWith(
-      "pane-1",
-      { force: true, mode: "total" },
-      expect.any(AbortSignal),
-    );
+const createSummaryWithPaths = (paths: string[], rev = "HEAD") =>
+  createDiffSummary({
+    rev,
+    files: paths.map((path) => ({
+      path,
+      status: "M" as const,
+      staged: false,
+      additions: 1,
+      deletions: 0,
+    })),
   });
 
-  it("switches worktree diff layers and keeps branch inspection committed", async () => {
-    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-    const wrapper = createWrapper();
-    const { result, rerender } = renderHook(
-      ({ branch }: { branch: string | null }) =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          branch,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper, initialProps: { branch: null as string | null } },
-    );
+const renderDiffs = ({
+  strict = false,
+  requestDiffSummary = vi.fn<UseSessionDiffsParams["requestDiffSummary"]>(async () =>
+    createDiffSummary(),
+  ),
+  requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(async (_paneId, path, rev) =>
+    createDiffFile({ path, rev: rev ?? null }),
+  ),
+  initialProps = {},
+}: {
+  strict?: boolean;
+  requestDiffSummary?: UseSessionDiffsParams["requestDiffSummary"];
+  requestDiffFile?: UseSessionDiffsParams["requestDiffFile"];
+  initialProps?: Partial<HookProps>;
+} = {}) => {
+  const queryClient = createAppQueryClient();
+  const Wrapper = ({ children }: { children: ReactNode }) => {
+    const content = <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return strict ? <StrictMode>{content}</StrictMode> : content;
+  };
+  const rendered = renderHook<ReturnType<typeof useSessionDiffs>, HookProps>(
+    ({ paneId, repoRoot, worktreePath, branch, connected }) =>
+      useSessionDiffs({
+        paneId,
+        repoRoot,
+        worktreePath,
+        branch,
+        connected,
+        requestDiffSummary,
+        requestDiffFile,
+      }),
+    {
+      wrapper: Wrapper,
+      initialProps: {
+        paneId: "pane-1",
+        repoRoot: "/repo",
+        worktreePath: null,
+        branch: null,
+        connected: true,
+        ...initialProps,
+      },
+    },
+  );
+  return { ...rendered, queryClient, requestDiffSummary, requestDiffFile };
+};
 
-    await waitFor(() => {
-      expect(result.current.diffMode).toBe("total");
-    });
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  onlineManager.setOnline(true);
+  Object.defineProperty(document, "hidden", { value: false, configurable: true });
+});
 
-    act(() => {
-      result.current.setDiffMode("uncommitted");
-    });
-    await waitFor(() => {
-      expect(requestDiffSummary).toHaveBeenLastCalledWith(
-        "pane-1",
-        {
-          force: true,
-          mode: "uncommitted",
-        },
-        expect.any(AbortSignal),
-      );
-    });
-
-    rerender({ branch: "feature/virtual" });
-    await waitFor(() => {
-      expect(result.current.diffMode).toBe("committed");
-      expect(requestDiffSummary).toHaveBeenLastCalledWith(
-        "pane-1",
-        {
-          branch: "feature/virtual",
-          force: true,
-          mode: "committed",
-        },
-        expect.any(AbortSignal),
-      );
-    });
-  });
-
-  it("loads diff file when toggled open", async () => {
-    const diffSummary = createDiffSummary();
-    const requestDiffSummary = vi.fn().mockResolvedValue(diffSummary);
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary).not.toBeNull();
-    });
-
-    result.current.toggleDiff("src/index.ts");
-
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledWith("pane-1", "src/index.ts", "HEAD", {
-        force: true,
-        mode: "total",
-      });
-    });
-  });
-
-  it("loads diff file without toggling open state", async () => {
-    const diffSummary = createDiffSummary();
-    const requestDiffSummary = vi.fn().mockResolvedValue(diffSummary);
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary).not.toBeNull();
-    });
-
-    void result.current.ensureDiffFile("src/index.ts");
-
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledWith("pane-1", "src/index.ts", "HEAD", {
-        force: true,
-        mode: "total",
-      });
-    });
-    expect(result.current.diffOpen["src/index.ts"]).toBeUndefined();
-  });
-
-  it("reloads diff summary when reconnected", async () => {
-    const diffSummary = createDiffSummary();
-    const requestDiffSummary = vi.fn().mockResolvedValue(diffSummary);
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { rerender } = renderHook(
-      ({ connected }) =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      {
-        wrapper,
-        initialProps: { connected: false },
+describe("useSessionDiffs summary Query", () => {
+  it("uses the full summary scope key and forwards its AbortSignal", async () => {
+    let signal: AbortSignal | undefined;
+    const requestDiffSummary = vi.fn<UseSessionDiffsParams["requestDiffSummary"]>(
+      async (_paneId, _options, requestSignal) => {
+        signal = requestSignal;
+        return createDiffSummary();
       },
     );
-
-    expect(requestDiffSummary).not.toHaveBeenCalled();
-
-    rerender({ connected: true });
-
-    await waitFor(() => {
-      expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-    });
-    expect(requestDiffSummary).toHaveBeenLastCalledWith(
-      "pane-1",
-      { force: true, mode: "total" },
-      expect.any(AbortSignal),
-    );
-  });
-
-  it("resumes summary polling after visibility returns without an immediate request", async () => {
-    vi.useFakeTimers();
-    Object.defineProperty(document, "hidden", { value: true, configurable: true });
-    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
-    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-
-    Object.defineProperty(document, "hidden", { value: false, configurable: true });
-    act(() => {
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-
-    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS);
-    });
-    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
-  });
-
-  it("stops summary polling while offline", async () => {
-    vi.useFakeTimers();
-    Object.defineProperty(document, "hidden", { value: false, configurable: true });
-    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
-    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-      await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS);
-    });
-    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
-
-    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
-    act(() => {
-      window.dispatchEvent(new Event("offline"));
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS * 2);
-    });
-
-    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
-  });
-
-  it("discards the previous summary and reloads when revisiting a pane", async () => {
-    const paneAInitial = createDiffSummary({ rev: "rev-a-initial" });
-    const paneARevisit = createDiffSummary({ rev: "rev-a-revisit" });
-    const paneBSummary = createDiffSummary({ rev: "rev-b" });
-    const paneARevisitDeferred = createDeferred<typeof paneARevisit>();
-    let paneACalls = 0;
-    const requestDiffSummary = vi.fn((paneId: string) => {
-      if (paneId === "pane-a") {
-        paneACalls += 1;
-        return paneACalls === 1 ? Promise.resolve(paneAInitial) : paneARevisitDeferred.promise;
-      }
-      return Promise.resolve(paneBSummary);
-    });
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result, rerender } = renderHook(
-      ({ paneId }) =>
-        useSessionDiffs({
-          paneId,
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper, initialProps: { paneId: "pane-a" } },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-a-initial");
-    });
-    rerender({ paneId: "pane-b" });
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-b");
-    });
-
-    rerender({ paneId: "pane-a" });
-
-    expect(result.current.diffSummary).toBeNull();
-    expect(result.current.diffLoading).toBe(true);
-    expect(requestDiffSummary).toHaveBeenCalledTimes(3);
-
-    await act(async () => {
-      paneARevisitDeferred.resolve(paneARevisit);
-      await paneARevisitDeferred.promise;
-    });
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-a-revisit");
-      expect(result.current.diffLoading).toBe(false);
-    });
-  });
-
-  it("exposes a rejected summary request through diffError", async () => {
-    const requestDiffSummary = vi.fn().mockRejectedValue(new Error("summary unavailable"));
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffError).toBe("summary unavailable");
-      expect(result.current.diffLoading).toBe(false);
-    });
-  });
-
-  it("ignores stale diff summary responses from previous pane", async () => {
-    const pane1Summary = createDiffSummary({ rev: "rev-pane-1", files: [] });
-    const pane2Summary = createDiffSummary({
-      rev: "rev-pane-2",
-      files: [{ path: "pane-2.ts", status: "M", staged: false, additions: 1, deletions: 0 }],
-    });
-    const pane1Deferred = createDeferred<typeof pane1Summary>();
-    const requestDiffSummary = vi.fn((paneId: string) =>
-      paneId === "pane-1" ? pane1Deferred.promise : Promise.resolve(pane2Summary),
-    );
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result, rerender } = renderHook(
-      ({ paneId }) =>
-        useSessionDiffs({
-          paneId,
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      {
-        wrapper,
-        initialProps: { paneId: "pane-1" },
-      },
-    );
-
-    rerender({ paneId: "pane-2" });
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-pane-2");
-    });
-
-    pane1Deferred.resolve(pane1Summary);
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-pane-2");
-    });
-  });
-
-  it("keeps the newest summary when refresh requests resolve out of order", async () => {
-    const staleSummary = createDiffSummary({ rev: "rev-stale" });
-    const freshSummary = createDiffSummary({ rev: "rev-fresh" });
-    const staleDeferred = createDeferred<typeof staleSummary>();
-    const freshDeferred = createDeferred<typeof freshSummary>();
-    const requestDiffSummary = vi
-      .fn()
-      .mockImplementationOnce(() => staleDeferred.promise)
-      .mockImplementationOnce(() => freshDeferred.promise);
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    void result.current.refreshDiff();
-    freshDeferred.resolve(freshSummary);
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-fresh");
-    });
-
-    staleDeferred.resolve(staleSummary);
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-fresh");
-    });
-  });
-
-  it("clears previous pane diff-file cache on pane switch", async () => {
-    const pane1Summary = createDiffSummary({ rev: "rev-pane-1" });
-    const pane2Summary = createDiffSummary({ rev: "rev-pane-2" });
-    const requestDiffSummary = vi.fn((paneId: string) =>
-      Promise.resolve(paneId === "pane-1" ? pane1Summary : pane2Summary),
-    );
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result, rerender } = renderHook(
-      ({ paneId }) =>
-        useSessionDiffs({
-          paneId,
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      {
-        wrapper,
-        initialProps: { paneId: "pane-1" },
-      },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-pane-1");
-    });
-
-    result.current.toggleDiff("src/index.ts");
-
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(1);
-    });
-
-    rerender({ paneId: "pane-2" });
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-pane-2");
-    });
-
-    rerender({ paneId: "pane-1" });
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-pane-1");
-    });
-
-    result.current.toggleDiff("src/index.ts");
-
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(2);
-    });
-    expect(requestDiffFile).toHaveBeenLastCalledWith("pane-1", "src/index.ts", "rev-pane-1", {
-      force: true,
-      mode: "total",
-    });
-  });
-
-  it("reuses cached open diff files when summary refresh keeps same rev", async () => {
-    const diffSummary = createDiffSummary({
-      rev: "HEAD",
-      files: [{ path: "src/index.ts", status: "M", staged: false, additions: 1, deletions: 0 }],
-    });
-    const requestDiffSummary = vi.fn().mockResolvedValue(diffSummary);
-    const requestDiffFile = vi.fn().mockResolvedValue(createDiffFile());
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("HEAD");
-    });
-
-    result.current.toggleDiff("src/index.ts");
-
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(1);
-    });
-
-    await result.current.refreshDiff();
-
-    await waitFor(() => {
-      expect(requestDiffSummary).toHaveBeenCalledTimes(2);
-    });
-    expect(requestDiffFile).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps an open-file refresh when a same-revision poll starts later", async () => {
-    const initialSummary = createDiffSummary({ rev: "rev-1" });
-    const refreshedSummary = createDiffSummary({ rev: "rev-2" });
-    const refreshedFileDeferred = createDeferred<ReturnType<typeof createDiffFile>>();
-    const requestDiffSummary = vi
-      .fn()
-      .mockResolvedValueOnce(initialSummary)
-      .mockResolvedValue(refreshedSummary);
-    const requestDiffFile = vi
-      .fn()
-      .mockResolvedValueOnce(createDiffFile({ rev: "rev-1", patch: "initial" }))
-      .mockImplementationOnce(() => refreshedFileDeferred.promise);
-    const setIntervalSpy = vi.spyOn(window, "setInterval");
-
-    try {
-      const wrapper = createWrapper();
-      const { result } = renderHook(
-        () =>
-          useSessionDiffs({
-            paneId: "pane-1",
-            connected: true,
-            requestDiffSummary,
-            requestDiffFile,
-          }),
-        { wrapper },
-      );
-
-      await waitFor(() => {
-        expect(result.current.diffSummary?.rev).toBe("rev-1");
-      });
-      act(() => {
-        result.current.toggleDiff("src/index.ts");
-      });
-      await waitFor(() => {
-        expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("initial");
-      });
-      const pollHandler = setIntervalSpy.mock.calls.find(
-        ([, delay]) => delay === AUTO_REFRESH_INTERVAL_MS,
-      )?.[0];
-      expect(typeof pollHandler).toBe("function");
-
-      act(() => {
-        void result.current.refreshDiff();
-      });
-      await waitFor(() => {
-        expect(requestDiffFile).toHaveBeenCalledTimes(2);
-        expect(result.current.diffSummary?.rev).toBe("rev-2");
-        expect(result.current.diffLoading).toBe(false);
-      });
-
-      act(() => {
-        if (typeof pollHandler === "function") pollHandler();
-      });
-      await waitFor(() => {
-        expect(requestDiffSummary).toHaveBeenCalledTimes(3);
-        expect(result.current.diffLoading).toBe(false);
-      });
-      expect(requestDiffFile).toHaveBeenCalledTimes(2);
-
-      await act(async () => {
-        refreshedFileDeferred.resolve(createDiffFile({ rev: "rev-2", patch: "fresh" }));
-      });
-
-      await waitFor(() => {
-        expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
-      });
-    } finally {
-      setIntervalSpy.mockRestore();
-    }
-  });
-
-  it("tracks loading while a cache-miss open file is hydrated for a new revision", async () => {
-    const initialSummary = createDiffSummary({ rev: "rev-1" });
-    const refreshedSummary = createDiffSummary({ rev: "rev-2" });
-    const refreshedFileDeferred = createDeferred<ReturnType<typeof createDiffFile>>();
-    const requestDiffSummary = vi
-      .fn()
-      .mockResolvedValueOnce(initialSummary)
-      .mockResolvedValueOnce(refreshedSummary);
-    const requestDiffFile = vi
-      .fn()
-      .mockResolvedValueOnce(createDiffFile({ rev: "rev-1", patch: "initial" }))
-      .mockImplementationOnce(() => refreshedFileDeferred.promise);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-1");
-    });
-    act(() => {
-      result.current.toggleDiff("src/index.ts");
-    });
-    await waitFor(() => {
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("initial");
-    });
-
-    act(() => {
-      void result.current.refreshDiff();
-    });
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-2");
-      expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(true);
-    });
-
-    await act(async () => {
-      refreshedFileDeferred.resolve(createDiffFile({ rev: "rev-2", patch: "refreshed" }));
-      await refreshedFileDeferred.promise;
-    });
-
-    await waitFor(() => {
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("refreshed");
-      expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(false);
-    });
-  });
-
-  it("deduplicates in-flight file requests for the same generation", async () => {
-    const diffSummary = createDiffSummary({ rev: "rev-1" });
-    const fileDeferred = createDeferred<ReturnType<typeof createDiffFile>>();
-    const requestDiffSummary = vi.fn().mockResolvedValue(diffSummary);
-    const requestDiffFile = vi.fn(() => fileDeferred.promise);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-1");
-    });
-
-    act(() => {
-      void result.current.ensureDiffFile("src/index.ts");
-      void result.current.ensureDiffFile("src/index.ts");
-    });
-
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(1);
-      expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(true);
-    });
-
-    await act(async () => {
-      fileDeferred.resolve(createDiffFile({ rev: "rev-1", patch: "deduplicated" }));
-      await fileDeferred.promise;
-    });
-
-    await waitFor(() => {
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("deduplicated");
-      expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(false);
-    });
-  });
-
-  it("keeps the same generation when a same-revision summary snapshot is unchanged", async () => {
-    const diffSummary = createDiffSummary({ rev: "rev-1" });
-    const fileDeferred = createDeferred<ReturnType<typeof createDiffFile>>();
-    const requestDiffSummary = vi.fn().mockResolvedValue(diffSummary);
-    const requestDiffFile = vi.fn(() => fileDeferred.promise);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-1");
-    });
-    act(() => {
-      result.current.toggleDiff("src/index.ts");
-    });
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(1);
-      expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(true);
-    });
-
-    await act(async () => {
-      await result.current.refreshDiff();
-    });
-
-    expect(requestDiffFile).toHaveBeenCalledTimes(1);
-    expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(true);
-
-    await act(async () => {
-      fileDeferred.resolve(createDiffFile({ rev: "rev-1", patch: "deduplicated" }));
-      await fileDeferred.promise;
-    });
-
-    await waitFor(() => {
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("deduplicated");
-      expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(false);
-    });
-  });
-
-  it("refetches a cached file when the same-revision summary snapshot changes", async () => {
-    const initialSummary = createDiffSummary({
-      rev: "rev-1",
-      files: [{ path: "src/index.ts", status: "M", staged: false, additions: 1, deletions: 0 }],
-    });
-    const changedSummary = createDiffSummary({
-      rev: "rev-1",
-      files: [{ path: "src/index.ts", status: "M", staged: false, additions: 2, deletions: 0 }],
-    });
-    const requestDiffSummary = vi
-      .fn()
-      .mockResolvedValueOnce(initialSummary)
-      .mockResolvedValueOnce(changedSummary);
-    const requestDiffFile = vi
-      .fn()
-      .mockResolvedValueOnce(createDiffFile({ rev: "rev-1", patch: "cached" }))
-      .mockResolvedValueOnce(createDiffFile({ rev: "rev-1", patch: "refetched" }));
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.files[0]?.additions).toBe(1);
-    });
-    act(() => {
-      result.current.toggleDiff("src/index.ts");
-    });
-    await waitFor(() => {
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("cached");
-    });
-
-    await act(async () => {
-      await result.current.refreshDiff();
-    });
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.files[0]?.additions).toBe(2);
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("refetched");
-    });
-    expect(requestDiffFile).toHaveBeenCalledTimes(2);
-  });
-
-  it("starts a new file request and ignores the old response when a same-revision snapshot changes", async () => {
-    const initialSummary = createDiffSummary({
-      rev: "rev-1",
-      files: [{ path: "src/index.ts", status: "M", staged: false, additions: 1, deletions: 0 }],
-    });
-    const changedSummary = createDiffSummary({
-      rev: "rev-1",
-      files: [{ path: "src/index.ts", status: "M", staged: false, additions: 2, deletions: 0 }],
-    });
-    const staleFileDeferred = createDeferred<ReturnType<typeof createDiffFile>>();
-    const freshFileDeferred = createDeferred<ReturnType<typeof createDiffFile>>();
-    const requestDiffSummary = vi
-      .fn()
-      .mockResolvedValueOnce(initialSummary)
-      .mockResolvedValueOnce(changedSummary);
-    const requestDiffFile = vi
-      .fn()
-      .mockImplementationOnce(() => staleFileDeferred.promise)
-      .mockImplementationOnce(() => freshFileDeferred.promise);
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-1",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.files[0]?.additions).toBe(1);
-    });
-    act(() => {
-      result.current.toggleDiff("src/index.ts");
-    });
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(1);
-    });
-
-    await act(async () => {
-      await result.current.refreshDiff();
-    });
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(2);
-      expect(result.current.diffSummary?.files[0]?.additions).toBe(2);
-    });
-
-    await act(async () => {
-      freshFileDeferred.resolve(createDiffFile({ rev: "rev-1", patch: "fresh" }));
-      await freshFileDeferred.promise;
-    });
-    await waitFor(() => {
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
-      expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(false);
-    });
-
-    await act(async () => {
-      staleFileDeferred.resolve(createDiffFile({ rev: "rev-1", patch: "stale" }));
-      await staleFileDeferred.promise;
-    });
-
-    expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
-    expect(result.current.diffLoadingFiles["src/index.ts"]).toBe(false);
-  });
-
-  it("does not restore a stale file cache entry after leaving and revisiting a scope", async () => {
-    const paneAInitial = createDiffSummary({ rev: "rev-a-1" });
-    const paneARefresh = createDiffSummary({ rev: "rev-a-2" });
-    const paneBSummary = createDiffSummary({ rev: "rev-b" });
-    const staleFileDeferred = createDeferred<ReturnType<typeof createDiffFile>>();
-    let paneACalls = 0;
-    const requestDiffSummary = vi.fn((paneId: string) => {
-      if (paneId === "pane-a") {
-        paneACalls += 1;
-        return Promise.resolve(paneACalls === 1 ? paneAInitial : paneARefresh);
-      }
-      return Promise.resolve(paneBSummary);
-    });
-    const requestDiffFile = vi
-      .fn()
-      .mockResolvedValueOnce(createDiffFile({ rev: "rev-a-1", patch: "initial" }))
-      .mockImplementationOnce(() => staleFileDeferred.promise)
-      .mockResolvedValueOnce(createDiffFile({ rev: "rev-a-2", patch: "fresh" }));
-
-    const wrapper = createWrapper();
-    const { result, rerender } = renderHook(
-      ({ paneId }) =>
-        useSessionDiffs({
-          paneId,
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper, initialProps: { paneId: "pane-a" } },
-    );
-
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-a-1");
-    });
-    act(() => {
-      result.current.toggleDiff("src/index.ts");
-    });
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(1);
-    });
-
-    act(() => {
-      void result.current.refreshDiff();
-    });
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(2);
-    });
-
-    rerender({ paneId: "pane-b" });
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-b");
-    });
-
-    rerender({ paneId: "pane-a" });
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("rev-a-2");
-    });
-    act(() => {
-      void result.current.ensureDiffFile("src/index.ts");
-    });
-
-    await waitFor(() => {
-      expect(requestDiffFile).toHaveBeenCalledTimes(3);
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
-    });
-
-    await act(async () => {
-      staleFileDeferred.resolve(createDiffFile({ rev: "rev-a-2", patch: "stale" }));
-      await staleFileDeferred.promise;
-      await Promise.resolve();
-    });
-
-    expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
-
-    act(() => {
-      void result.current.ensureDiffFile("src/index.ts");
-    });
-    await waitFor(() => {
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
-    });
-    expect(requestDiffFile).toHaveBeenCalledTimes(3);
-  });
-
-  it("ignores a previous mount response after revisiting the same scope", async () => {
-    const staleSummaryDeferred = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const staleSummary = createDiffSummary({ rev: "rev-stale" });
-    const freshSummary = createDiffSummary({ rev: "rev-fresh" });
-    const freshFile = createDiffFile({ rev: "rev-fresh", patch: "fresh" });
-    const requestDiffSummary = vi
-      .fn()
-      .mockImplementationOnce(() => staleSummaryDeferred.promise)
-      .mockResolvedValueOnce(freshSummary);
-    const requestDiffFile = vi.fn().mockResolvedValue(freshFile);
-    const store = createStore();
-    const wrapper = createWrapper(store);
-    const renderDiffHook = () =>
-      renderHook(
-        () =>
-          useSessionDiffs({
-            paneId: "pane-a",
-            connected: true,
-            requestDiffSummary,
-            requestDiffFile,
-          }),
-        { wrapper },
-      );
-
-    const staleMount = renderDiffHook();
-    await waitFor(() => {
-      expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-    });
-    staleMount.unmount();
-
-    const freshMount = renderDiffHook();
-    await waitFor(() => {
-      expect(freshMount.result.current.diffSummary?.rev).toBe("rev-fresh");
-    });
-    act(() => {
-      freshMount.result.current.toggleDiff("src/index.ts");
-    });
-    await waitFor(() => {
-      expect(freshMount.result.current.diffFiles["src/index.ts"]?.patch).toBe("fresh");
-    });
-
-    await act(async () => {
-      staleSummaryDeferred.resolve(staleSummary);
-      await staleSummaryDeferred.promise;
-      await Promise.resolve();
-    });
-
-    expect(freshMount.result.current.diffSummary?.rev).toBe("rev-fresh");
-    expect(store.get(diffFilesAtom)["src/index.ts"]?.patch).toBe("fresh");
-  });
-
-  it("stores the summary under the full query key and forwards the query AbortSignal", async () => {
-    let receivedSignal: AbortSignal | undefined;
-    const summary = createDiffSummary({ rev: "query-rev" });
-    const requestDiffSummary = vi.fn(
-      async (_paneId: string, _options: unknown, signal?: AbortSignal) => {
-        receivedSignal = signal;
-        return summary;
-      },
-    );
-    const { queryClient, Wrapper } = createHarness();
-
-    renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-query",
-          repoRoot: "/repo/query",
-          connected: true,
-          worktreePath: "/repo/query/wt",
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: Wrapper },
-    );
-
-    const queryKey = sessionDetailQueryKeys.diffSummary("pane-query", {
-      repoRoot: "/repo/query",
-      worktreePath: "/repo/query/wt",
+    const { result, queryClient } = renderDiffs({
+      requestDiffSummary,
+      initialProps: { worktreePath: "/worktree" },
+    });
+
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    expect(signal).toBeInstanceOf(AbortSignal);
+    const key = sessionDetailQueryKeys.diffSummary("pane-1", {
+      repoRoot: "/repo",
+      worktreePath: "/worktree",
       branch: null,
       mode: "total",
     });
-    await waitFor(() => expect(queryClient.getQueryData(queryKey)).toEqual(summary));
-    expect(receivedSignal).toBeInstanceOf(AbortSignal);
-    expect(queryClient.getQueryCache().find({ queryKey, exact: true })?.options).toMatchObject({
-      staleTime: 0,
-      gcTime: 0,
-      retry: false,
-      networkMode: "online",
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: "always",
-      refetchInterval: AUTO_REFRESH_INTERVAL_MS,
-      refetchIntervalInBackground: false,
-    });
+    expect(queryClient.getQueryData(key)).toEqual(createDiffSummary());
   });
 
-  it("shows a cold offline reason without a request or spinner, then resumes once online", async () => {
-    onlineManager.setOnline(false);
-    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-offline",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper() },
+  it("switches worktree modes and keeps branch inspection committed", async () => {
+    const requestDiffSummary = vi.fn<UseSessionDiffsParams["requestDiffSummary"]>(async () =>
+      createDiffSummary(),
     );
-
-    await waitFor(() => {
-      expect(result.current.diffError).toBe("Offline: waiting to load diffs");
-      expect(result.current.diffLoading).toBe(false);
-    });
-    expect(requestDiffSummary).not.toHaveBeenCalled();
-
-    act(() => onlineManager.setOnline(true));
+    const { result, rerender } = renderDiffs({ requestDiffSummary });
     await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
-    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-  });
 
-  it("waits until the next interval after a warm browser reconnect", async () => {
-    vi.useFakeTimers();
-    const requestDiffSummary = vi.fn().mockResolvedValue(createDiffSummary());
-    renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-online",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper() },
+    act(() => result.current.setDiffMode("uncommitted"));
+    await waitFor(() =>
+      expect(requestDiffSummary).toHaveBeenLastCalledWith(
+        "pane-1",
+        { force: true, mode: "uncommitted" },
+        expect.any(AbortSignal),
+      ),
     );
-    await act(async () => Promise.resolve());
-    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-
-    act(() => onlineManager.setOnline(false));
-    await act(async () => vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS * 2));
-    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-
-    act(() => onlineManager.setOnline(true));
-    await act(async () => Promise.resolve());
-    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-    await act(async () => vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS));
-    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
-  });
-
-  it("coalesces a StrictMode replay into one summary request", async () => {
-    const requestDiffSummary = vi.fn(async () => createDiffSummary());
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-strict",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper(createStore(), true) },
-    );
-
-    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
-    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-  });
-
-  it("aborts the consumed summary signal on unmount and scope change", async () => {
-    const signals: AbortSignal[] = [];
-    const requestDiffSummary = vi.fn((_paneId: string, _options: unknown, signal?: AbortSignal) => {
-      if (signal) signals.push(signal);
-      return new Promise<ReturnType<typeof createDiffSummary>>(() => {});
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: "feature/a",
+      connected: true,
     });
-    const hook = renderHook(
-      ({ paneId }) =>
-        useSessionDiffs({
-          paneId,
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper(), initialProps: { paneId: "pane-a" } },
+    await waitFor(() => expect(result.current.diffMode).toBe("committed"));
+    expect(requestDiffSummary).toHaveBeenLastCalledWith(
+      "pane-1",
+      { branch: "feature/a", force: true, mode: "committed" },
+      expect.any(AbortSignal),
     );
-
-    await waitFor(() => expect(signals).toHaveLength(1));
-    expect(signals[0]?.aborted).toBe(false);
-    hook.rerender({ paneId: "pane-b" });
-    await waitFor(() => {
-      expect(signals[0]?.aborted).toBe(true);
-      expect(signals).toHaveLength(2);
-    });
-    expect(signals[1]?.aborted).toBe(false);
-    hook.unmount();
-    expect(signals[1]?.aborted).toBe(true);
   });
 
-  it("clears legacy file state before painting a new summary scope", async () => {
-    const paneB = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const requestDiffSummary = vi.fn((paneId: string) =>
-      paneId === "pane-a" ? Promise.resolve(createDiffSummary({ rev: "rev-a" })) : paneB.promise,
-    );
-    const { result, rerender } = renderHook(
-      ({ paneId }) =>
-        useSessionDiffs({
-          paneId,
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi
-            .fn()
-            .mockResolvedValue(createDiffFile({ rev: "rev-a", patch: "pane-a" })),
-        }),
-      { wrapper: createWrapper(), initialProps: { paneId: "pane-a" } },
-    );
-    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("rev-a"));
-    act(() => result.current.toggleDiff("src/index.ts"));
-    await waitFor(() => expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("pane-a"));
-
-    rerender({ paneId: "pane-b" });
-
-    expect(result.current.diffSummary).toBeNull();
-    expect(result.current.diffFiles).toEqual({});
-    expect(result.current.diffOpen).toEqual({});
-    expect(result.current.diffLoadingFiles).toEqual({});
-  });
-
-  it("cancels the pending automatic request before a manual refresh", async () => {
-    const initial = createDeferred<ReturnType<typeof createDiffSummary>>();
-    let initialSignal: AbortSignal | undefined;
-    const requestDiffSummary = vi
-      .fn()
-      .mockImplementationOnce((_paneId, _options, signal?: AbortSignal) => {
-        initialSignal = signal;
-        return initial.promise;
-      })
-      .mockResolvedValueOnce(createDiffSummary({ rev: "manual" }));
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-manual-cancel",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper() },
-    );
-
-    await waitFor(() => expect(initialSignal).toBeInstanceOf(AbortSignal));
-    act(() => void result.current.refreshDiff());
-    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("manual"));
-    expect(initialSignal?.aborted).toBe(true);
-    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
-  });
-
-  it("keeps warm summary data and a manual error across a later silent poll failure", async () => {
-    vi.useFakeTimers();
-    const requestDiffSummary = vi
-      .fn()
-      .mockResolvedValueOnce(createDiffSummary({ rev: "warm" }))
-      .mockRejectedValueOnce(new Error("manual failed"))
-      .mockRejectedValueOnce(new Error("poll failed"));
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-errors",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper() },
-    );
-    await act(async () => Promise.resolve());
-    expect(result.current.diffSummary?.rev).toBe("warm");
-
-    await act(async () => result.current.refreshDiff());
-    expect(result.current.diffSummary?.rev).toBe("warm");
-    expect(result.current.diffError).toBe("manual failed");
-
-    await act(async () => vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS));
-    expect(result.current.diffSummary?.rev).toBe("warm");
-    expect(result.current.diffError).toBe("manual failed");
-  });
-
-  it("retries an open cache miss for manual equal-snapshot refresh but not for polling", async () => {
-    vi.useFakeTimers();
-    const summary = createDiffSummary({ rev: "same" });
-    const requestDiffSummary = vi.fn().mockResolvedValue(summary);
-    const requestDiffFile = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("file failed"))
-      .mockResolvedValueOnce(createDiffFile({ rev: "same", patch: "retried" }));
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-force-hydrate",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper: createWrapper() },
-    );
-    await act(async () => Promise.resolve());
-    act(() => result.current.toggleDiff("src/index.ts"));
-    await act(async () => Promise.resolve());
-    expect(result.current.diffError).toBe("file failed");
-    expect(requestDiffFile).toHaveBeenCalledTimes(1);
-
-    await act(async () => vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS));
-    expect(requestDiffFile).toHaveBeenCalledTimes(1);
-    expect(result.current.diffError).toBe("file failed");
-
-    await act(async () => result.current.refreshDiff());
-    await act(async () => Promise.resolve());
-    expect(requestDiffFile).toHaveBeenCalledTimes(2);
-    expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("retried");
-    expect(result.current.diffError).toBeNull();
-  });
-
-  it("cancels a pending summary on app disconnect and starts a fresh reconnect request", async () => {
-    const disconnectedRequest = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const reconnectedRequest = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const signals: AbortSignal[] = [];
-    const requestDiffSummary = vi
-      .fn()
-      .mockImplementationOnce((_paneId, _options, signal?: AbortSignal) => {
-        if (signal) signals.push(signal);
-        return disconnectedRequest.promise;
-      })
-      .mockImplementationOnce((_paneId, _options, signal?: AbortSignal) => {
-        if (signal) signals.push(signal);
-        return reconnectedRequest.promise;
-      });
-    const { result, rerender } = renderHook(
-      ({ connected }) =>
-        useSessionDiffs({
-          paneId: "pane-disconnect",
-          connected,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper(), initialProps: { connected: true } },
-    );
-
-    await waitFor(() => expect(signals).toHaveLength(1));
-    expect(signals[0]?.aborted).toBe(false);
-    rerender({ connected: false });
-    await waitFor(() => expect(signals[0]?.aborted).toBe(true));
-
-    rerender({ connected: true });
-    await waitFor(() => expect(signals).toHaveLength(2));
-    expect(signals[1]?.aborted).toBe(false);
-    expect(result.current.diffLoading).toBe(true);
-
-    await act(async () => {
-      disconnectedRequest.resolve(createDiffSummary({ rev: "stale-disconnected" }));
-      await disconnectedRequest.promise;
-    });
-    expect(result.current.diffSummary).toBeNull();
-
-    await act(async () => {
-      reconnectedRequest.resolve(createDiffSummary({ rev: "fresh-reconnected" }));
-      await reconnectedRequest.promise;
-    });
-    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("fresh-reconnected"));
-    expect(result.current.diffLoading).toBe(false);
-  });
-
-  it("keeps an offline app reconnect non-loading until the paused query resumes", async () => {
+  it("shows a cold offline reason without a request or spinner and resumes online", async () => {
     onlineManager.setOnline(false);
-    const reconnectRequest = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const requestDiffSummary = vi.fn(() => reconnectRequest.promise);
-    const { result, rerender } = renderHook(
-      ({ connected }) =>
-        useSessionDiffs({
-          paneId: "pane-offline-reconnect",
-          connected,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper(), initialProps: { connected: false } },
-    );
-
-    rerender({ connected: true });
-    await waitFor(() => {
-      expect(result.current.diffError).toBe("Offline: waiting to load diffs");
-      expect(result.current.diffLoading).toBe(false);
-    });
-    expect(requestDiffSummary).not.toHaveBeenCalled();
-
-    act(() => onlineManager.setOnline(true));
-    await waitFor(() => {
-      expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-      expect(result.current.diffLoading).toBe(true);
-    });
-    await act(async () => reconnectRequest.resolve(createDiffSummary({ rev: "online" })));
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("online");
-      expect(result.current.diffLoading).toBe(false);
-    });
-  });
-
-  it("keeps a cold offline manual refresh non-loading until its query resumes", async () => {
-    onlineManager.setOnline(false);
-    const manualRequest = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const requestDiffSummary = vi.fn(() => manualRequest.promise);
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-offline-manual",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper() },
-    );
-
+    const { result, requestDiffSummary } = renderDiffs();
     await waitFor(() => expect(result.current.diffError).toBe("Offline: waiting to load diffs"));
-    act(() => void result.current.refreshDiff());
     expect(result.current.diffLoading).toBe(false);
     expect(requestDiffSummary).not.toHaveBeenCalled();
 
     act(() => onlineManager.setOnline(true));
-    await waitFor(() => {
-      expect(requestDiffSummary).toHaveBeenCalledTimes(1);
-      expect(result.current.diffLoading).toBe(true);
-    });
-    await act(async () => manualRequest.resolve(createDiffSummary({ rev: "manual-online" })));
-    await waitFor(() => {
-      expect(result.current.diffSummary?.rev).toBe("manual-online");
-      expect(result.current.diffLoading).toBe(false);
-    });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    expect(requestDiffSummary).toHaveBeenCalledTimes(1);
   });
 
-  it("clears a legacy file error before exposing the latest manual summary failure", async () => {
-    let rejectManualSummary: ((reason: unknown) => void) | undefined;
-    const manualSummary = new Promise<ReturnType<typeof createDiffSummary>>((_resolve, reject) => {
-      rejectManualSummary = reject;
-    });
-    const requestDiffSummary = vi
-      .fn()
-      .mockResolvedValueOnce(createDiffSummary({ rev: "warm" }))
-      .mockImplementationOnce(() => manualSummary);
-    const requestDiffFile = vi.fn().mockRejectedValue(new Error("old file failed"));
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-error-precedence",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper: createWrapper() },
-    );
-    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("warm"));
+  it("polls an equal summary without refetching an open file", async () => {
+    vi.useFakeTimers();
+    const summary = createDiffSummary();
+    const requestDiffSummary = vi.fn(async () => summary);
+    const requestDiffFile = vi.fn(async () => createDiffFile());
+    const { result } = renderDiffs({ requestDiffSummary, requestDiffFile });
+    await act(async () => Promise.resolve());
     act(() => result.current.toggleDiff("src/index.ts"));
-    await waitFor(() => expect(result.current.diffError).toBe("old file failed"));
+    await act(async () => Promise.resolve());
+    expect(requestDiffFile).toHaveBeenCalledTimes(1);
+
+    await act(async () => vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS));
+    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
+    expect(requestDiffFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps only the latest manual summary result", async () => {
+    const first = createControllable<ReturnType<typeof createDiffSummary>>();
+    const second = createControllable<ReturnType<typeof createDiffSummary>>();
+    const signals: AbortSignal[] = [];
+    const requestDiffSummary = vi
+      .fn<UseSessionDiffsParams["requestDiffSummary"]>()
+      .mockResolvedValueOnce(createDiffSummary({ rev: "initial" }))
+      .mockImplementationOnce((_pane, _options, signal) => {
+        signals.push(signal!);
+        return first.promise;
+      })
+      .mockImplementationOnce((_pane, _options, signal) => {
+        signals.push(signal!);
+        return second.promise;
+      });
+    const { result } = renderDiffs({ requestDiffSummary });
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("initial"));
 
     act(() => void result.current.refreshDiff());
-    expect(result.current.diffError).toBeNull();
-    await act(async () => rejectManualSummary?.(new Error("latest summary failed")));
-    await waitFor(() => expect(result.current.diffError).toBe("latest summary failed"));
+    await waitFor(() => expect(signals).toHaveLength(1));
+    act(() => void result.current.refreshDiff());
+    await waitFor(() => expect(signals).toHaveLength(2));
+    expect(signals.some((signal) => signal.aborted)).toBe(true);
+    await act(async () => second.resolve(createDiffSummary({ rev: "latest" })));
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("latest"));
+    await act(async () => first.resolve(createDiffSummary({ rev: "stale" })));
+    expect(result.current.diffSummary?.rev).toBe("latest");
   });
 
-  it("retains a manual error for equal automatic success and clears it on snapshot change", async () => {
+  it("does not request on a disconnected cold mount and blocks once on reconnect", async () => {
+    const summary = createControllable<ReturnType<typeof createDiffSummary>>();
+    const requestDiffSummary = vi.fn(() => summary.promise);
+    const { result, rerender } = renderDiffs({
+      requestDiffSummary,
+      initialProps: { connected: false },
+    });
+    await act(async () => Promise.resolve());
+    expect(requestDiffSummary).not.toHaveBeenCalled();
+    expect(result.current.diffLoading).toBe(false);
+
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
+    await waitFor(() => expect(requestDiffSummary).toHaveBeenCalledTimes(1));
+    expect(result.current.diffLoading).toBe(true);
+    await act(async () => summary.resolve(createDiffSummary()));
+    await waitFor(() => expect(result.current.diffLoading).toBe(false));
+  });
+
+  it("aborts a consumed summary signal on scope change and unmount", async () => {
+    const signals: AbortSignal[] = [];
+    let paneBCalls = 0;
+    const requestDiffSummary = vi.fn<UseSessionDiffsParams["requestDiffSummary"]>(
+      async (paneId, _options, signal) => {
+        signals.push(signal!);
+        if (paneId === "pane-b") {
+          paneBCalls += 1;
+          if (paneBCalls === 1) return createDiffSummary({ rev: "pane-b" });
+        }
+        return new Promise<ReturnType<typeof createDiffSummary>>(() => undefined);
+      },
+    );
+    const { result, rerender, unmount } = renderDiffs({
+      requestDiffSummary,
+      initialProps: { paneId: "pane-a" },
+    });
+    await waitFor(() => expect(signals).toHaveLength(1));
+    rerender({
+      paneId: "pane-b",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("pane-b"));
+    expect(signals[0]?.aborted).toBe(true);
+    act(() => void result.current.refreshDiff());
+    await waitFor(() => expect(signals).toHaveLength(3));
+    unmount();
+    expect(signals[2]?.aborted).toBe(true);
+  });
+
+  it("keeps a manual error across an equal poll and clears it on snapshot change", async () => {
     vi.useFakeTimers();
     const warm = createDiffSummary({ rev: "warm" });
     const changed = createDiffSummary({ rev: "changed" });
     const requestDiffSummary = vi
-      .fn()
+      .fn<UseSessionDiffsParams["requestDiffSummary"]>()
       .mockResolvedValueOnce(warm)
-      .mockRejectedValueOnce(new Error("manual remains"))
+      .mockRejectedValueOnce(new Error("manual failed"))
       .mockResolvedValueOnce(warm)
       .mockResolvedValueOnce(changed);
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-error-clear",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderDiffs({ requestDiffSummary });
     await act(async () => Promise.resolve());
     await act(async () => result.current.refreshDiff());
-    expect(result.current.diffError).toBe("manual remains");
+    expect(result.current.diffError).toBe("manual failed");
 
     await act(async () => vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS));
     expect(result.current.diffSummary?.rev).toBe("warm");
-    expect(result.current.diffError).toBe("manual remains");
-
+    expect(result.current.diffError).toBe("manual failed");
     await act(async () => vi.advanceTimersByTimeAsync(AUTO_REFRESH_INTERVAL_MS));
     expect(result.current.diffSummary?.rev).toBe("changed");
     expect(result.current.diffError).toBeNull();
   });
 
-  it("keeps only the latest of two reverse-order manual refreshes", async () => {
-    const firstManual = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const secondManual = createDeferred<ReturnType<typeof createDiffSummary>>();
-    const manualSignals: AbortSignal[] = [];
-    const requestDiffSummary = vi
-      .fn()
-      .mockResolvedValueOnce(createDiffSummary({ rev: "initial" }))
-      .mockImplementationOnce((_paneId, _options, signal?: AbortSignal) => {
-        if (signal) manualSignals.push(signal);
-        return firstManual.promise;
-      })
-      .mockImplementationOnce((_paneId, _options, signal?: AbortSignal) => {
-        if (signal) manualSignals.push(signal);
-        return secondManual.promise;
-      });
-    const { result } = renderHook(
-      () =>
-        useSessionDiffs({
-          paneId: "pane-double-manual",
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper() },
-    );
-    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("initial"));
-
-    act(() => void result.current.refreshDiff());
-    await waitFor(() => expect(manualSignals).toHaveLength(1));
-    expect(manualSignals[0]?.aborted).toBe(false);
-    act(() => void result.current.refreshDiff());
-    await waitFor(() => {
-      expect(manualSignals[0]?.aborted).toBe(true);
-      expect(manualSignals).toHaveLength(2);
-    });
-    expect(manualSignals[1]?.aborted).toBe(false);
-
-    await act(async () => secondManual.resolve(createDiffSummary({ rev: "latest" })));
-    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("latest"));
-    await act(async () => firstManual.resolve(createDiffSummary({ rev: "stale" })));
-    expect(result.current.diffSummary?.rev).toBe("latest");
-    expect(result.current.diffLoading).toBe(false);
-  });
-
-  it("does not re-expose a pending manual refresh after A to B to A", async () => {
-    const staleManual = createDeferred<ReturnType<typeof createDiffSummary>>();
+  it("does not re-expose an old A manual request after A to B to A", async () => {
+    const staleA = createControllable<ReturnType<typeof createDiffSummary>>();
     let paneACalls = 0;
     const requestDiffSummary = vi.fn((paneId: string) => {
-      if (paneId === "pane-b") {
-        return Promise.resolve(createDiffSummary({ rev: "pane-b" }));
-      }
+      if (paneId === "pane-b") return Promise.resolve(createDiffSummary({ rev: "pane-b" }));
       paneACalls += 1;
       if (paneACalls === 1) return Promise.resolve(createDiffSummary({ rev: "pane-a-initial" }));
-      if (paneACalls === 2) return staleManual.promise;
+      if (paneACalls === 2) return staleA.promise;
       return Promise.resolve(createDiffSummary({ rev: "pane-a-revisit" }));
     });
-    const { result, rerender } = renderHook(
-      ({ paneId }) =>
-        useSessionDiffs({
-          paneId,
-          connected: true,
-          requestDiffSummary,
-          requestDiffFile: vi.fn().mockResolvedValue(createDiffFile()),
-        }),
-      { wrapper: createWrapper(), initialProps: { paneId: "pane-a" } },
-    );
+    const { result, rerender } = renderDiffs({
+      requestDiffSummary,
+      initialProps: { paneId: "pane-a" },
+    });
     await waitFor(() => expect(result.current.diffSummary?.rev).toBe("pane-a-initial"));
     act(() => void result.current.refreshDiff());
     await waitFor(() => expect(result.current.diffLoading).toBe(true));
-
-    rerender({ paneId: "pane-b" });
+    rerender({
+      paneId: "pane-b",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
     await waitFor(() => expect(result.current.diffSummary?.rev).toBe("pane-b"));
-    rerender({ paneId: "pane-a" });
+    rerender({
+      paneId: "pane-a",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
     await waitFor(() => expect(result.current.diffSummary?.rev).toBe("pane-a-revisit"));
-    expect(result.current.diffLoading).toBe(false);
-    expect(result.current.diffError).toBeNull();
-
-    await act(async () => staleManual.resolve(createDiffSummary({ rev: "pane-a-stale" })));
+    await act(async () => staleA.resolve(createDiffSummary({ rev: "pane-a-stale" })));
     expect(result.current.diffSummary?.rev).toBe("pane-a-revisit");
     expect(result.current.diffLoading).toBe(false);
     expect(result.current.diffError).toBeNull();
   });
+});
 
-  it("force-hydrates an equal snapshot cache miss after app reconnect", async () => {
-    const summary = createDiffSummary({ rev: "same-reconnect" });
-    const requestDiffSummary = vi.fn().mockResolvedValue(summary);
-    const requestDiffFile = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("file unavailable"))
-      .mockResolvedValueOnce(createDiffFile({ rev: "same-reconnect", patch: "reconnected" }));
-    const { result, rerender } = renderHook(
-      ({ connected }) =>
-        useSessionDiffs({
-          paneId: "pane-reconnect-hydrate",
-          connected,
-          requestDiffSummary,
-          requestDiffFile,
-        }),
-      { wrapper: createWrapper(), initialProps: { connected: true } },
+describe("useSessionDiffs diff-file Query", () => {
+  it("uses the full key/options, one StrictMode observer, and forwards AbortSignal", async () => {
+    let fileSignal: AbortSignal | undefined;
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (_paneId, path, rev, _options, signal) => {
+        fileSignal = signal;
+        return createDiffFile({ path, rev: rev ?? null });
+      },
     );
-    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("same-reconnect"));
-    act(() => result.current.toggleDiff("src/index.ts"));
-    await waitFor(() => expect(result.current.diffError).toBe("file unavailable"));
-
-    rerender({ connected: false });
-    rerender({ connected: true });
-    await waitFor(() => {
-      expect(requestDiffSummary).toHaveBeenCalledTimes(2);
-      expect(requestDiffFile).toHaveBeenCalledTimes(2);
-      expect(result.current.diffFiles["src/index.ts"]?.patch).toBe("reconnected");
-      expect(result.current.diffError).toBeNull();
+    const { result, queryClient } = renderDiffs({ strict: true, requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => {
+      result.current.toggleDiff("src/index.ts");
+      void result.current.ensureDiffFile("src/index.ts");
+      void result.current.ensureDiffFile("src/index.ts");
     });
+    await waitFor(() => expect(result.current.diffFiles["src/index.ts"]).toBeDefined());
+    expect(requestDiffFile).toHaveBeenCalledTimes(1);
+    expect(fileSignal).toBeInstanceOf(AbortSignal);
+
+    const summary = result.current.diffSummary!;
+    const key = sessionDetailQueryKeys.diffFile("pane-1", {
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      mode: "total",
+      revision: summary.rev,
+      summarySnapshot: buildDiffSummarySnapshot(summary),
+      path: "src/index.ts",
+    });
+    const query = queryClient.getQueryCache().find({ queryKey: key, exact: true });
+    expect(query?.getObserversCount()).toBe(1);
+    expect(query?.options).toMatchObject({
+      staleTime: Infinity,
+      gcTime: 0,
+      retry: false,
+      networkMode: "online",
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    });
+    expect(requestDiffFile).toHaveBeenCalledWith(
+      "pane-1",
+      "src/index.ts",
+      "HEAD",
+      { force: true, mode: "total" },
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("keeps a pending observer after close, completes it, and reopens with zero requests", async () => {
+    const file = createControllable<ReturnType<typeof createDiffFile>>();
+    const requestDiffFile = vi.fn(() => file.promise);
+    const { result, queryClient } = renderDiffs({ requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => result.current.toggleDiff("src/index.ts"));
+    await waitFor(() => expect(requestDiffFile).toHaveBeenCalledTimes(1));
+    act(() => result.current.toggleDiff("src/index.ts"));
+    expect(result.current.diffOpen["src/index.ts"]).toBe(false);
+
+    await act(async () => file.resolve(createDiffFile()));
+    await waitFor(() => expect(result.current.diffFiles["src/index.ts"]).toBeDefined());
+    const query = queryClient
+      .getQueryCache()
+      .findAll({ queryKey: sessionDetailQueryKeys.diffFileRoot("pane-1") })[0];
+    expect(query?.getObserversCount()).toBe(1);
+    act(() => result.current.toggleDiff("src/index.ts"));
+    await act(async () => Promise.resolve());
+    expect(requestDiffFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("manual equal-snapshot refresh refetches every open successful file", async () => {
+    const summary = createSummaryWithPaths(["src/a.ts", "src/b.ts"]);
+    const requestDiffSummary = vi.fn(async () => summary);
+    let fileRequestCount = 0;
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (_pane, path, rev) => {
+        fileRequestCount += 1;
+        return createDiffFile({
+          path,
+          rev: rev ?? null,
+          patch: `${path}:${fileRequestCount}`,
+        });
+      },
+    );
+    const { result } = renderDiffs({ requestDiffSummary, requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => {
+      result.current.toggleDiff("src/a.ts");
+      result.current.toggleDiff("src/b.ts");
+    });
+    await waitFor(() => expect(requestDiffFile).toHaveBeenCalledTimes(2));
+
+    await act(async () => result.current.refreshDiff());
+    await waitFor(() => expect(requestDiffFile).toHaveBeenCalledTimes(4));
+    expect(requestDiffSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it("carries only still-present open paths to a changed snapshot", async () => {
+    const initial = createSummaryWithPaths(
+      ["src/open.ts", "src/removed.ts", "src/external.ts"],
+      "rev-1",
+    );
+    const changed = createSummaryWithPaths(["src/open.ts", "src/external.ts"], "rev-2");
+    const openRequest = createControllable<ReturnType<typeof createDiffFile>>();
+    const signals: AbortSignal[] = [];
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (_pane, path, rev, _options, signal) => {
+        signals.push(signal!);
+        if (path === "src/open.ts" && rev === "rev-1") return openRequest.promise;
+        return createDiffFile({ path, rev: rev ?? null });
+      },
+    );
+    const { result, queryClient } = renderDiffs({
+      requestDiffSummary: vi.fn(async () => initial),
+      requestDiffFile,
+    });
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("rev-1"));
+    act(() => {
+      result.current.toggleDiff("src/open.ts");
+      result.current.toggleDiff("src/removed.ts");
+      void result.current.ensureDiffFile("src/external.ts");
+    });
+    await waitFor(() => expect(requestDiffFile).toHaveBeenCalledTimes(3));
+
+    const summaryKey = sessionDetailQueryKeys.diffSummary("pane-1", {
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      mode: "total",
+    });
+    const oldOpenKey = sessionDetailQueryKeys.diffFile("pane-1", {
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      mode: "total",
+      revision: "rev-1",
+      summarySnapshot: buildDiffSummarySnapshot(initial),
+      path: "src/open.ts",
+    });
+    act(() => void queryClient.setQueryData(summaryKey, changed));
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("rev-2"));
+    await waitFor(() =>
+      expect(
+        requestDiffFile.mock.calls.some(
+          ([, path, rev]) => path === "src/open.ts" && rev === "rev-2",
+        ),
+      ).toBe(true),
+    );
+    expect(result.current.diffOpen["src/open.ts"]).toBe(true);
+    expect(result.current.diffOpen["src/removed.ts"]).toBeUndefined();
+    expect(result.current.diffFiles["src/removed.ts"]).toBeUndefined();
+    expect(result.current.diffFiles["src/external.ts"]).toBeUndefined();
+    expect(signals.some((signal) => signal.aborted)).toBe(true);
+    await waitFor(() => expect(queryClient.getQueryData(oldOpenKey)).toBeUndefined());
+    expect(
+      requestDiffFile.mock.calls.some(
+        ([, path, rev]) => path === "src/removed.ts" && rev === "rev-2",
+      ),
+    ).toBe(false);
+  });
+
+  it("drops every file resource on scope change and ignores an A to B to A stale response", async () => {
+    const staleA = createControllable<ReturnType<typeof createDiffFile>>();
+    let firstA = true;
+    let oldSignal: AbortSignal | undefined;
+    const requestDiffSummary = vi.fn(async (paneId: string) =>
+      createDiffSummary({ rev: paneId === "pane-a" ? "rev-a" : "rev-b" }),
+    );
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (paneId, path, rev, _options, signal) => {
+        if (paneId === "pane-a" && firstA) {
+          firstA = false;
+          oldSignal = signal;
+          return staleA.promise;
+        }
+        return createDiffFile({ path, rev: rev ?? null, patch: paneId });
+      },
+    );
+    const { result, rerender, queryClient } = renderDiffs({
+      requestDiffSummary,
+      requestDiffFile,
+      initialProps: { paneId: "pane-a" },
+    });
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("rev-a"));
+    act(() => result.current.toggleDiff("src/index.ts"));
+    await waitFor(() => expect(requestDiffFile).toHaveBeenCalledTimes(1));
+
+    rerender({
+      paneId: "pane-b",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("rev-b"));
+    expect(result.current.diffOpen).toEqual({});
+    expect(oldSignal?.aborted).toBe(true);
+    rerender({
+      paneId: "pane-a",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
+    await waitFor(() => expect(result.current.diffSummary?.rev).toBe("rev-a"));
+    await act(async () => staleA.resolve(createDiffFile({ rev: "rev-a", patch: "stale" })));
+    expect(result.current.diffFiles).toEqual({});
+    expect(
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: sessionDetailQueryKeys.diffFileRoot("pane-a") }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ["revision", createDiffFile({ rev: "wrong-rev" })],
+    ["path", createDiffFile({ path: "src/wrong.ts" })],
+  ])("rejects a %s mismatch and refreshes the exact summary once", async (_kind, response) => {
+    const summary = createDiffSummary();
+    const requestDiffSummary = vi.fn(async () => summary);
+    const requestDiffFile = vi.fn(async () => response);
+    const { result, queryClient } = renderDiffs({ requestDiffSummary, requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => result.current.toggleDiff("src/index.ts"));
+    await waitFor(() => expect(result.current.diffError).toBe("Failed to load diff file"));
+    await waitFor(() => expect(requestDiffSummary).toHaveBeenCalledTimes(2));
+    expect(requestDiffFile).toHaveBeenCalledTimes(1);
+    const key = sessionDetailQueryKeys.diffFile("pane-1", {
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      mode: "total",
+      revision: "HEAD",
+      summarySnapshot: buildDiffSummarySnapshot(summary),
+      path: "src/index.ts",
+    });
+    expect(queryClient.getQueryData(key)).toBeUndefined();
+  });
+
+  it("reconnects only open missing/error files and reuses open success", async () => {
+    const summary = createSummaryWithPaths(["src/success.ts", "src/error.ts", "src/missing.ts"]);
+    const pathCalls = new Map<string, number>();
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (_pane, path, rev) => {
+        const count = (pathCalls.get(path) ?? 0) + 1;
+        pathCalls.set(path, count);
+        if (path === "src/error.ts" && count === 1) throw new Error("file error");
+        return createDiffFile({ path, rev: rev ?? null });
+      },
+    );
+    const { result, rerender } = renderDiffs({
+      requestDiffSummary: vi.fn(async () => summary),
+      requestDiffFile,
+    });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => {
+      result.current.toggleDiff("src/success.ts");
+      result.current.toggleDiff("src/error.ts");
+    });
+    await waitFor(() => expect(requestDiffFile).toHaveBeenCalledTimes(2));
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: false,
+    });
+    act(() => result.current.toggleDiff("src/missing.ts"));
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
+    await waitFor(() => expect(requestDiffFile).toHaveBeenCalledTimes(4));
+    expect(pathCalls.get("src/success.ts")).toBe(1);
+    expect(pathCalls.get("src/error.ts")).toBe(2);
+    expect(pathCalls.get("src/missing.ts")).toBe(1);
+  });
+
+  it("starts a disconnected external missing request once after reconnect", async () => {
+    const summary = createSummaryWithPaths(["src/success.ts", "src/cold.ts"]);
+    const pathCalls = new Map<string, number>();
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (_pane, path, rev) => {
+        pathCalls.set(path, (pathCalls.get(path) ?? 0) + 1);
+        return createDiffFile({ path, rev: rev ?? null });
+      },
+    );
+    const { result, rerender } = renderDiffs({
+      requestDiffSummary: vi.fn(async () => summary),
+      requestDiffFile,
+    });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    await act(async () => result.current.ensureDiffFile("src/success.ts"));
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: false,
+    });
+    await act(async () => result.current.ensureDiffFile("src/cold.ts"));
+    expect(pathCalls.get("src/cold.ts")).toBeUndefined();
+
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
+    await waitFor(() => expect(pathCalls.get("src/cold.ts")).toBe(1));
+    expect(pathCalls.get("src/success.ts")).toBe(1);
+  });
+
+  it("retries an external error only on another ensure", async () => {
+    const requestDiffFile = vi
+      .fn<UseSessionDiffsParams["requestDiffFile"]>()
+      .mockRejectedValueOnce(new Error("external failed"))
+      .mockResolvedValueOnce(createDiffFile());
+    const { result, rerender } = renderDiffs({ requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    await act(async () => result.current.ensureDiffFile("src/index.ts"));
+    expect(requestDiffFile).toHaveBeenCalledTimes(1);
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: false,
+    });
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: true,
+    });
+    await act(async () => Promise.resolve());
+    expect(requestDiffFile).toHaveBeenCalledTimes(1);
+    await act(async () => result.current.ensureDiffFile("src/index.ts"));
+    expect(requestDiffFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not show a paused cold file as loading", async () => {
+    const summary = createSummaryWithPaths(["src/index.ts", "src/offline.ts"]);
+    const requestDiffFile = vi.fn(async (_pane: string, path: string) => createDiffFile({ path }));
+    const { result } = renderDiffs({
+      requestDiffSummary: vi.fn(async () => summary),
+      requestDiffFile,
+    });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    onlineManager.setOnline(false);
+    act(() => void result.current.ensureDiffFile("src/offline.ts"));
+    await act(async () => Promise.resolve());
+    expect(requestDiffFile).not.toHaveBeenCalled();
+    expect(result.current.diffLoadingFiles["src/offline.ts"]).toBe(false);
+  });
+
+  it("hides an old file error while manual summary refresh blocks and then shows its failure", async () => {
+    const summary = createSummaryWithPaths(["src/index.ts"]);
+    const manualSummary = createControllable<ReturnType<typeof createDiffSummary>>();
+    const requestDiffSummary = vi
+      .fn<UseSessionDiffsParams["requestDiffSummary"]>()
+      .mockResolvedValueOnce(summary)
+      .mockImplementationOnce(() => manualSummary.promise);
+    const requestDiffFile = vi.fn(async () => {
+      throw new Error("file failed");
+    });
+    const { result } = renderDiffs({ requestDiffSummary, requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => result.current.toggleDiff("src/index.ts"));
+    await waitFor(() => expect(result.current.diffError).toBe("file failed"));
+
+    let refresh!: Promise<void>;
+    act(() => {
+      refresh = result.current.refreshDiff();
+    });
+    await waitFor(() => expect(requestDiffSummary).toHaveBeenCalledTimes(2));
+    expect(result.current.diffLoading).toBe(true);
+    expect(result.current.diffError).toBeNull();
+    manualSummary.reject(new Error("summary failed"));
+    await act(async () => refresh);
+    expect(result.current.diffError).toBe("summary failed");
+  });
+
+  it.each(["disconnect", "unmount", "snapshot"] as const)(
+    "uses the committed lifetime guard before cancellation settles after %s",
+    async (boundary) => {
+      const initialSummary = createDiffSummary({ rev: "rev-1" });
+      const changedSummary = createDiffSummary({ rev: "rev-2" });
+      const oldFile = createControllable<ReturnType<typeof createDiffFile>>();
+      let oldSignal: AbortSignal | undefined;
+      let fileCalls = 0;
+      const requestDiffSummary = vi.fn(async () => initialSummary);
+      const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+        async (_pane, path, rev, _options, signal) => {
+          fileCalls += 1;
+          if (fileCalls === 1) {
+            oldSignal = signal;
+            return oldFile.promise;
+          }
+          return createDiffFile({ path, rev: rev ?? null });
+        },
+      );
+      const rendered = renderDiffs({ requestDiffSummary, requestDiffFile });
+      await waitFor(() => expect(rendered.result.current.diffSummary).not.toBeNull());
+      act(() => rendered.result.current.toggleDiff("src/index.ts"));
+      await waitFor(() => expect(oldSignal).toBeDefined());
+      Object.defineProperty(oldSignal!, "aborted", { value: false, configurable: true });
+
+      if (boundary === "disconnect") {
+        rendered.rerender({
+          paneId: "pane-1",
+          repoRoot: "/repo",
+          worktreePath: null,
+          branch: null,
+          connected: false,
+        });
+      } else if (boundary === "unmount") {
+        rendered.unmount();
+      } else {
+        const summaryKey = sessionDetailQueryKeys.diffSummary("pane-1", {
+          repoRoot: "/repo",
+          worktreePath: null,
+          branch: null,
+          mode: "total",
+        });
+        act(() => void rendered.queryClient.setQueryData(summaryKey, changedSummary));
+      }
+      expect(oldSignal?.aborted).toBe(false);
+      await act(async () => {
+        oldFile.resolve(createDiffFile({ path: "src/wrong.ts", rev: "wrong-rev" }));
+        await Promise.resolve();
+      });
+      expect(requestDiffSummary).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("aborts summary and file roots on disconnect", async () => {
+    const file = createControllable<ReturnType<typeof createDiffFile>>();
+    const manual = createControllable<ReturnType<typeof createDiffSummary>>();
+    let fileSignal: AbortSignal | undefined;
+    let summarySignal: AbortSignal | undefined;
+    const requestDiffSummary = vi
+      .fn<UseSessionDiffsParams["requestDiffSummary"]>()
+      .mockResolvedValueOnce(createDiffSummary())
+      .mockImplementationOnce((_pane, _options, signal) => {
+        summarySignal = signal;
+        return manual.promise;
+      });
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (_pane, _path, _rev, _options, signal) => {
+        fileSignal = signal;
+        return file.promise;
+      },
+    );
+    const { result, rerender } = renderDiffs({ requestDiffSummary, requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => {
+      result.current.toggleDiff("src/index.ts");
+      void result.current.refreshDiff();
+    });
+    await waitFor(() => expect(fileSignal).toBeDefined());
+    await waitFor(() => expect(summarySignal).toBeDefined());
+    rerender({
+      paneId: "pane-1",
+      repoRoot: "/repo",
+      worktreePath: null,
+      branch: null,
+      connected: false,
+    });
+    await waitFor(() => {
+      expect(fileSignal?.aborted).toBe(true);
+      expect(summarySignal?.aborted).toBe(true);
+    });
+    expect(result.current.diffError).toBeNull();
+  });
+
+  it("aborts and garbage-collects a file Query on unmount", async () => {
+    const file = createControllable<ReturnType<typeof createDiffFile>>();
+    let signal: AbortSignal | undefined;
+    const requestDiffFile = vi.fn<UseSessionDiffsParams["requestDiffFile"]>(
+      async (_pane, _path, _rev, _options, requestSignal) => {
+        signal = requestSignal;
+        return file.promise;
+      },
+    );
+    const { result, unmount, queryClient } = renderDiffs({ requestDiffFile });
+    await waitFor(() => expect(result.current.diffSummary).not.toBeNull());
+    act(() => result.current.toggleDiff("src/index.ts"));
+    await waitFor(() => expect(signal).toBeDefined());
+    unmount();
+    expect(signal?.aborted).toBe(true);
+    await act(async () => file.resolve(createDiffFile({ patch: "ignored" })));
+    await waitFor(() =>
+      expect(
+        queryClient
+          .getQueryCache()
+          .findAll({ queryKey: sessionDetailQueryKeys.diffFileRoot("pane-1") }),
+      ).toEqual([]),
+    );
   });
 });
