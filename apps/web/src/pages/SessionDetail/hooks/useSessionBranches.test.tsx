@@ -447,6 +447,46 @@ describe("useSessionBranches", () => {
     );
   });
 
+  it("settles a successful mutation without starting its forced refresh while offline", async () => {
+    vi.useFakeTimers();
+    const requestBranches = vi.fn<BranchesRequest>(async (paneId) => buildBranchList(paneId));
+    const requestBranchCheckout = vi.fn(async () => {
+      onlineManager.setOnline(false);
+    });
+    const { result } = renderHook(
+      () =>
+        useSessionBranches({
+          paneId: "pane-a",
+          connected: true,
+          session: createSessionDetail({ paneId: "pane-a", repoRoot: "/repo/a" }),
+          requestBranches,
+          requestBranchCheckout,
+          requestBranchCreate: vi.fn(async () => undefined),
+          requestBranchDelete: vi.fn(async () => undefined),
+        }),
+      { wrapper: createQueryWrapper() },
+    );
+
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    expect(result.current.currentBranch).toBe("pane-a");
+    let succeeded: boolean | undefined;
+    await act(async () => {
+      succeeded = await result.current.checkoutBranch("feature/a");
+    });
+
+    expect(succeeded).toBe(true);
+    expect(result.current.mutating).toBeNull();
+    expect(result.current.mutationError).toBeNull();
+    expect(requestBranches).toHaveBeenCalledTimes(1);
+
+    act(() => onlineManager.setOnline(true));
+    await act(async () => undefined);
+    expect(requestBranches).toHaveBeenCalledTimes(1);
+    await act(async () => vi.advanceTimersByTimeAsync(10_000));
+    expect(requestBranches).toHaveBeenCalledTimes(2);
+    expect(requestBranches).toHaveBeenLastCalledWith("pane-a", undefined, expect.any(AbortSignal));
+  });
+
   it("does not refresh the previous pane after its mutation finishes", async () => {
     const mutationDeferred = createDeferred<void>();
     const requestBranches = vi.fn<BranchesRequest>(async (paneId) => buildBranchList(paneId));

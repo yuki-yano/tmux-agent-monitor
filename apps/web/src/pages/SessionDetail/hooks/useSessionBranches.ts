@@ -230,7 +230,9 @@ export const useSessionBranches = ({
         if (!isCurrentResourceGeneration()) {
           return false;
         }
-        await forceRefreshBranches();
+        if (onlineManager.isOnline()) {
+          await forceRefreshBranches();
+        }
         return isCurrentResourceGeneration();
       } catch (err) {
         if (!isCurrentResourceGeneration()) {
