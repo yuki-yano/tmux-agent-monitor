@@ -233,7 +233,7 @@ export const NotesSection = memo(({ state, actions }: NotesSectionProps) => {
           </Callout>
         ) : (
           <>
-            {!notesLoading && notes.length === 0 ? (
+            {!notesLoading && !notesError && notes.length === 0 ? (
               <EmptyState
                 icon={<BookText className="text-latte-overlay1 h-6 w-6" />}
                 message="No notes yet"

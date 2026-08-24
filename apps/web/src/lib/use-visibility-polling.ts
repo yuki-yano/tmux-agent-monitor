@@ -3,6 +3,7 @@ import { useEffect, useEffectEvent } from "react";
 type UseVisibilityPollingParams = {
   enabled: boolean;
   intervalMs: number;
+  onStart?: () => void;
   onTick: () => void;
   onResume?: () => void;
   shouldPoll?: () => boolean;
@@ -11,10 +12,14 @@ type UseVisibilityPollingParams = {
 export const useVisibilityPolling = ({
   enabled,
   intervalMs,
+  onStart,
   onTick,
   onResume,
   shouldPoll,
 }: UseVisibilityPollingParams) => {
+  const handleStart = useEffectEvent(() => {
+    onStart?.();
+  });
   const handleTick = useEffectEvent(onTick);
   const handleResumeCallback = useEffectEvent(() => {
     onResume?.();
@@ -65,6 +70,7 @@ export const useVisibilityPolling = ({
     };
 
     if (canPoll()) {
+      handleStart();
       start();
     }
 

@@ -87,22 +87,52 @@ describe("useNotesPolling", () => {
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps requesting on its interval while hidden and offline", async () => {
+  it("stops while hidden and waits for the next tick after visibility resumes", async () => {
     vi.useFakeTimers();
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const onRefresh = vi.fn();
+
+    renderHook(() => useNotesPolling({ repoRoot: "/repo", onRefresh }));
+
+    expect(onRefresh).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(onRefresh).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    void act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(onRefresh).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onRefresh).toHaveBeenCalledWith({ silent: true });
+  });
+
+  it("stops while offline and waits for the next tick after online resumes", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
     Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
     const onRefresh = vi.fn();
 
     renderHook(() => useNotesPolling({ repoRoot: "/repo", onRefresh }));
 
-    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(onRefresh).not.toHaveBeenCalled();
     await act(async () => {
       vi.advanceTimersByTime(20_000);
     });
+    expect(onRefresh).not.toHaveBeenCalled();
 
-    expect(onRefresh).toHaveBeenCalledTimes(3);
-    expect(onRefresh).toHaveBeenNthCalledWith(1, { silent: true });
-    expect(onRefresh).toHaveBeenNthCalledWith(2, { silent: true });
-    expect(onRefresh).toHaveBeenNthCalledWith(3, { silent: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    void act(() => window.dispatchEvent(new Event("online")));
+    expect(onRefresh).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(onRefresh).toHaveBeenCalledOnce();
   });
 });

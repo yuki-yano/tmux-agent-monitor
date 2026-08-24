@@ -12,6 +12,34 @@ describe("useVisibilityPolling", () => {
     Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
   });
 
+  it("runs onStart only for the initial active setup, not when resuming", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    const onStart = vi.fn();
+    const onTick = vi.fn();
+
+    renderHook(() =>
+      useVisibilityPolling({
+        enabled: true,
+        intervalMs: 1000,
+        onStart,
+        onTick,
+      }),
+    );
+
+    expect(onStart).toHaveBeenCalledOnce();
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    void act(() => document.dispatchEvent(new Event("visibilitychange")));
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    void act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onTick).not.toHaveBeenCalled();
+
+    void act(() => vi.advanceTimersByTime(1000));
+    expect(onTick).toHaveBeenCalledOnce();
+  });
+
   it("starts polling after visibility resumes from hidden state", () => {
     vi.useFakeTimers();
     Object.defineProperty(document, "hidden", { value: true, configurable: true });

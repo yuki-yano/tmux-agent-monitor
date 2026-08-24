@@ -1,14 +1,17 @@
+import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type RepoNote, sortNotesDesc } from "@vde-monitor/shared";
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
+
+import { sessionDetailQueryKeys } from "../session-detail-query-keys";
 
 type UseSessionRepoNotesParams = {
   paneId: string;
   repoRoot: string | null;
   connected: boolean;
-  requestRepoNotes: (paneId: string) => Promise<RepoNote[]>;
+  requestRepoNotes: (paneId: string, signal?: AbortSignal) => Promise<RepoNote[]>;
   createRepoNote: (
     paneId: string,
     input: { title?: string | null; body: string },
@@ -31,104 +34,122 @@ type RepoNotesScope = {
   generation: number;
 };
 
-const isSameRepoNotesScope = (left: RepoNotesScope, right: RepoNotesScope) =>
-  left.paneId === right.paneId &&
-  left.repoRoot === right.repoRoot &&
-  left.generation === right.generation;
-
-type RepoNotesState = {
-  notes: RepoNote[];
-  notesLoading: boolean;
-  notesError: string | null;
+type RepoNotesMutationState = {
+  paneId: string;
+  repoRoot: string | null;
+  generation: number;
+  mutationError: string | null;
+  mutationErrorDataUpdateCount: number | null;
   creatingNote: boolean;
   savingNoteId: string | null;
   deletingNoteId: string | null;
 };
 
-type RepoNotesAction =
-  | { type: "reset" }
-  | { type: "loadStart"; silent: boolean }
-  | { type: "loadSuccess"; notes: RepoNote[] }
-  | { type: "loadFailure"; error: string }
-  | { type: "loadFinish"; silent: boolean; loading: boolean }
-  | { type: "setError"; error: string }
-  | { type: "createStart" }
+type RepoNotesMutationAction =
+  | { type: "createStart"; paneId: string; repoRoot: string | null; generation: number }
   | { type: "createFinish" }
-  | { type: "saveStart"; noteId: string }
+  | {
+      type: "saveStart";
+      paneId: string;
+      repoRoot: string | null;
+      generation: number;
+      noteId: string;
+    }
   | { type: "saveFinish"; noteId: string }
-  | { type: "deleteStart"; noteId: string }
+  | {
+      type: "deleteStart";
+      paneId: string;
+      repoRoot: string | null;
+      generation: number;
+      noteId: string;
+    }
   | { type: "deleteFinish"; noteId: string }
-  | { type: "appendOrReplace"; note: RepoNote }
-  | { type: "remove"; noteId: string };
+  | { type: "mutationFailure"; error: string; dataUpdateCount: number };
 
-const initialRepoNotesState: RepoNotesState = {
-  notes: [],
-  notesLoading: false,
-  notesError: null,
+const createInitialMutationState = (
+  paneId: string,
+  repoRoot: string | null,
+  generation = -1,
+): RepoNotesMutationState => ({
+  paneId,
+  repoRoot,
+  generation,
+  mutationError: null,
+  mutationErrorDataUpdateCount: null,
   creatingNote: false,
   savingNoteId: null,
   deletingNoteId: null,
-};
+});
 
-const repoNotesReducer = (state: RepoNotesState, action: RepoNotesAction): RepoNotesState => {
+const beginMutationInScope = (
+  state: RepoNotesMutationState,
+  paneId: string,
+  repoRoot: string | null,
+  generation: number,
+) =>
+  state.paneId === paneId && state.repoRoot === repoRoot && state.generation === generation
+    ? { ...state, mutationError: null, mutationErrorDataUpdateCount: null }
+    : createInitialMutationState(paneId, repoRoot, generation);
+
+const repoNotesMutationReducer = (
+  state: RepoNotesMutationState,
+  action: RepoNotesMutationAction,
+): RepoNotesMutationState => {
   switch (action.type) {
-    case "reset":
-      return initialRepoNotesState;
-    case "loadStart":
-      return {
-        ...state,
-        notesLoading: action.silent ? state.notesLoading : true,
-      };
-    case "loadSuccess":
-      return {
-        ...state,
-        notes: sortNotesDesc(action.notes),
-        notesError: null,
-      };
-    case "loadFailure":
-      return { ...state, notesError: action.error };
-    case "loadFinish":
-      return {
-        ...state,
-        notesLoading: action.silent ? state.notesLoading : action.loading,
-      };
-    case "setError":
-      return { ...state, notesError: action.error };
     case "createStart":
-      return { ...state, creatingNote: true };
+      return {
+        ...beginMutationInScope(state, action.paneId, action.repoRoot, action.generation),
+        creatingNote: true,
+      };
     case "createFinish":
       return { ...state, creatingNote: false };
     case "saveStart":
-      return { ...state, savingNoteId: action.noteId };
+      return {
+        ...beginMutationInScope(state, action.paneId, action.repoRoot, action.generation),
+        savingNoteId: action.noteId,
+      };
     case "saveFinish":
       return {
         ...state,
         savingNoteId: state.savingNoteId === action.noteId ? null : state.savingNoteId,
       };
     case "deleteStart":
-      return { ...state, deletingNoteId: action.noteId };
+      return {
+        ...beginMutationInScope(state, action.paneId, action.repoRoot, action.generation),
+        deletingNoteId: action.noteId,
+      };
     case "deleteFinish":
       return {
         ...state,
         deletingNoteId: state.deletingNoteId === action.noteId ? null : state.deletingNoteId,
       };
-    case "appendOrReplace":
+    case "mutationFailure":
       return {
         ...state,
-        notes: sortNotesDesc([
-          ...state.notes.filter((note) => note.id !== action.note.id),
-          action.note,
-        ]),
-        notesError: null,
-      };
-    case "remove":
-      return {
-        ...state,
-        notes: state.notes.filter((note) => note.id !== action.noteId),
-        notesError: null,
+        mutationError: action.error,
+        mutationErrorDataUpdateCount: action.dataUpdateCount,
       };
   }
 };
+
+type NotesLoadingState = {
+  paneId: string;
+  repoRoot: string | null;
+  connected: boolean;
+  showColdLoading: boolean;
+};
+
+type InteractiveRefreshState = {
+  scope: RepoNotesScope;
+  refreshGeneration: number;
+};
+
+type NotesVisibleErrorState = {
+  queryKey: readonly unknown[];
+  error: unknown;
+};
+
+const OFFLINE_NOTES_MESSAGE = "Offline: waiting to load notes";
 
 export const useSessionRepoNotes = ({
   paneId,
@@ -139,131 +160,180 @@ export const useSessionRepoNotes = ({
   updateRepoNote,
   deleteRepoNote,
 }: UseSessionRepoNotesParams) => {
-  const [state, dispatch] = useReducer(repoNotesReducer, initialRepoNotesState);
-  const { notes, notesLoading, notesError, creatingNote, savingNoteId, deletingNoteId } = state;
+  const queryClient = useQueryClient();
+  const browserOnline = onlineManager.isOnline();
+  const queryKey = useMemo(
+    () => sessionDetailQueryKeys.notes(paneId, repoRoot),
+    [paneId, repoRoot],
+  );
+  const {
+    data: queryNotes,
+    error: queryError,
+    fetchStatus,
+    isFetched,
+    isLoading,
+  } = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => sortNotesDesc(await requestRepoNotes(paneId, signal)),
+    enabled: Boolean(paneId) && Boolean(repoRoot) && connected,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    networkMode: "online",
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: "always",
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+  });
+  const notes = queryNotes ?? [];
+  const [loadingState, setLoadingState] = useState<NotesLoadingState>(() => ({
+    paneId,
+    repoRoot,
+    connected,
+    showColdLoading: connected && browserOnline,
+  }));
+  let currentLoadingState = loadingState;
+  if (loadingState.paneId !== paneId || loadingState.repoRoot !== repoRoot) {
+    currentLoadingState = {
+      paneId,
+      repoRoot,
+      connected,
+      showColdLoading: connected && browserOnline,
+    };
+    setLoadingState(currentLoadingState);
+  } else if (loadingState.connected !== connected) {
+    currentLoadingState = {
+      ...loadingState,
+      connected,
+      showColdLoading: false,
+    };
+    setLoadingState(currentLoadingState);
+  }
 
-  const noteRequestIdRef = useRef(0);
-  const previousConnectedRef = useRef<boolean | null>(null);
-  const activeScopeRef = useRef<RepoNotesScope>({ paneId, repoRoot, generation: 0 });
-  const pendingInteractiveLoadsRef = useRef({ generation: 0, count: 0 });
+  const [scopeState, setScopeState] = useState<RepoNotesScope>({ paneId, repoRoot, generation: 0 });
+  let currentScopeState = scopeState;
+  if (scopeState.paneId !== paneId || scopeState.repoRoot !== repoRoot) {
+    currentScopeState = { paneId, repoRoot, generation: scopeState.generation + 1 };
+    setScopeState(currentScopeState);
+  }
+  const activeScopeRef = useRef<RepoNotesScope>(currentScopeState);
+  const [mutationState, dispatch] = useReducer(
+    repoNotesMutationReducer,
+    createInitialMutationState(paneId, repoRoot),
+  );
+  const currentMutationState =
+    mutationState.paneId === paneId &&
+    mutationState.repoRoot === repoRoot &&
+    mutationState.generation === currentScopeState.generation
+      ? mutationState
+      : createInitialMutationState(paneId, repoRoot);
+  const interactiveRefreshGenerationRef = useRef(0);
+  const [interactiveRefreshState, setInteractiveRefreshState] =
+    useState<InteractiveRefreshState | null>(null);
+  const currentInteractiveRefreshState =
+    interactiveRefreshState?.scope === currentScopeState ? interactiveRefreshState : null;
 
   useLayoutEffect(() => {
-    if (activeScopeRef.current.paneId === paneId && activeScopeRef.current.repoRoot === repoRoot) {
-      return;
-    }
-    const generation = activeScopeRef.current.generation + 1;
-    activeScopeRef.current = { paneId, repoRoot, generation };
-    pendingInteractiveLoadsRef.current = { generation, count: 0 };
-  }, [paneId, repoRoot]);
+    activeScopeRef.current = currentScopeState;
+    interactiveRefreshGenerationRef.current += 1;
+    return () => {
+      if (activeScopeRef.current === currentScopeState) {
+        activeScopeRef.current = {
+          paneId: "",
+          repoRoot: null,
+          generation: currentScopeState.generation + 1,
+        };
+        interactiveRefreshGenerationRef.current += 1;
+      }
+    };
+  }, [currentScopeState]);
 
   const isActiveScope = useCallback(
-    (scope: RepoNotesScope) => isSameRepoNotesScope(activeScopeRef.current, scope),
+    (scope: RepoNotesScope) => activeScopeRef.current === scope,
     [],
   );
 
-  const loadNotes = useCallback(
-    async ({ silent = false }: { silent?: boolean } = {}) => {
-      const scope = activeScopeRef.current;
-      if (!scope.paneId || !scope.repoRoot) {
-        return;
-      }
-      const targetPaneId = scope.paneId;
-      const requestId = noteRequestIdRef.current + 1;
-      noteRequestIdRef.current = requestId;
-      if (!silent) {
-        const pending = pendingInteractiveLoadsRef.current;
-        pendingInteractiveLoadsRef.current = {
-          generation: scope.generation,
-          count: pending.generation === scope.generation ? pending.count + 1 : 1,
-        };
-      }
-      dispatch({ type: "loadStart", silent });
-      try {
-        const loaded = await requestRepoNotes(targetPaneId);
-        if (!isActiveScope(scope) || noteRequestIdRef.current !== requestId) {
-          return;
-        }
-        dispatch({ type: "loadSuccess", notes: loaded });
-      } catch (error) {
-        if (!isActiveScope(scope) || noteRequestIdRef.current !== requestId) {
-          return;
-        }
-        dispatch({
-          type: "loadFailure",
-          error: resolveUnknownErrorMessage(error, API_ERROR_MESSAGES.repoNotes),
-        });
-      } finally {
-        const pending = pendingInteractiveLoadsRef.current;
-        if (!silent && isActiveScope(scope) && pending.generation === scope.generation) {
-          const count = Math.max(0, pending.count - 1);
-          pendingInteractiveLoadsRef.current = { generation: scope.generation, count };
-          dispatch({
-            type: "loadFinish",
-            silent,
-            loading: count > 0,
-          });
-        }
-      }
-    },
-    [isActiveScope, requestRepoNotes],
-  );
-
-  useEffect(() => {
-    pendingInteractiveLoadsRef.current = {
-      generation: activeScopeRef.current.generation,
-      count: 0,
-    };
-    dispatch({ type: "reset" });
-    // react-doctor-disable-next-line no-event-handler
-    if (repoRoot) {
-      void loadNotes();
-    }
-  }, [loadNotes, paneId, repoRoot]);
-
-  useEffect(() => {
-    if (previousConnectedRef.current === false && connected && repoRoot) {
-      void loadNotes({ silent: true });
-    }
-    previousConnectedRef.current = connected;
-  }, [connected, loadNotes, repoRoot]);
-
   const refreshNotes = useCallback(
     (options?: RefreshNotesOptions) => {
-      void loadNotes({ silent: options?.silent ?? false });
+      if (!paneId || !repoRoot || !connected) {
+        return;
+      }
+      if (options?.silent) {
+        void queryClient.refetchQueries(
+          { queryKey, exact: true, type: "active" },
+          { cancelRefetch: false },
+        );
+        return;
+      }
+
+      const scope = activeScopeRef.current;
+      const generation = interactiveRefreshGenerationRef.current + 1;
+      interactiveRefreshGenerationRef.current = generation;
+      setInteractiveRefreshState({ scope, refreshGeneration: generation });
+      void (async () => {
+        try {
+          await queryClient.cancelQueries({ queryKey, exact: true });
+          if (!isActiveScope(scope) || interactiveRefreshGenerationRef.current !== generation) {
+            return;
+          }
+          await queryClient.refetchQueries({ queryKey, exact: true, type: "active" });
+        } finally {
+          setInteractiveRefreshState((current) =>
+            current?.scope === scope && current.refreshGeneration === generation ? null : current,
+          );
+        }
+      })();
     },
-    [loadNotes],
+    [connected, isActiveScope, paneId, queryClient, queryKey, repoRoot],
   );
 
-  const appendOrReplaceNote = useCallback((incoming: RepoNote) => {
-    dispatch({ type: "appendOrReplace", note: incoming });
-  }, []);
-
-  const invalidatePendingNoteLoads = useCallback(() => {
-    noteRequestIdRef.current += 1;
-  }, []);
+  const cancelListRequests = useCallback(
+    () => queryClient.cancelQueries({ queryKey, exact: true }),
+    [queryClient, queryKey],
+  );
+  const getQueryDataUpdateCount = useCallback(
+    () => queryClient.getQueryState<RepoNote[]>(queryKey)?.dataUpdateCount ?? 0,
+    [queryClient, queryKey],
+  );
 
   const createNote = useCallback(
     async (input: { title?: string | null; body: string }) => {
       const scope = activeScopeRef.current;
       if (!scope.repoRoot) {
-        dispatch({ type: "setError", error: API_ERROR_MESSAGES.repoUnavailable });
+        dispatch({
+          type: "mutationFailure",
+          error: API_ERROR_MESSAGES.repoUnavailable,
+          dataUpdateCount: getQueryDataUpdateCount(),
+        });
         return null;
       }
-      const targetPaneId = scope.paneId;
-      dispatch({ type: "createStart" });
+      dispatch({
+        type: "createStart",
+        paneId: scope.paneId,
+        repoRoot: scope.repoRoot,
+        generation: scope.generation,
+      });
       try {
-        const created = await createRepoNote(targetPaneId, input);
+        await cancelListRequests();
         if (!isActiveScope(scope)) {
           return null;
         }
-        invalidatePendingNoteLoads();
-        appendOrReplaceNote(created);
+        const created = await createRepoNote(scope.paneId, input);
+        await cancelListRequests();
+        if (!isActiveScope(scope)) {
+          return null;
+        }
+        queryClient.setQueryData<RepoNote[]>(queryKey, (current = []) =>
+          sortNotesDesc([...current.filter((note) => note.id !== created.id), created]),
+        );
         return created;
       } catch (error) {
         if (isActiveScope(scope)) {
           dispatch({
-            type: "setError",
+            type: "mutationFailure",
             error: resolveUnknownErrorMessage(error, API_ERROR_MESSAGES.createRepoNote),
+            dataUpdateCount: getQueryDataUpdateCount(),
           });
         }
         return null;
@@ -273,31 +343,54 @@ export const useSessionRepoNotes = ({
         }
       }
     },
-    [appendOrReplaceNote, createRepoNote, invalidatePendingNoteLoads, isActiveScope],
+    [
+      cancelListRequests,
+      createRepoNote,
+      getQueryDataUpdateCount,
+      isActiveScope,
+      queryClient,
+      queryKey,
+    ],
   );
 
   const saveNote = useCallback(
     async (noteId: string, input: { title?: string | null; body: string }) => {
       const scope = activeScopeRef.current;
       if (!scope.repoRoot) {
-        dispatch({ type: "setError", error: API_ERROR_MESSAGES.repoUnavailable });
+        dispatch({
+          type: "mutationFailure",
+          error: API_ERROR_MESSAGES.repoUnavailable,
+          dataUpdateCount: getQueryDataUpdateCount(),
+        });
         return false;
       }
-      const targetPaneId = scope.paneId;
-      dispatch({ type: "saveStart", noteId });
+      dispatch({
+        type: "saveStart",
+        paneId: scope.paneId,
+        repoRoot: scope.repoRoot,
+        generation: scope.generation,
+        noteId,
+      });
       try {
-        const updated = await updateRepoNote(targetPaneId, noteId, input);
+        await cancelListRequests();
         if (!isActiveScope(scope)) {
           return false;
         }
-        invalidatePendingNoteLoads();
-        appendOrReplaceNote(updated);
+        const updated = await updateRepoNote(scope.paneId, noteId, input);
+        await cancelListRequests();
+        if (!isActiveScope(scope)) {
+          return false;
+        }
+        queryClient.setQueryData<RepoNote[]>(queryKey, (current = []) =>
+          sortNotesDesc([...current.filter((note) => note.id !== updated.id), updated]),
+        );
         return true;
       } catch (error) {
         if (isActiveScope(scope)) {
           dispatch({
-            type: "setError",
+            type: "mutationFailure",
             error: resolveUnknownErrorMessage(error, API_ERROR_MESSAGES.updateRepoNote),
+            dataUpdateCount: getQueryDataUpdateCount(),
           });
         }
         return false;
@@ -307,31 +400,54 @@ export const useSessionRepoNotes = ({
         }
       }
     },
-    [appendOrReplaceNote, invalidatePendingNoteLoads, isActiveScope, updateRepoNote],
+    [
+      cancelListRequests,
+      getQueryDataUpdateCount,
+      isActiveScope,
+      queryClient,
+      queryKey,
+      updateRepoNote,
+    ],
   );
 
   const removeNote = useCallback(
     async (noteId: string) => {
       const scope = activeScopeRef.current;
       if (!scope.repoRoot) {
-        dispatch({ type: "setError", error: API_ERROR_MESSAGES.repoUnavailable });
+        dispatch({
+          type: "mutationFailure",
+          error: API_ERROR_MESSAGES.repoUnavailable,
+          dataUpdateCount: getQueryDataUpdateCount(),
+        });
         return false;
       }
-      const targetPaneId = scope.paneId;
-      dispatch({ type: "deleteStart", noteId });
+      dispatch({
+        type: "deleteStart",
+        paneId: scope.paneId,
+        repoRoot: scope.repoRoot,
+        generation: scope.generation,
+        noteId,
+      });
       try {
-        const removedNoteId = await deleteRepoNote(targetPaneId, noteId);
+        await cancelListRequests();
         if (!isActiveScope(scope)) {
           return false;
         }
-        invalidatePendingNoteLoads();
-        dispatch({ type: "remove", noteId: removedNoteId });
+        const removedNoteId = await deleteRepoNote(scope.paneId, noteId);
+        await cancelListRequests();
+        if (!isActiveScope(scope)) {
+          return false;
+        }
+        queryClient.setQueryData<RepoNote[]>(queryKey, (current = []) =>
+          current.filter((note) => note.id !== removedNoteId),
+        );
         return true;
       } catch (error) {
         if (isActiveScope(scope)) {
           dispatch({
-            type: "setError",
+            type: "mutationFailure",
             error: resolveUnknownErrorMessage(error, API_ERROR_MESSAGES.deleteRepoNote),
+            dataUpdateCount: getQueryDataUpdateCount(),
           });
         }
         return false;
@@ -341,16 +457,68 @@ export const useSessionRepoNotes = ({
         }
       }
     },
-    [deleteRepoNote, invalidatePendingNoteLoads, isActiveScope],
+    [
+      cancelListRequests,
+      deleteRepoNote,
+      getQueryDataUpdateCount,
+      isActiveScope,
+      queryClient,
+      queryKey,
+    ],
   );
+
+  const [visibleErrorState, setVisibleErrorState] = useState<NotesVisibleErrorState>(() => ({
+    queryKey,
+    error: null,
+  }));
+  let currentVisibleErrorState = visibleErrorState;
+  if (visibleErrorState.queryKey !== queryKey) {
+    currentVisibleErrorState = { queryKey, error: null };
+    setVisibleErrorState(currentVisibleErrorState);
+  } else if (
+    fetchStatus === "idle" &&
+    queryError != null &&
+    visibleErrorState.error !== queryError
+  ) {
+    currentVisibleErrorState = { queryKey, error: queryError };
+    setVisibleErrorState(currentVisibleErrorState);
+  } else if (
+    fetchStatus === "idle" &&
+    queryError == null &&
+    queryNotes !== undefined &&
+    visibleErrorState.error != null
+  ) {
+    currentVisibleErrorState = { queryKey, error: null };
+    setVisibleErrorState(currentVisibleErrorState);
+  }
+  const queryErrorMessage =
+    fetchStatus === "paused" && queryNotes === undefined
+      ? OFFLINE_NOTES_MESSAGE
+      : fetchStatus === "fetching" && currentInteractiveRefreshState != null
+        ? null
+        : currentVisibleErrorState.error == null
+          ? null
+          : resolveUnknownErrorMessage(
+              currentVisibleErrorState.error,
+              API_ERROR_MESSAGES.repoNotes,
+            );
+  const currentQueryDataUpdateCount =
+    queryClient.getQueryState<RepoNote[]>(queryKey)?.dataUpdateCount ?? 0;
+  const mutationErrorMessage =
+    currentMutationState.mutationErrorDataUpdateCount != null &&
+    currentQueryDataUpdateCount > currentMutationState.mutationErrorDataUpdateCount
+      ? null
+      : currentMutationState.mutationError;
 
   return {
     notes,
-    notesLoading,
-    notesError,
-    creatingNote,
-    savingNoteId,
-    deletingNoteId,
+    notesLoading:
+      currentInteractiveRefreshState != null ||
+      (currentLoadingState.showColdLoading && browserOnline && !isFetched && isLoading),
+    notesError: mutationErrorMessage ?? queryErrorMessage,
+    creatingNote: currentMutationState.creatingNote,
+    savingNoteId: currentMutationState.savingNoteId,
+    deletingNoteId: currentMutationState.deletingNoteId,
     refreshNotes,
     createNote,
     saveNote,

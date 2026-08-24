@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useVisibilityPolling } from "@/lib/use-visibility-polling";
 
 const AUTO_SYNC_INTERVAL_MS = 10_000;
 
@@ -17,16 +17,10 @@ export const useNotesPolling = ({
   onRefresh,
   intervalMs = AUTO_SYNC_INTERVAL_MS,
 }: UseNotesPollingParams) => {
-  useEffect(() => {
-    if (!repoRoot) {
-      return;
-    }
-    onRefresh({ silent: true });
-    const intervalId = window.setInterval(() => {
-      onRefresh({ silent: true });
-    }, intervalMs);
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [intervalMs, onRefresh, repoRoot]);
+  useVisibilityPolling({
+    enabled: Boolean(repoRoot),
+    intervalMs,
+    onStart: () => onRefresh({ silent: true }),
+    onTick: () => onRefresh({ silent: true }),
+  });
 };

@@ -143,6 +143,7 @@ describe("NotesSection", () => {
     );
 
     expect(screen.getByText("Notes unavailable")).toBeTruthy();
+    expect(screen.queryByText("No notes yet")).toBeNull();
   });
 
   it("asks for confirmation dialog before deleting a note", async () => {
