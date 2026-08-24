@@ -1,6 +1,10 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { BranchList, BranchListEntry } from "@vde-monitor/shared";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+
+import { createAppQueryClient } from "@/state/query-client";
 
 import { useSessionBranches } from "./useSessionBranches";
 import { useSessionVirtualBranch } from "./useSessionVirtualBranch";
@@ -8,6 +12,13 @@ import { useSessionVirtualBranch } from "./useSessionVirtualBranch";
 const STORAGE_KEY_PREFIX = "vde-monitor:virtual-branch:v1";
 
 const buildStorageKey = (paneId: string) => `${STORAGE_KEY_PREFIX}:${paneId}`;
+
+const createQueryWrapper = () => {
+  const queryClient = createAppQueryClient();
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 const createBranchEntry = (overrides: Partial<BranchListEntry> = {}): BranchListEntry => ({
   name: "feature/a",
@@ -222,11 +233,11 @@ describe("useSessionVirtualBranch", () => {
         });
         return useSessionVirtualBranch({ paneId, branchList: branches.branchList });
       },
-      { initialProps: { paneId: "pane-a" } },
+      { initialProps: { paneId: "pane-a" }, wrapper: createQueryWrapper() },
     );
 
     await waitFor(() => {
-      expect(requestBranches).toHaveBeenCalledWith("pane-a", undefined);
+      expect(requestBranches).toHaveBeenCalledWith("pane-a", undefined, expect.any(AbortSignal));
     });
     rerender({ paneId: "pane-b" });
 

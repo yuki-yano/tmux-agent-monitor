@@ -478,6 +478,132 @@ describe("SessionDetailProvider", () => {
     expect(requestWorktrees.mock.calls.length).toBeGreaterThan(worktreeCallsBeforeCheckout);
   });
 
+  it("does not explicitly refresh the stale virtual branch scope after checkout", async () => {
+    window.localStorage.clear();
+    const requestBranchCheckout = vi.fn(async () => undefined);
+    const requestWorktrees = vi.fn(async () => ({
+      repoRoot: session.repoRoot,
+      currentPath: null,
+      baseBranch: "main",
+      entries: [],
+    }));
+    const requestDiffSummary = vi.fn<
+      ReturnType<typeof createSessionBranchesApiMock>["requestDiffSummary"]
+    >(async () => ({
+      repoRoot: "/repo",
+      rev: "HEAD",
+      generatedAt: new Date(0).toISOString(),
+      files: [],
+    }));
+    const requestCommitLog = vi.fn<
+      ReturnType<typeof createSessionBranchesApiMock>["requestCommitLog"]
+    >(async () => ({
+      repoRoot: "/repo",
+      rev: "HEAD",
+      generatedAt: new Date(0).toISOString(),
+      commits: [],
+      totalCount: 0,
+    }));
+    const requestBranches = vi.fn<
+      ReturnType<typeof createSessionBranchesApiMock>["requestBranches"]
+    >(async () => ({
+      repoRoot: session.repoRoot,
+      defaultBranch: "main",
+      currentBranch: "main",
+      entries: [
+        {
+          name: "main",
+          current: true,
+          isDefault: true,
+          ahead: null,
+          behind: null,
+          fileChanges: null,
+          additions: null,
+          deletions: null,
+          merged: null,
+          pr: null,
+          worktreePath: null,
+          committedAt: null,
+        },
+        {
+          name: "feature/a",
+          current: false,
+          isDefault: false,
+          ahead: null,
+          behind: null,
+          fileChanges: null,
+          additions: null,
+          deletions: null,
+          merged: null,
+          pr: null,
+          worktreePath: null,
+          committedAt: null,
+        },
+      ],
+    }));
+    const sessionApi: SessionApiMockOverrides = {
+      branches: {
+        requestBranchCheckout,
+        requestWorktrees,
+        requestDiffSummary,
+        requestCommitLog,
+        requestBranches,
+      },
+    };
+    const { result } = renderContext([session], sessionApi);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      result.current.scope.selectVirtualBranch("feature/a");
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.scope.virtualBranch.virtualBranch).toBe("feature/a");
+    const diffCallCount = requestDiffSummary.mock.calls.length;
+    const commitCallCount = requestCommitLog.mock.calls.length;
+    const worktreeCallCount = requestWorktrees.mock.calls.length;
+
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.scope.checkoutBranch("feature/a");
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(ok).toBe(true);
+    expect(result.current.scope.virtualBranch.virtualBranch).toBeNull();
+    expect(
+      requestDiffSummary.mock.calls
+        .slice(diffCallCount)
+        .filter(([, options]) => options.branch === "feature/a"),
+    ).toEqual([]);
+    expect(
+      requestCommitLog.mock.calls
+        .slice(commitCallCount)
+        .filter(([, options]) => options.branch === "feature/a"),
+    ).toEqual([]);
+    expect(
+      requestDiffSummary.mock.calls
+        .slice(diffCallCount)
+        .filter(([, options]) => options.branch == null).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      requestCommitLog.mock.calls
+        .slice(commitCallCount)
+        .filter(([, options]) => options.branch == null).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(requestBranches).toHaveBeenCalledWith(
+      "pane-1",
+      { force: true },
+      expect.any(AbortSignal),
+    );
+    expect(requestWorktrees.mock.calls.length).toBeGreaterThan(worktreeCallCount);
+  });
+
   // Render-suppression regression coverage for T15a. useSessionDetailVMState's
   // return value ("base") used to be a plain object literal (never
   // memoized), so it produced a new reference on every render for any reason

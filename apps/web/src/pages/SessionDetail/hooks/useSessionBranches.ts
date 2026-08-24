@@ -1,74 +1,68 @@
+import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { BranchList, SessionSummary } from "@vde-monitor/shared";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
-import { useVisibilityPolling } from "@/lib/use-visibility-polling";
 
+import { sessionDetailQueryKeys } from "../session-detail-query-keys";
 import { AUTO_REFRESH_INTERVAL_MS } from "../sessionDetailUtils";
-import { createNextRequestId, isCurrentRequest } from "./session-request-guard";
 
 type BranchMutationKind = "checkout" | "create" | "delete";
 
-type ActivePaneContext = {
+type ActiveResourceContext = {
   paneId: string;
+  repoRoot: string | null;
   generation: number;
 };
 
-type BranchesState = {
+type BranchesMutationState = {
   paneId: string;
-  branchList: BranchList | null;
-  loading: boolean;
-  error: string | null;
+  repoRoot: string | null;
   mutating: { kind: BranchMutationKind; name: string } | null;
   mutationError: string | null;
 };
 
-type BranchesAction =
-  | { type: "fetchStart"; paneId: string; resetEntries: boolean; showLoading: boolean }
-  | { type: "fetchSuccess"; branchList: BranchList; showLoading: boolean }
-  | { type: "fetchFailure"; error: string; resetEntries: boolean; showLoading: boolean }
-  | { type: "mutationStart"; kind: BranchMutationKind; name: string }
+type BranchesMutationAction =
+  | {
+      type: "mutationStart";
+      paneId: string;
+      repoRoot: string | null;
+      kind: BranchMutationKind;
+      name: string;
+    }
   | { type: "mutationFailure"; error: string }
   | { type: "mutationFinish" }
   | { type: "clearMutationError" };
 
-const createInitialBranchesState = (paneId: string): BranchesState => ({
+const createInitialMutationState = (
+  paneId: string,
+  repoRoot: string | null,
+): BranchesMutationState => ({
   paneId,
-  branchList: null,
-  loading: false,
-  error: null,
+  repoRoot,
   mutating: null,
   mutationError: null,
 });
 
-const branchesReducer = (state: BranchesState, action: BranchesAction): BranchesState => {
+const branchesMutationReducer = (
+  state: BranchesMutationState,
+  action: BranchesMutationAction,
+): BranchesMutationState => {
   switch (action.type) {
-    case "fetchStart":
-      if (state.paneId !== action.paneId) {
-        state = createInitialBranchesState(action.paneId);
-      }
-      return {
-        ...state,
-        branchList: action.resetEntries ? null : state.branchList,
-        loading: action.showLoading ? true : state.loading,
-        error: null,
-      };
-    case "fetchSuccess":
-      return {
-        ...state,
-        branchList: action.branchList,
-        loading: action.showLoading ? false : state.loading,
-        error: null,
-      };
-    case "fetchFailure":
-      return {
-        ...state,
-        branchList: action.resetEntries || action.showLoading ? null : state.branchList,
-        loading: action.showLoading ? false : state.loading,
-        error: action.error,
-      };
     case "mutationStart":
-      return { ...state, mutating: { kind: action.kind, name: action.name }, mutationError: null };
+      return {
+        paneId: action.paneId,
+        repoRoot: action.repoRoot,
+        mutating: { kind: action.kind, name: action.name },
+        mutationError: null,
+      };
     case "mutationFailure":
       return { ...state, mutationError: action.error };
     case "mutationFinish":
@@ -82,7 +76,11 @@ type UseSessionBranchesArgs = {
   paneId: string;
   connected: boolean;
   session: SessionSummary | null;
-  requestBranches: (paneId: string, options?: { force?: boolean }) => Promise<BranchList>;
+  requestBranches: (
+    paneId: string,
+    options?: { force?: boolean },
+    signal?: AbortSignal,
+  ) => Promise<BranchList>;
   requestBranchCheckout: (paneId: string, branch: string) => Promise<void>;
   requestBranchCreate: (paneId: string, name: string, base?: string) => Promise<void>;
   requestBranchDelete: (
@@ -91,6 +89,13 @@ type UseSessionBranchesArgs = {
     options?: { force?: boolean },
   ) => Promise<void>;
 };
+
+const OFFLINE_BRANCHES_MESSAGE = "Offline: waiting to load branches";
+
+const subscribeBrowserOnline = (onStoreChange: () => void) =>
+  onlineManager.subscribe(onStoreChange);
+const getBrowserOnlineSnapshot = () => onlineManager.isOnline();
+const getServerBrowserOnlineSnapshot = () => true;
 
 export const useSessionBranches = ({
   paneId,
@@ -101,118 +106,134 @@ export const useSessionBranches = ({
   requestBranchCreate,
   requestBranchDelete,
 }: UseSessionBranchesArgs) => {
-  const [state, dispatch] = useReducer(branchesReducer, paneId, createInitialBranchesState);
-  const latestRequestIdRef = useRef(0);
-  const hasLoadedRef = useRef(false);
-  const activePaneRef = useRef<ActivePaneContext>({ paneId, generation: 0 });
-  const currentState = state.paneId === paneId ? state : createInitialBranchesState(paneId);
-  const { branchList, loading, error, mutating, mutationError } = currentState;
+  const queryClient = useQueryClient();
+  const browserOnline = useSyncExternalStore(
+    subscribeBrowserOnline,
+    getBrowserOnlineSnapshot,
+    getServerBrowserOnlineSnapshot,
+  );
+  const repoRoot = session?.repoRoot ?? null;
+  const queryKey = useMemo(
+    () => sessionDetailQueryKeys.branches(paneId, repoRoot),
+    [paneId, repoRoot],
+  );
+  const {
+    data: branchList = null,
+    error: queryError,
+    fetchStatus,
+    isLoading,
+  } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => requestBranches(paneId, undefined, signal),
+    enabled: Boolean(paneId),
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    networkMode: "online",
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: "always",
+    refetchInterval: connected && browserOnline ? AUTO_REFRESH_INTERVAL_MS : false,
+    refetchIntervalInBackground: false,
+  });
+  const [mutationState, dispatch] = useReducer(
+    branchesMutationReducer,
+    createInitialMutationState(paneId, repoRoot),
+  );
+  const activeResourceRef = useRef<ActiveResourceContext>({ paneId, repoRoot, generation: 0 });
+  const refreshGenerationRef = useRef(0);
+  const currentMutationState =
+    mutationState.paneId === paneId && mutationState.repoRoot === repoRoot
+      ? mutationState
+      : createInitialMutationState(paneId, repoRoot);
 
   useLayoutEffect(() => {
-    if (activePaneRef.current.paneId !== paneId) {
-      activePaneRef.current = {
+    if (
+      activeResourceRef.current.paneId !== paneId ||
+      activeResourceRef.current.repoRoot !== repoRoot
+    ) {
+      activeResourceRef.current = {
         paneId,
-        generation: activePaneRef.current.generation + 1,
+        repoRoot,
+        generation: activeResourceRef.current.generation + 1,
       };
+      refreshGenerationRef.current += 1;
     }
-    const activePane = activePaneRef.current;
+    const activeResource = activeResourceRef.current;
     return () => {
-      if (activePaneRef.current === activePane) {
-        activePaneRef.current = {
+      if (activeResourceRef.current === activeResource) {
+        activeResourceRef.current = {
           paneId: "",
-          generation: activePane.generation + 1,
+          repoRoot: null,
+          generation: activeResource.generation + 1,
         };
-        latestRequestIdRef.current += 1;
+        refreshGenerationRef.current += 1;
       }
     };
-  }, [paneId]);
+  }, [paneId, repoRoot]);
 
-  const fetchBranches = useCallback(
-    async (options?: { resetEntries?: boolean; force?: boolean }) => {
-      const targetPaneId = paneId;
-      const targetPaneContext = activePaneRef.current;
-      const requestId = createNextRequestId(latestRequestIdRef);
-      const shouldReset = options?.resetEntries === true;
-      const shouldShowLoading = shouldReset || !hasLoadedRef.current;
-      if (shouldReset) {
-        hasLoadedRef.current = false;
-      }
-      dispatch({
-        type: "fetchStart",
-        paneId: targetPaneId,
-        resetEntries: shouldReset,
-        showLoading: shouldShowLoading,
+  const forceRefreshBranches = useCallback(async () => {
+    const targetPaneId = paneId;
+    const targetRepoRoot = repoRoot;
+    const targetResourceContext = activeResourceRef.current;
+    const generation = refreshGenerationRef.current + 1;
+    refreshGenerationRef.current = generation;
+    const isCurrentResourceGeneration = () =>
+      activeResourceRef.current === targetResourceContext &&
+      targetResourceContext.paneId === targetPaneId &&
+      targetResourceContext.repoRoot === targetRepoRoot &&
+      refreshGenerationRef.current === generation;
+
+    await queryClient.cancelQueries({ queryKey, exact: true });
+    if (!isCurrentResourceGeneration()) {
+      return;
+    }
+    try {
+      await queryClient.fetchQuery({
+        queryKey,
+        queryFn: ({ signal }) => requestBranches(targetPaneId, { force: true }, signal),
+        staleTime: 0,
+        gcTime: 0,
+        retry: false,
+        networkMode: "online",
       });
-      try {
-        // False positive: request freshness is checked immediately after the fetch resolves.
-        // react-doctor-disable-next-line async-defer-await
-        const next = await requestBranches(
-          targetPaneId,
-          options?.force === true ? { force: true } : undefined,
-        );
-        if (
-          activePaneRef.current !== targetPaneContext ||
-          targetPaneContext.paneId !== targetPaneId ||
-          !isCurrentRequest(latestRequestIdRef, requestId)
-        ) {
-          return;
-        }
-        hasLoadedRef.current = true;
-        dispatch({ type: "fetchSuccess", branchList: next, showLoading: shouldShowLoading });
-      } catch (nextError) {
-        if (
-          activePaneRef.current !== targetPaneContext ||
-          targetPaneContext.paneId !== targetPaneId ||
-          !isCurrentRequest(latestRequestIdRef, requestId)
-        ) {
-          return;
-        }
-        dispatch({
-          type: "fetchFailure",
-          error: resolveUnknownErrorMessage(nextError, "Failed to load branches"),
-          resetEntries: shouldReset,
-          showLoading: shouldShowLoading,
-        });
-      }
-    },
-    [paneId, requestBranches],
-  );
-
-  useEffect(() => {
-    void fetchBranches({ resetEntries: true });
-  }, [fetchBranches, session?.repoRoot]);
-
-  useVisibilityPolling({
-    enabled: Boolean(paneId) && connected,
-    intervalMs: AUTO_REFRESH_INTERVAL_MS,
-    onTick: useCallback(() => {
-      void fetchBranches();
-    }, [fetchBranches]),
-  });
+    } catch {
+      // Keep the resource error in Query state, but preserve the non-rejecting refresh contract.
+    }
+  }, [paneId, queryClient, queryKey, repoRoot, requestBranches]);
 
   const runMutation = useCallback(
     async (
       kind: BranchMutationKind,
       name: string,
       targetPaneId: string,
+      targetRepoRoot: string | null,
       mutate: () => Promise<void>,
     ) => {
-      const targetPaneContext = activePaneRef.current;
-      const isCurrentPaneGeneration = () =>
-        activePaneRef.current === targetPaneContext && targetPaneContext.paneId === targetPaneId;
-      if (!isCurrentPaneGeneration()) {
+      const targetResourceContext = activeResourceRef.current;
+      const isCurrentResourceGeneration = () =>
+        activeResourceRef.current === targetResourceContext &&
+        targetResourceContext.paneId === targetPaneId &&
+        targetResourceContext.repoRoot === targetRepoRoot;
+      if (!isCurrentResourceGeneration()) {
         return false;
       }
-      dispatch({ type: "mutationStart", kind, name });
+      dispatch({
+        type: "mutationStart",
+        paneId: targetPaneId,
+        repoRoot: targetRepoRoot,
+        kind,
+        name,
+      });
       try {
         await mutate();
-        if (!isCurrentPaneGeneration()) {
+        if (!isCurrentResourceGeneration()) {
           return false;
         }
-        await fetchBranches({ force: true });
-        return isCurrentPaneGeneration();
+        await forceRefreshBranches();
+        return isCurrentResourceGeneration();
       } catch (err) {
-        if (!isCurrentPaneGeneration()) {
+        if (!isCurrentResourceGeneration()) {
           return false;
         }
         dispatch({
@@ -221,43 +242,51 @@ export const useSessionBranches = ({
         });
         return false;
       } finally {
-        if (isCurrentPaneGeneration()) {
+        if (isCurrentResourceGeneration()) {
           dispatch({ type: "mutationFinish" });
         }
       }
     },
-    [fetchBranches],
+    [forceRefreshBranches],
   );
 
   const checkoutBranch = useCallback(
     (name: string) =>
-      runMutation("checkout", name, paneId, () => requestBranchCheckout(paneId, name)),
-    [paneId, requestBranchCheckout, runMutation],
+      runMutation("checkout", name, paneId, repoRoot, () => requestBranchCheckout(paneId, name)),
+    [paneId, repoRoot, requestBranchCheckout, runMutation],
   );
   const createBranch = useCallback(
     (name: string, base?: string) =>
-      runMutation("create", name, paneId, () => requestBranchCreate(paneId, name, base)),
-    [paneId, requestBranchCreate, runMutation],
+      runMutation("create", name, paneId, repoRoot, () => requestBranchCreate(paneId, name, base)),
+    [paneId, repoRoot, requestBranchCreate, runMutation],
   );
   const deleteBranch = useCallback(
     (name: string, options?: { force?: boolean }) =>
-      runMutation("delete", name, paneId, () => requestBranchDelete(paneId, name, options)),
-    [paneId, requestBranchDelete, runMutation],
+      runMutation("delete", name, paneId, repoRoot, () =>
+        requestBranchDelete(paneId, name, options),
+      ),
+    [paneId, repoRoot, requestBranchDelete, runMutation],
   );
 
   const branches = useMemo(() => branchList?.entries ?? [], [branchList]);
+  const branchesError =
+    fetchStatus === "paused" && branchList == null
+      ? OFFLINE_BRANCHES_MESSAGE
+      : fetchStatus === "fetching" || queryError == null
+        ? null
+        : resolveUnknownErrorMessage(queryError, "Failed to load branches");
 
   return {
     branchList,
     branches,
     defaultBranch: branchList?.defaultBranch ?? null,
     currentBranch: branchList?.currentBranch ?? null,
-    branchesLoading: loading,
-    branchesError: error,
-    mutating,
-    mutationError,
+    branchesLoading: isLoading,
+    branchesError,
+    mutating: currentMutationState.mutating,
+    mutationError: currentMutationState.mutationError,
     clearMutationError: useCallback(() => dispatch({ type: "clearMutationError" }), []),
-    refreshBranches: useCallback(() => fetchBranches({ force: true }), [fetchBranches]),
+    refreshBranches: forceRefreshBranches,
     checkoutBranch,
     createBranch,
     deleteBranch,
