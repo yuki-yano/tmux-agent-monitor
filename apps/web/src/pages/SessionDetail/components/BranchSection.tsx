@@ -1,9 +1,10 @@
 import type { BranchListEntry } from "@vde-monitor/shared";
 import { Plus, RefreshCw, X } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 
 import { Button, Card, IconButton } from "@/components/ui";
 
+import { useSessionDetailBase, useSessionDetailScope } from "../SessionDetailContexts";
 import { BranchCheckoutDialog } from "./branch-section/BranchCheckoutDialog";
 import { BranchCreateDialog } from "./branch-section/BranchCreateDialog";
 import { BranchDeleteDialog } from "./branch-section/BranchDeleteDialog";
@@ -200,3 +201,61 @@ export const BranchSection = memo(({ state, actions }: BranchSectionProps) => {
 });
 
 BranchSection.displayName = "BranchSection";
+
+export const ConnectedBranchSection = memo(() => {
+  const { nowMs } = useSessionDetailBase();
+  const scope = useSessionDetailScope();
+  const { branches, virtualBranch } = scope;
+  const refreshBranches = branches.refreshBranches;
+  const onRefreshBranches = useCallback(() => {
+    void refreshBranches();
+  }, [refreshBranches]);
+  const state = useMemo<BranchSectionState>(
+    () => ({
+      branches: branches.branches,
+      repoRoot: branches.repoRoot,
+      currentBranch: branches.currentBranch,
+      virtualBranch: virtualBranch.virtualBranch,
+      branchesLoading: branches.branchesLoading,
+      branchesError: branches.branchesError,
+      mutating: branches.mutating,
+      mutationError: branches.mutationError,
+      nowMs,
+    }),
+    [
+      branches.branches,
+      branches.branchesError,
+      branches.branchesLoading,
+      branches.currentBranch,
+      branches.mutating,
+      branches.mutationError,
+      branches.repoRoot,
+      nowMs,
+      virtualBranch.virtualBranch,
+    ],
+  );
+  const actions = useMemo<BranchSectionActions>(
+    () => ({
+      onRefreshBranches,
+      onSelectVirtualBranch: scope.selectVirtualBranch,
+      onClearVirtualBranch: virtualBranch.clearVirtualBranch,
+      onCheckoutBranch: scope.checkoutBranch,
+      onCreateBranch: scope.createBranch,
+      onDeleteBranch: scope.deleteBranch,
+      onClearMutationError: branches.clearMutationError,
+    }),
+    [
+      branches.clearMutationError,
+      onRefreshBranches,
+      scope.checkoutBranch,
+      scope.createBranch,
+      scope.deleteBranch,
+      scope.selectVirtualBranch,
+      virtualBranch.clearVirtualBranch,
+    ],
+  );
+
+  return <BranchSection state={state} actions={actions} />;
+});
+
+ConnectedBranchSection.displayName = "ConnectedBranchSection";

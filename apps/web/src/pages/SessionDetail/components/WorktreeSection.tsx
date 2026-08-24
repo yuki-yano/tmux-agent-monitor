@@ -1,9 +1,10 @@
 import type { WorktreeListEntry } from "@vde-monitor/shared";
 import { GitBranch, RefreshCw, X } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 
 import { Button, Card, IconButton } from "@/components/ui";
 
+import { useSessionDetailScope } from "../SessionDetailContexts";
 import { sortWorktreeEntriesByRepoRoot } from "./worktree-view-model";
 import { WorktreeEntryList } from "./WorktreeEntryList";
 import { WorktreeStatusStack } from "./WorktreeStatusStack";
@@ -130,3 +131,46 @@ export const WorktreeSection = memo(({ state, actions }: WorktreeSectionProps) =
 });
 
 WorktreeSection.displayName = "WorktreeSection";
+
+export const ConnectedWorktreeSection = memo(() => {
+  const scope = useSessionDetailScope();
+  const worktree = scope.virtualWorktree;
+  const refreshWorktrees = worktree.refreshWorktrees;
+  const onRefreshWorktrees = useCallback(() => {
+    void refreshWorktrees();
+  }, [refreshWorktrees]);
+  const state = useMemo<WorktreeSectionState>(
+    () => ({
+      worktreeSelectorEnabled: worktree.selectorEnabled,
+      worktreeSelectorLoading: worktree.loading,
+      worktreeSelectorError: worktree.error,
+      worktreeEntries: worktree.entries,
+      worktreeRepoRoot: worktree.repoRoot,
+      worktreeBaseBranch: worktree.baseBranch,
+      actualWorktreePath: worktree.actualWorktreePath,
+      virtualWorktreePath: worktree.virtualWorktreePath,
+    }),
+    [
+      worktree.actualWorktreePath,
+      worktree.baseBranch,
+      worktree.entries,
+      worktree.error,
+      worktree.loading,
+      worktree.repoRoot,
+      worktree.selectorEnabled,
+      worktree.virtualWorktreePath,
+    ],
+  );
+  const actions = useMemo<WorktreeSectionActions>(
+    () => ({
+      onRefreshWorktrees,
+      onSelectVirtualWorktree: scope.selectVirtualWorktree,
+      onClearVirtualWorktree: worktree.clearVirtualWorktree,
+    }),
+    [onRefreshWorktrees, scope.selectVirtualWorktree, worktree.clearVirtualWorktree],
+  );
+
+  return <WorktreeSection state={state} actions={actions} />;
+});
+
+ConnectedWorktreeSection.displayName = "ConnectedWorktreeSection";

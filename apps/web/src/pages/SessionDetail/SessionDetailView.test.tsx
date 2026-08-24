@@ -69,6 +69,7 @@ vi.mock("./SessionDetailContexts", () => ({
   useSessionDetailQuickPanel: () => mockContextValue.logsActions,
   useSessionDetailRepoPins: () => mockContextValue.repoPins,
   useSessionDetailSidebarActions: () => mockContextValue.logsActions.actions,
+  useSessionDetailScope: () => mockContextValue.scope,
   useSessionDetailTerminal: () => mockContextValue.terminal,
 }));
 

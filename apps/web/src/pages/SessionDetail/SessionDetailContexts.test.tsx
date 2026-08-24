@@ -71,6 +71,11 @@ const controls = {
 const base = {} as SliceProps["base"];
 const repoPins = {} as SliceProps["repoPins"];
 const terminal = { controls } as unknown as SliceProps["terminal"];
+const scope = {
+  virtualWorktree: {},
+  branches: {},
+  virtualBranch: {},
+} as unknown as SliceProps["scope"];
 
 const buildLogsActions = () => ({
   logs: {
@@ -104,6 +109,7 @@ const renderTree = (logsActions: SliceProps["logsActions"]) => (
     base={base}
     repoPins={repoPins}
     terminal={terminal}
+    scope={scope}
     logsActions={logsActions}
   >
     <QuickProbe />

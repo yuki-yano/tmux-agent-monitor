@@ -75,21 +75,24 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
     paneId,
     branchList: branches.branchList,
   });
+  const { clearVirtualWorktree, refreshWorktrees: refreshTrees } = virtualWorktree;
+  const selectWorktree = virtualWorktree.selectVirtualWorktree;
+  const { clearVirtualBranch, selectVirtualBranch: selectBranch } = virtualBranch;
 
   // A virtual branch and a virtual worktree selection are mutually exclusive.
   const selectVirtualBranch = useCallback(
     (name: string) => {
-      virtualWorktree.clearVirtualWorktree();
-      virtualBranch.selectVirtualBranch(name);
+      clearVirtualWorktree();
+      selectBranch(name);
     },
-    [virtualBranch, virtualWorktree],
+    [clearVirtualWorktree, selectBranch],
   );
   const selectVirtualWorktree = useCallback(
     (path: string) => {
-      virtualBranch.clearVirtualBranch();
-      virtualWorktree.selectVirtualWorktree(path);
+      clearVirtualBranch();
+      selectWorktree(path);
     },
-    [virtualBranch, virtualWorktree],
+    [clearVirtualBranch, selectWorktree],
   );
 
   const effectiveBranchScope = virtualBranch.virtualBranch;
@@ -116,48 +119,49 @@ const useSessionDetailContextValue = (paneId: string, pushNotifications: PushNot
     requestCommitDetail: base.requestCommitDetail,
     requestCommitFile: base.requestCommitFile,
   });
+  const { checkoutBranch: checkout, createBranch: create, deleteBranch: remove } = branches;
+  const refreshDiff = diffs.refreshDiff;
+  const refreshCommits = commits.refreshCommitLog;
+  const virtualBranchActive = effectiveBranchScope != null;
 
   const checkoutBranch = useCallback(
     async (name: string) => {
-      const wasVirtualBranchActive = virtualBranch.virtualBranch != null;
-      const ok = await branches.checkoutBranch(name);
+      const ok = await checkout(name);
       if (ok) {
-        virtualBranch.clearVirtualBranch();
-        // Clearing an active virtual branch changes the diff/commit scope key,
-        // which re-triggers their load effects with the new scope. Explicitly
-        // refreshing here would fire the captured stale branch-scoped requests,
-        // so only refresh when the scope stays the same.
-        if (!wasVirtualBranchActive) {
-          void diffs.refreshDiff();
-          void commits.refreshCommitLog();
+        clearVirtualBranch();
+        // Clearing an active virtual branch changes query scopes; captured refreshes are stale,
+        // so refresh only when the scope stays the same.
+        if (!virtualBranchActive) {
+          void refreshDiff();
+          void refreshCommits();
         }
-        void virtualWorktree.refreshWorktrees();
+        void refreshTrees();
       }
       return ok;
     },
-    [branches, commits, diffs, virtualBranch, virtualWorktree],
+    [checkout, clearVirtualBranch, refreshCommits, refreshDiff, refreshTrees, virtualBranchActive],
   );
 
   const createBranch = useCallback(
     async (name: string, base?: string) => {
-      const ok = await branches.createBranch(name, base);
+      const ok = await create(name, base);
       if (ok) {
-        void virtualWorktree.refreshWorktrees();
+        void refreshTrees();
       }
       return ok;
     },
-    [branches, virtualWorktree],
+    [create, refreshTrees],
   );
 
   const deleteBranch = useCallback(
     async (name: string, options?: { force?: boolean }) => {
-      const ok = await branches.deleteBranch(name, options);
+      const ok = await remove(name, options);
       if (ok) {
-        void virtualWorktree.refreshWorktrees();
+        void refreshTrees();
       }
       return ok;
     },
-    [branches, virtualWorktree],
+    [refreshTrees, remove],
   );
 
   const fileRoot = resolveSessionFileRoot(base.session, virtualWorktree.effectiveWorktreePath);
@@ -298,6 +302,7 @@ const SessionDetailPaneProvider = ({
         base={value.base}
         repoPins={value.repoPins}
         terminal={value.terminal}
+        scope={value.scope}
         logsActions={value.logsActions}
       >
         {children}

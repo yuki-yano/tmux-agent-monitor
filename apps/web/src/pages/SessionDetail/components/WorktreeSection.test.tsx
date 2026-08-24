@@ -1,7 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { WorktreeSection } from "./WorktreeSection";
+import type { SessionDetailScopeContextValue } from "../SessionDetailContexts";
+import { ConnectedWorktreeSection, WorktreeSection } from "./WorktreeSection";
+
+let mockScope: SessionDetailScopeContextValue;
+
+vi.mock("../SessionDetailContexts", () => ({
+  useSessionDetailScope: () => mockScope,
+}));
 
 describe("WorktreeSection", () => {
   type WorktreeSectionState = Parameters<typeof WorktreeSection>[0]["state"];
@@ -168,5 +175,38 @@ describe("WorktreeSection", () => {
     expect(
       prLink.compareDocumentPosition(repoRootBadge) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
+  });
+
+  it("maps scope refresh, select, and clear actions through the connected entry", () => {
+    const state = buildState();
+    const refreshWorktrees = vi.fn(async () => undefined);
+    const selectVirtualWorktree = vi.fn();
+    const clearVirtualWorktree = vi.fn();
+    mockScope = {
+      virtualWorktree: {
+        selectorEnabled: state.worktreeSelectorEnabled,
+        loading: state.worktreeSelectorLoading,
+        error: state.worktreeSelectorError,
+        entries: state.worktreeEntries,
+        repoRoot: state.worktreeRepoRoot,
+        baseBranch: state.worktreeBaseBranch,
+        actualWorktreePath: state.actualWorktreePath,
+        virtualWorktreePath: state.virtualWorktreePath,
+        effectiveWorktreePath: state.virtualWorktreePath,
+        effectiveBranch: null,
+        refreshWorktrees,
+        clearVirtualWorktree,
+      },
+      selectVirtualWorktree,
+    } as unknown as SessionDetailScopeContextValue;
+
+    render(<ConnectedWorktreeSection />);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh worktrees" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear virtual worktree" }));
+    fireEvent.click(screen.getByRole("button", { name: /feature\/a/ }));
+
+    expect(refreshWorktrees).toHaveBeenCalledTimes(1);
+    expect(clearVirtualWorktree).toHaveBeenCalledTimes(1);
+    expect(selectVirtualWorktree).toHaveBeenCalledWith(state.worktreeEntries[0]?.path);
   });
 });

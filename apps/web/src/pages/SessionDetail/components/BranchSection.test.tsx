@@ -2,7 +2,19 @@ import type { BranchListEntry } from "@vde-monitor/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { BranchSection } from "./BranchSection";
+import type {
+  SessionDetailBaseContextValue,
+  SessionDetailScopeContextValue,
+} from "../SessionDetailContexts";
+import { BranchSection, ConnectedBranchSection } from "./BranchSection";
+
+let mockBase: SessionDetailBaseContextValue;
+let mockScope: SessionDetailScopeContextValue;
+
+vi.mock("../SessionDetailContexts", () => ({
+  useSessionDetailBase: () => mockBase,
+  useSessionDetailScope: () => mockScope,
+}));
 
 describe("BranchSection", () => {
   type BranchSectionState = Parameters<typeof BranchSection>[0]["state"];
@@ -231,5 +243,67 @@ describe("BranchSection", () => {
         (_content, element) => element?.textContent === "Delete local branch feature/plain-branch?",
       ),
     ).not.toBeNull();
+  });
+
+  it("maps wrapped branch actions through the connected entry", () => {
+    const state = buildState({ virtualBranch: "feature/plain-branch" });
+    const refreshBranches = vi.fn(async () => undefined);
+    const selectVirtualBranch = vi.fn();
+    const clearVirtualBranch = vi.fn();
+    const checkoutBranch = vi.fn().mockResolvedValue(false);
+    const createBranch = vi.fn().mockResolvedValue(false);
+    const deleteBranch = vi.fn().mockResolvedValue(false);
+    const clearMutationError = vi.fn();
+    mockBase = { nowMs: state.nowMs } as SessionDetailBaseContextValue;
+    mockScope = {
+      branches: {
+        branches: state.branches,
+        repoRoot: state.repoRoot,
+        defaultBranch: "main",
+        currentBranch: state.currentBranch,
+        branchesLoading: state.branchesLoading,
+        branchesError: state.branchesError,
+        mutating: state.mutating,
+        mutationError: state.mutationError,
+        refreshBranches,
+        clearMutationError,
+      },
+      virtualBranch: { virtualBranch: state.virtualBranch, clearVirtualBranch },
+      selectVirtualBranch,
+      checkoutBranch,
+      createBranch,
+      deleteBranch,
+    } as unknown as SessionDetailScopeContextValue;
+
+    render(<ConnectedBranchSection />);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh branches" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear virtual branch" }));
+    const plainRow = findRow("feature/plain-branch");
+    const [selectButton] = within(plainRow).getAllByRole("button");
+    if (!selectButton) throw new Error("select button not found");
+    fireEvent.click(selectButton);
+
+    fireEvent.click(screen.getByRole("button", { name: "Create branch" }));
+    fireEvent.change(screen.getByLabelText("Branch name"), {
+      target: { value: "feature/created" },
+    });
+    fireEvent.change(screen.getByLabelText("Base branch"), { target: { value: "main" } });
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Create" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(within(plainRow).getByRole("button", { name: "Checkout" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Checkout" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete branch feature/plain-branch" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
+
+    expect(refreshBranches).toHaveBeenCalledTimes(1);
+    expect(clearVirtualBranch).toHaveBeenCalledTimes(1);
+    expect(selectVirtualBranch).toHaveBeenCalledWith("feature/plain-branch");
+    expect(createBranch).toHaveBeenCalledWith("feature/created", "main");
+    expect(checkoutBranch).toHaveBeenCalledWith("feature/plain-branch");
+    expect(deleteBranch).toHaveBeenCalledWith("feature/plain-branch", { force: false });
+    expect(clearMutationError).toHaveBeenCalled();
   });
 });

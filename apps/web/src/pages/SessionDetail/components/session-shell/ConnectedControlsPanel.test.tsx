@@ -85,6 +85,13 @@ const renderWithSlices = ({
     base={base}
     repoPins={{} as SliceProps["repoPins"]}
     terminal={terminal}
+    scope={
+      {
+        virtualWorktree: {},
+        branches: {},
+        virtualBranch: {},
+      } as unknown as SliceProps["scope"]
+    }
     logsActions={logsActions}
   >
     {children}

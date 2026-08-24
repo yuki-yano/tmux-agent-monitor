@@ -18,7 +18,7 @@ import { buildSessionDocumentTitle } from "@/lib/brand";
 import { cn } from "@/lib/cn";
 import { useTimeout } from "@/lib/use-timeout";
 
-import { BranchSection } from "./components/BranchSection";
+import { ConnectedBranchSection } from "./components/BranchSection";
 import { CommitSection } from "./components/CommitSection";
 import { DiffSection } from "./components/DiffSection";
 import { FileContentModal } from "./components/FileContentModal";
@@ -33,7 +33,7 @@ import { ConnectedQuickPanel } from "./components/session-shell/ConnectedQuickPa
 import { ConnectedSessionHeader } from "./components/session-shell/ConnectedSessionHeader";
 import { ConnectedSessionSidebar } from "./components/session-shell/ConnectedSessionSidebar";
 import { ConnectedStateTimelineSection } from "./components/StateTimelineSection";
-import { WorktreeSection } from "./components/WorktreeSection";
+import { ConnectedWorktreeSection } from "./components/WorktreeSection";
 import { useSessionDetailContext } from "./SessionDetailProvider";
 import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
 import { SessionDetailTitleProvider } from "./SessionDetailTitleProvider";
@@ -48,7 +48,6 @@ import {
 import { useSessionDetailLayoutState } from "./hooks/useSessionDetailLayoutState";
 import { useSessionDetailViewDataSectionProps } from "./hooks/useSessionDetailViewDataSectionProps";
 import { useSessionDetailViewExplorerSectionProps } from "./hooks/useSessionDetailViewExplorerSectionProps";
-import { useSessionDetailViewWorktreeBranchSectionProps } from "./hooks/useSessionDetailViewWorktreeBranchSectionProps";
 
 const MISSING_SESSION_GRACE_MS = 1600;
 
@@ -185,8 +184,6 @@ const SessionDetailViewContent = () => {
     screenPanelProps,
     logFileCandidateModalProps,
   } = useSessionDetailViewExplorerSectionProps();
-  const { worktreeSectionProps, branchSectionProps } =
-    useSessionDetailViewWorktreeBranchSectionProps();
   const hasConnectionIssue = splitConnectionIssueLines(connectionIssue).length > 0;
   const isSessionMissing = !session;
   const isInitialSessionLoading =
@@ -263,14 +260,14 @@ const SessionDetailViewContent = () => {
       ariaLabel: "Branches panel",
       label: "Branches",
       icon: GitFork,
-      render: () => <BranchSection {...branchSectionProps} />,
+      render: () => <ConnectedBranchSection />,
     },
     {
       value: "worktrees",
       ariaLabel: "Worktrees panel",
       label: "Worktrees",
       icon: GitBranch,
-      render: () => <WorktreeSection {...worktreeSectionProps} />,
+      render: () => <ConnectedWorktreeSection />,
     },
   ];
   const selectedMobileSectionContent =

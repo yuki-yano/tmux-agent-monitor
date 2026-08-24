@@ -3,7 +3,10 @@ import { type ReactNode, createContext, use, useMemo } from "react";
 import type { useSessionDetailLogsActions as useSessionDetailLogsActionsOwner } from "./hooks/useSessionDetailLogsActions";
 import type { useSessionDetailScreenControls } from "./hooks/useSessionDetailScreenControls";
 import type { useSessionDetailVMState } from "./hooks/useSessionDetailVMState";
+import type { useSessionBranches } from "./hooks/useSessionBranches";
 import type { useSessionRepoPins } from "./hooks/useSessionRepoPins";
+import type { useSessionVirtualBranch } from "./hooks/useSessionVirtualBranch";
+import type { useSessionVirtualWorktree } from "./hooks/useSessionVirtualWorktree";
 
 type LogsActionsOwnerValue = ReturnType<typeof useSessionDetailLogsActionsOwner>;
 
@@ -13,6 +16,46 @@ export type SessionDetailBaseContextValue = ReturnType<typeof useSessionDetailVM
 export type SessionDetailRepoPinsContextValue = ReturnType<typeof useSessionRepoPins>;
 export type SessionDetailTerminalContextValue = {
   controls: Omit<ReturnType<typeof useSessionDetailScreenControls>["controls"], "sendError">;
+};
+export type SessionDetailScopeContextValue = {
+  virtualWorktree: Pick<
+    ReturnType<typeof useSessionVirtualWorktree>,
+    | "selectorEnabled"
+    | "loading"
+    | "error"
+    | "entries"
+    | "repoRoot"
+    | "baseBranch"
+    | "actualWorktreePath"
+    | "virtualWorktreePath"
+    | "effectiveWorktreePath"
+    | "effectiveBranch"
+    | "clearVirtualWorktree"
+    | "refreshWorktrees"
+  >;
+  branches: Pick<
+    ReturnType<typeof useSessionBranches>,
+    | "branches"
+    | "defaultBranch"
+    | "currentBranch"
+    | "branchesLoading"
+    | "branchesError"
+    | "mutating"
+    | "mutationError"
+    | "clearMutationError"
+    | "refreshBranches"
+  > & { repoRoot: string | null };
+  virtualBranch: Pick<
+    ReturnType<typeof useSessionVirtualBranch>,
+    "virtualBranch" | "clearVirtualBranch"
+  >;
+  effectiveBranchScope: string | null;
+  effectiveWorktreeScope: string | null;
+  selectVirtualBranch: (name: string) => void;
+  selectVirtualWorktree: (path: string) => void;
+  checkoutBranch: (name: string) => Promise<boolean>;
+  createBranch: (name: string, base?: string) => Promise<boolean>;
+  deleteBranch: (name: string, options?: { force?: boolean }) => Promise<boolean>;
 };
 export type SessionDetailQuickPanelContextValue = {
   logs: Pick<
@@ -51,6 +94,7 @@ export type SessionDetailSidebarActionsContextValue = Pick<
 const SessionDetailBaseContext = createContext<SessionDetailBaseContextValue | null>(null);
 const SessionDetailRepoPinsContext = createContext<SessionDetailRepoPinsContextValue | null>(null);
 const SessionDetailTerminalContext = createContext<SessionDetailTerminalContextValue | null>(null);
+const SessionDetailScopeContext = createContext<SessionDetailScopeContextValue | null>(null);
 const SessionDetailQuickPanelContext = createContext<SessionDetailQuickPanelContextValue | null>(
   null,
 );
@@ -73,6 +117,8 @@ export const useSessionDetailRepoPins = () =>
   useRequiredContext(use(SessionDetailRepoPinsContext), "useSessionDetailRepoPins");
 export const useSessionDetailTerminal = () =>
   useRequiredContext(use(SessionDetailTerminalContext), "useSessionDetailTerminal");
+export const useSessionDetailScope = () =>
+  useRequiredContext(use(SessionDetailScopeContext), "useSessionDetailScope");
 export const useSessionDetailQuickPanel = () =>
   useRequiredContext(use(SessionDetailQuickPanelContext), "useSessionDetailQuickPanel");
 export const useSessionDetailLogModal = () =>
@@ -86,8 +132,103 @@ type SessionDetailSliceProvidersProps = {
   base: SessionDetailBaseContextValue;
   repoPins: SessionDetailRepoPinsContextValue;
   terminal: ReturnType<typeof useSessionDetailScreenControls>;
+  scope: SessionDetailScopeContextValue;
   logsActions: LogsActionsOwnerValue;
   children: ReactNode;
+};
+
+const useScopeContextValue = (
+  scope: SessionDetailScopeContextValue,
+): SessionDetailScopeContextValue => {
+  const virtualWorktree = useMemo(
+    () => ({
+      selectorEnabled: scope.virtualWorktree.selectorEnabled,
+      loading: scope.virtualWorktree.loading,
+      error: scope.virtualWorktree.error,
+      entries: scope.virtualWorktree.entries,
+      repoRoot: scope.virtualWorktree.repoRoot,
+      baseBranch: scope.virtualWorktree.baseBranch,
+      actualWorktreePath: scope.virtualWorktree.actualWorktreePath,
+      virtualWorktreePath: scope.virtualWorktree.virtualWorktreePath,
+      effectiveWorktreePath: scope.virtualWorktree.effectiveWorktreePath,
+      effectiveBranch: scope.virtualWorktree.effectiveBranch,
+      clearVirtualWorktree: scope.virtualWorktree.clearVirtualWorktree,
+      refreshWorktrees: scope.virtualWorktree.refreshWorktrees,
+    }),
+    [
+      scope.virtualWorktree.actualWorktreePath,
+      scope.virtualWorktree.baseBranch,
+      scope.virtualWorktree.clearVirtualWorktree,
+      scope.virtualWorktree.effectiveBranch,
+      scope.virtualWorktree.effectiveWorktreePath,
+      scope.virtualWorktree.entries,
+      scope.virtualWorktree.error,
+      scope.virtualWorktree.loading,
+      scope.virtualWorktree.refreshWorktrees,
+      scope.virtualWorktree.repoRoot,
+      scope.virtualWorktree.selectorEnabled,
+      scope.virtualWorktree.virtualWorktreePath,
+    ],
+  );
+  const branches = useMemo(
+    () => ({
+      branches: scope.branches.branches,
+      repoRoot: scope.branches.repoRoot,
+      defaultBranch: scope.branches.defaultBranch,
+      currentBranch: scope.branches.currentBranch,
+      branchesLoading: scope.branches.branchesLoading,
+      branchesError: scope.branches.branchesError,
+      mutating: scope.branches.mutating,
+      mutationError: scope.branches.mutationError,
+      clearMutationError: scope.branches.clearMutationError,
+      refreshBranches: scope.branches.refreshBranches,
+    }),
+    [
+      scope.branches.branches,
+      scope.branches.branchesError,
+      scope.branches.branchesLoading,
+      scope.branches.clearMutationError,
+      scope.branches.currentBranch,
+      scope.branches.defaultBranch,
+      scope.branches.mutating,
+      scope.branches.mutationError,
+      scope.branches.refreshBranches,
+      scope.branches.repoRoot,
+    ],
+  );
+  const virtualBranch = useMemo(
+    () => ({
+      virtualBranch: scope.virtualBranch.virtualBranch,
+      clearVirtualBranch: scope.virtualBranch.clearVirtualBranch,
+    }),
+    [scope.virtualBranch.clearVirtualBranch, scope.virtualBranch.virtualBranch],
+  );
+  return useMemo(
+    () => ({
+      virtualWorktree,
+      branches,
+      virtualBranch,
+      effectiveBranchScope: scope.effectiveBranchScope,
+      effectiveWorktreeScope: scope.effectiveWorktreeScope,
+      selectVirtualBranch: scope.selectVirtualBranch,
+      selectVirtualWorktree: scope.selectVirtualWorktree,
+      checkoutBranch: scope.checkoutBranch,
+      createBranch: scope.createBranch,
+      deleteBranch: scope.deleteBranch,
+    }),
+    [
+      branches,
+      scope.checkoutBranch,
+      scope.createBranch,
+      scope.deleteBranch,
+      scope.effectiveBranchScope,
+      scope.effectiveWorktreeScope,
+      scope.selectVirtualBranch,
+      scope.selectVirtualWorktree,
+      virtualBranch,
+      virtualWorktree,
+    ],
+  );
 };
 
 const useTerminalContextValue = (
@@ -238,10 +379,12 @@ export const SessionDetailSliceProviders = ({
   base,
   repoPins,
   terminal,
+  scope,
   logsActions,
   children,
 }: SessionDetailSliceProvidersProps) => {
   const terminalContext = useTerminalContextValue(terminal);
+  const scopeContext = useScopeContextValue(scope);
   const quickPanelContext = useQuickPanelContextValue(logsActions);
   const logModalContext = useLogModalContextValue(logsActions);
   const headerActionsContext = useHeaderActionsContextValue(logsActions);
@@ -250,15 +393,17 @@ export const SessionDetailSliceProviders = ({
     <SessionDetailBaseContext.Provider value={base}>
       <SessionDetailRepoPinsContext.Provider value={repoPins}>
         <SessionDetailTerminalContext.Provider value={terminalContext}>
-          <SessionDetailQuickPanelContext.Provider value={quickPanelContext}>
-            <SessionDetailLogModalContext.Provider value={logModalContext}>
-              <SessionDetailHeaderActionsContext.Provider value={headerActionsContext}>
-                <SessionDetailSidebarActionsContext.Provider value={sidebarActionsContext}>
-                  {children}
-                </SessionDetailSidebarActionsContext.Provider>
-              </SessionDetailHeaderActionsContext.Provider>
-            </SessionDetailLogModalContext.Provider>
-          </SessionDetailQuickPanelContext.Provider>
+          <SessionDetailScopeContext.Provider value={scopeContext}>
+            <SessionDetailQuickPanelContext.Provider value={quickPanelContext}>
+              <SessionDetailLogModalContext.Provider value={logModalContext}>
+                <SessionDetailHeaderActionsContext.Provider value={headerActionsContext}>
+                  <SessionDetailSidebarActionsContext.Provider value={sidebarActionsContext}>
+                    {children}
+                  </SessionDetailSidebarActionsContext.Provider>
+                </SessionDetailHeaderActionsContext.Provider>
+              </SessionDetailLogModalContext.Provider>
+            </SessionDetailQuickPanelContext.Provider>
+          </SessionDetailScopeContext.Provider>
         </SessionDetailTerminalContext.Provider>
       </SessionDetailRepoPinsContext.Provider>
     </SessionDetailBaseContext.Provider>

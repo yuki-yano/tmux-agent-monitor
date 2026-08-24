@@ -162,6 +162,23 @@ const renderWithRouter = (ui: ReactNode, queryClient = createAppQueryClient()) =
   );
 };
 
+const expectSingleGitScopeObservers = (queryClient: ReturnType<typeof createAppQueryClient>) => {
+  const branchQueryKey = sessionDetailQueryKeys.branches("pane-1", session.repoRoot);
+  const worktreeQueryKey = sessionDetailQueryKeys.worktrees("pane-1", session.repoRoot);
+  expect(
+    queryClient
+      .getQueryCache()
+      .find({ queryKey: branchQueryKey, exact: true })
+      ?.getObserversCount(),
+  ).toBe(1);
+  expect(
+    queryClient
+      .getQueryCache()
+      .find({ queryKey: worktreeQueryKey, exact: true })
+      ?.getObserversCount(),
+  ).toBe(1);
+};
+
 describe("SessionDetail Provider <-> View wiring (smoke)", () => {
   beforeEach(() => {
     requestRepoFileContent.mockClear();
@@ -173,6 +190,7 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
 
   it("mounts the real Provider + View and switches between every inspector section", async () => {
     const store = createStore();
+    const queryClient = createAppQueryClient();
 
     renderWithRouter(
       <JotaiProvider store={store}>
@@ -180,12 +198,14 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
           <SessionDetailView />
         </SessionDetailProvider>
       </JotaiProvider>,
+      queryClient,
     );
 
     expect(await screen.findByRole("button", { name: "Edit session title" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "State Timeline" })).toBeTruthy();
     expect(screen.getByRole("tablist", { name: "Session inspector sections" })).toBeTruthy();
     expect(requestRepoNotes).toHaveBeenCalledWith("pane-1", expect.any(AbortSignal));
+    expectSingleGitScopeObservers(queryClient);
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle session quick panel" }));
     expect(screen.getByRole("button", { name: "Close quick panel" })).toBeTruthy();
@@ -195,7 +215,6 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
       ["Changes panel", "Changes"],
       ["Files panel", "File Navigator"],
       ["Commits panel", "Commit Log"],
-      ["Branches panel", "Branches"],
       ["Notes panel", "Notes"],
     ] as const;
 
@@ -204,8 +223,21 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
       expect(screen.getByRole("heading", { name: headingName })).toBeTruthy();
     }
 
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Branches panel" }), { button: 0 });
+    expect(screen.getByRole("heading", { name: "Branches" })).toBeTruthy();
+    expectSingleGitScopeObservers(queryClient);
+
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Worktrees panel" }), { button: 0 });
     expect(screen.getByTestId("worktree-section")).toBeTruthy();
+    expectSingleGitScopeObservers(queryClient);
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Changes panel" }), { button: 0 });
+    expect(screen.getByRole("heading", { name: "Changes" })).toBeTruthy();
+    expectSingleGitScopeObservers(queryClient);
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Branches panel" }), { button: 0 });
+    expect(screen.getByRole("heading", { name: "Branches" })).toBeTruthy();
+    expectSingleGitScopeObservers(queryClient);
   });
 
   it("opens a changed file in the shared content preview", async () => {
@@ -281,6 +313,15 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
           .find({ queryKey: timelineQueryKey, exact: true })
           ?.getObserversCount(),
       ).toBe(1);
+      expectSingleGitScopeObservers(queryClient);
+
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Branches panel" }), { button: 0 });
+      expect(screen.getByRole("heading", { name: "Branches" })).toBeTruthy();
+      expectSingleGitScopeObservers(queryClient);
+
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Worktrees panel" }), { button: 0 });
+      expect(screen.getByTestId("worktree-section")).toBeTruthy();
+      expectSingleGitScopeObservers(queryClient);
 
       fireEvent.mouseDown(screen.getByRole("tab", { name: "Changes panel" }), { button: 0 });
       expect(screen.queryByRole("heading", { name: "State Timeline" })).toBeNull();
@@ -291,6 +332,7 @@ describe("SessionDetail Provider <-> View wiring (smoke)", () => {
           .find({ queryKey: timelineQueryKey, exact: true })
           ?.getObserversCount(),
       ).toBe(1);
+      expectSingleGitScopeObservers(queryClient);
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5_000);

@@ -365,6 +365,7 @@ export const useSessionCommits = ({
       }
     };
   }, []);
+  const refreshCommitLog = useCallback(() => loadCommitLog({ force: true }), [loadCommitLog]);
 
   return {
     commitLog,
@@ -379,7 +380,7 @@ export const useSessionCommits = ({
     commitOpen,
     commitLoadingDetails,
     copiedHash,
-    refreshCommitLog: () => loadCommitLog({ force: true }),
+    refreshCommitLog,
     loadMoreCommits: () => loadCommitLog({ append: true, force: true }),
     toggleCommit,
     toggleCommitFile,

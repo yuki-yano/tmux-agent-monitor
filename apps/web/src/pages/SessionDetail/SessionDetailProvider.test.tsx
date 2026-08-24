@@ -27,6 +27,7 @@ import {
   useSessionDetailLogModal,
   useSessionDetailQuickPanel,
   useSessionDetailRepoPins,
+  useSessionDetailScope,
   useSessionDetailSidebarActions,
   useSessionDetailTerminal,
 } from "./SessionDetailContexts";
@@ -251,6 +252,13 @@ const ShellSliceProbe = memo(() => {
 });
 ShellSliceProbe.displayName = "ShellSliceProbe";
 
+const scopeSliceRenderSpy = vi.fn();
+const ScopeSliceProbe = memo(() => {
+  scopeSliceRenderSpy(useSessionDetailScope());
+  return null;
+});
+ScopeSliceProbe.displayName = "ScopeSliceProbe";
+
 const TitleProbe = () => {
   const title = useSessionDetailTitle();
   return (
@@ -397,6 +405,7 @@ describe("SessionDetailProvider", () => {
         aggregate: useSessionDetailContext(),
         base: useSessionDetailBase(),
         repoPins: useSessionDetailRepoPins(),
+        scope: useSessionDetailScope(),
         terminal: useSessionDetailTerminal(),
         quickPanel: useSessionDetailQuickPanel(),
         logModal: useSessionDetailLogModal(),
@@ -408,6 +417,16 @@ describe("SessionDetailProvider", () => {
 
     expect(result.current.base).toBe(result.current.aggregate.base);
     expect(result.current.repoPins).toBe(result.current.aggregate.repoPins);
+    expect(result.current.scope).not.toBe(result.current.aggregate.scope);
+    expect(result.current.scope.checkoutBranch).toBe(result.current.aggregate.scope.checkoutBranch);
+    expect(result.current.scope.createBranch).toBe(result.current.aggregate.scope.createBranch);
+    expect(result.current.scope.deleteBranch).toBe(result.current.aggregate.scope.deleteBranch);
+    expect(result.current.scope.selectVirtualBranch).toBe(
+      result.current.aggregate.scope.selectVirtualBranch,
+    );
+    expect(result.current.scope.selectVirtualWorktree).toBe(
+      result.current.aggregate.scope.selectVirtualWorktree,
+    );
     expect(result.current.terminal).not.toBe(result.current.aggregate.terminal);
     expect(result.current.terminal.controls.textInputRef).toBe(
       result.current.aggregate.terminal.controls.textInputRef,
@@ -427,7 +446,7 @@ describe("SessionDetailProvider", () => {
     );
   });
 
-  it("does not update shell slice consumers for an unrelated session tick", async () => {
+  it("does not update shell or scope consumers for an unrelated session tick", async () => {
     const sessionApi = buildSessionApi();
     mockSessionsContext = buildSessionContext({
       sessions: [session],
@@ -435,9 +454,11 @@ describe("SessionDetailProvider", () => {
       connected: false,
     });
     shellSliceRenderSpy.mockClear();
+    scopeSliceRenderSpy.mockClear();
     const view = render(
       <SessionDetailProvider paneId="pane-1">
         <ShellSliceProbe />
+        <ScopeSliceProbe />
       </SessionDetailProvider>,
       { wrapper: QueryTestProvider },
     );
@@ -445,6 +466,7 @@ describe("SessionDetailProvider", () => {
       await Promise.resolve();
     });
     expect(shellSliceRenderSpy).toHaveBeenCalled();
+    expect(scopeSliceRenderSpy).toHaveBeenCalled();
     const initialShellSlices = shellSliceRenderSpy.mock.lastCall?.[0] as {
       terminal: unknown;
       quickPanel: unknown;
@@ -453,6 +475,7 @@ describe("SessionDetailProvider", () => {
       sidebarActions: unknown;
     };
     shellSliceRenderSpy.mockClear();
+    scopeSliceRenderSpy.mockClear();
 
     const updatedSession = createSessionDetail({
       ...session,
@@ -467,6 +490,7 @@ describe("SessionDetailProvider", () => {
     view.rerender(
       <SessionDetailProvider paneId="pane-1">
         <ShellSliceProbe />
+        <ScopeSliceProbe />
       </SessionDetailProvider>,
     );
     await act(async () => {
@@ -479,6 +503,7 @@ describe("SessionDetailProvider", () => {
     expect(initialShellSlices.headerActions).toBeDefined();
     expect(initialShellSlices.sidebarActions).toBeDefined();
     expect(shellSliceRenderSpy).not.toHaveBeenCalled();
+    expect(scopeSliceRenderSpy).not.toHaveBeenCalled();
   });
 
   it("resets an unsaved title draft across a keyed pane A -> B -> A transition", () => {
@@ -511,6 +536,7 @@ describe("SessionDetailProvider", () => {
   it.each([
     ["useSessionDetailBase", useSessionDetailBase],
     ["useSessionDetailRepoPins", useSessionDetailRepoPins],
+    ["useSessionDetailScope", useSessionDetailScope],
     ["useSessionDetailTerminal", useSessionDetailTerminal],
     ["useSessionDetailQuickPanel", useSessionDetailQuickPanel],
     ["useSessionDetailLogModal", useSessionDetailLogModal],
