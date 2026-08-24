@@ -1,121 +1,162 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type QueryClient,
+  type QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { UsageRepositoryActivityResponse } from "@vde-monitor/shared";
+import { useCallback, useMemo, useState } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
-import { useVisibilityPolling } from "@/lib/use-visibility-polling";
 
 import type { RepositoryActivityRange } from "./repository-activity-types";
+import {
+  type UsageDashboardQueryScope,
+  usageDashboardQueryKeys,
+} from "./usage-dashboard-query-keys";
 
 const REPOSITORY_ACTIVITY_POLL_INTERVAL_MS = 15_000;
 const DEFAULT_REPOSITORY_ACTIVITY_RANGE: RepositoryActivityRange = "24h";
 
-type RequestRepositoryActivity = (options: {
-  range: RepositoryActivityRange;
-}) => Promise<UsageRepositoryActivityResponse>;
-
+type RequestRepositoryActivity = (
+  options: {
+    range: RepositoryActivityRange;
+  },
+  signal?: AbortSignal,
+) => Promise<UsageRepositoryActivityResponse>;
 type ResolveErrorMessage = (error: unknown, fallback: string) => string;
+
+type RepositoryActivityRefreshSnapshot = {
+  queryClient: QueryClient;
+  queryKey: QueryKey;
+  operationKey: string;
+  requestRepositoryActivity: RequestRepositoryActivity;
+  range: RepositoryActivityRange;
+};
+
+const requestActivity = async (
+  requestRepositoryActivity: RequestRepositoryActivity,
+  range: RepositoryActivityRange,
+  signal?: AbortSignal,
+) => {
+  const response = await requestRepositoryActivity({ range }, signal);
+  if (response.range !== range) throw new Error(API_ERROR_MESSAGES.invalidResponse);
+  return response;
+};
+
+const refreshRepositoryActivity = async ({
+  queryClient,
+  queryKey,
+  requestRepositoryActivity,
+  range,
+}: RepositoryActivityRefreshSnapshot) => {
+  await queryClient.cancelQueries({ queryKey, exact: true });
+  try {
+    await queryClient.fetchQuery({
+      queryKey,
+      queryFn: ({ signal }) => requestActivity(requestRepositoryActivity, range, signal),
+      staleTime: 0,
+      gcTime: 0,
+      retry: false,
+      networkMode: "always",
+    });
+  } catch {
+    // Query state owns the visible error.
+  }
+};
 
 export const useRepositoryActivityData = ({
   canRequest,
+  queryScope,
   requestRepositoryActivity,
   resolveErrorMessage,
 }: {
   canRequest: boolean;
+  queryScope: UsageDashboardQueryScope;
   requestRepositoryActivity: RequestRepositoryActivity;
   resolveErrorMessage: ResolveErrorMessage;
 }) => {
-  const [activity, setActivity] = useState<UsageRepositoryActivityResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [range, setRange] = useState<RepositoryActivityRange>(DEFAULT_REPOSITORY_ACTIVITY_RANGE);
-  const requestIdRef = useRef(0);
-  const rangeRef = useRef<RepositoryActivityRange>(DEFAULT_REPOSITORY_ACTIVITY_RANGE);
-  const visibleLoadingRef = useRef(false);
-
-  const setVisibleLoading = useCallback((next: boolean) => {
-    visibleLoadingRef.current = next;
-    setLoading(next);
-  }, []);
-
-  const load = useCallback(
-    async ({
-      silent = false,
-      requestedRange,
-    }: { silent?: boolean; requestedRange?: RepositoryActivityRange } = {}) => {
-      const resolvedRange = requestedRange ?? rangeRef.current;
-      const requestId = ++requestIdRef.current;
-      if (!canRequest) {
-        setActivity(null);
-        setVisibleLoading(false);
-        setError(API_ERROR_MESSAGES.missingToken);
-        return;
-      }
-      if (!silent) {
-        setVisibleLoading(true);
-        setActivity(null);
-      }
-      try {
-        const next = await requestRepositoryActivity({ range: resolvedRange });
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
-        if (next.range !== resolvedRange) {
-          throw new Error(API_ERROR_MESSAGES.invalidResponse);
-        }
-        setActivity(next);
-        setError(null);
-      } catch (nextError) {
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
-        setActivity(null);
-        setError(resolveErrorMessage(nextError, API_ERROR_MESSAGES.usageRepositoryActivity));
-      } finally {
-        if (requestId === requestIdRef.current && visibleLoadingRef.current) {
-          setVisibleLoading(false);
-        }
-      }
-    },
-    [canRequest, requestRepositoryActivity, resolveErrorMessage, setVisibleLoading],
+  const queryClient = useQueryClient();
+  const [range, setRangeState] = useState<RepositoryActivityRange>(
+    DEFAULT_REPOSITORY_ACTIVITY_RANGE,
   );
-
-  useEffect(() => {
-    // This is lifecycle data loading, not live child state forwarded to a parent callback.
-    /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecycle request. */
-    // react-doctor-disable-next-line no-pass-live-state-to-parent
-    void load({ requestedRange: range });
-    /* oxlint-enable react/set-state-in-effect */
-  }, [load, range]);
+  const queryKey = useMemo(
+    () => usageDashboardQueryKeys.repositoryActivity(queryScope, range),
+    [queryScope, range],
+  );
+  const operationKey = JSON.stringify(queryKey);
+  const requestCurrentRange = useCallback(
+    (signal?: AbortSignal) => requestActivity(requestRepositoryActivity, range, signal),
+    [range, requestRepositoryActivity],
+  );
+  const {
+    data,
+    error: queryError,
+    isLoading,
+  } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => requestCurrentRange(signal),
+    enabled: canRequest,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    networkMode: "online",
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
+    refetchInterval: REPOSITORY_ACTIVITY_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
+  });
+  const activityRefresh = useMutation({
+    mutationFn: refreshRepositoryActivity,
+    networkMode: "always",
+    onSuccess: (_data, variables) => {
+      void variables.queryClient.invalidateQueries({
+        queryKey: variables.queryKey,
+        exact: true,
+        refetchType: "none",
+      });
+    },
+  });
+  const load = useCallback(() => {
+    if (!canRequest) return Promise.resolve();
+    return activityRefresh.mutateAsync({
+      queryClient,
+      queryKey,
+      operationKey,
+      requestRepositoryActivity,
+      range,
+    });
+  }, [
+    activityRefresh,
+    canRequest,
+    operationKey,
+    queryClient,
+    queryKey,
+    range,
+    requestRepositoryActivity,
+  ]);
 
   const handleRangeChange = useCallback(
     (nextRange: RepositoryActivityRange) => {
-      if (nextRange === range) {
-        return;
-      }
-      rangeRef.current = nextRange;
-      requestIdRef.current += 1;
-      setActivity(null);
-      setError(null);
-      setVisibleLoading(true);
-      setRange(nextRange);
+      if (nextRange === range) return;
+      queryClient.removeQueries({ queryKey, exact: true });
+      setRangeState(nextRange);
     },
-    [range, setVisibleLoading],
+    [queryClient, queryKey, range],
   );
-
-  useVisibilityPolling({
-    enabled: canRequest,
-    intervalMs: REPOSITORY_ACTIVITY_POLL_INTERVAL_MS,
-    onTick: () => {
-      void load({ silent: true });
-    },
-    onResume: () => {
-      void load({ silent: true });
-    },
-  });
+  const error = !canRequest
+    ? API_ERROR_MESSAGES.missingToken
+    : queryError == null
+      ? null
+      : resolveErrorMessage(queryError, API_ERROR_MESSAGES.usageRepositoryActivity);
 
   return {
-    activity,
-    loading,
+    activity: error == null ? (data ?? null) : null,
+    loading: isLoading,
+    refreshing:
+      activityRefresh.isPending && activityRefresh.variables.operationKey === operationKey,
     error,
     range,
     setRange: handleRangeChange,

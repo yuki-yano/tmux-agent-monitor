@@ -144,14 +144,18 @@ export const UsageDashboardView = ({
   sidebarWidth,
   dashboard,
   dashboardLoading,
+  dashboardRefreshing,
   billingLoadingByProvider,
+  billingRefreshingByProvider,
   dashboardError,
   timeline,
   timelineLoading,
+  timelineRefreshing,
   timelineError,
   timelineRange,
   repositoryActivity,
   repositoryActivityLoading,
+  repositoryActivityRefreshing,
   repositoryActivityError,
   repositoryActivityRange,
   compactTimeline,
@@ -211,7 +215,16 @@ export const UsageDashboardView = ({
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-6">
           <UsageDashboardHeader
             backToListSearch={backToListSearch}
-            loading={dashboardLoading || timelineLoading || repositoryActivityLoading}
+            loading={
+              dashboardLoading ||
+              dashboardRefreshing ||
+              timelineLoading ||
+              timelineRefreshing ||
+              repositoryActivityLoading ||
+              repositoryActivityRefreshing ||
+              billingRefreshingByProvider.codex ||
+              billingRefreshingByProvider.claude
+            }
             onRefresh={onRefreshAll}
           />
 
@@ -226,21 +239,21 @@ export const UsageDashboardView = ({
               title="Codex"
               provider={codexProvider}
               nowMs={nowMs}
-              providerLoading={dashboardLoading}
-              billingLoading={billingLoadingByProvider.codex}
+              providerLoading={dashboardLoading || dashboardRefreshing}
+              billingLoading={billingLoadingByProvider.codex || billingRefreshingByProvider.codex}
             />
             <ProviderQuotaSection
               title="Claude"
               provider={claudeProvider}
               nowMs={nowMs}
-              providerLoading={dashboardLoading}
-              billingLoading={billingLoadingByProvider.claude}
+              providerLoading={dashboardLoading || dashboardRefreshing}
+              billingLoading={billingLoadingByProvider.claude || billingRefreshingByProvider.claude}
             />
           </div>
 
           <RepositoryActivitySection
             activity={repositoryActivity}
-            loading={repositoryActivityLoading}
+            loading={repositoryActivityLoading || repositoryActivityRefreshing}
             error={repositoryActivityError}
             range={repositoryActivityRange}
             onRangeChange={onRepositoryActivityRangeChange}

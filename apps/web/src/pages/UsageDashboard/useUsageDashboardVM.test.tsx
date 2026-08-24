@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type {
   SessionSummary,
@@ -6,8 +7,10 @@ import type {
   UsageProviderSnapshot,
 } from "@vde-monitor/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 
 import { defaultLaunchConfig } from "@/state/launch-agent-options";
+import { createAppQueryClient } from "@/state/query-client";
 
 import { useUsageDashboardVM } from "./useUsageDashboardVM";
 
@@ -43,10 +46,6 @@ vi.mock("@/lib/use-sidebar-width", () => ({
     sidebarWidth: 280,
     handlePointerDown: vi.fn(),
   }),
-}));
-
-vi.mock("@/lib/use-visibility-polling", () => ({
-  useVisibilityPolling: vi.fn(),
 }));
 
 vi.mock("@/lib/session-group", () => ({
@@ -85,6 +84,13 @@ vi.mock("@/features/shared-session-ui/hooks/useSessionLogs", () => ({
 }));
 
 const NOW_ISO = "2026-02-27T00:00:00.000Z";
+
+const createWrapper = () => {
+  const queryClient = createAppQueryClient();
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 const createBilling = (): UsageProviderSnapshot["billing"] => ({
   creditsLeft: null,
@@ -197,14 +203,14 @@ describe("useUsageDashboardVM", () => {
     });
   });
 
-  it("does not fire duplicate billing request for provider while previous request is pending", async () => {
+  it("replaces a cold billing request once and deduplicates concurrent manual refreshes", async () => {
     let resolveCodexBilling: ((value: UsageProviderSnapshot) => void) | undefined;
     const codexBillingPromise = new Promise<UsageProviderSnapshot>((resolve) => {
       resolveCodexBilling = resolve;
     });
 
     const requestUsageProviderBilling = vi.fn(
-      async ({ provider }: { provider: "codex" | "claude" }) => {
+      async ({ provider }: { provider: "codex" | "claude"; refresh?: boolean }) => {
         if (provider === "codex") {
           return codexBillingPromise;
         }
@@ -234,7 +240,7 @@ describe("useUsageDashboardVM", () => {
       resolveErrorMessage: (_error: unknown, fallback: string) => fallback,
     });
 
-    const { result } = renderHook(() => useUsageDashboardVM());
+    const { result } = renderHook(() => useUsageDashboardVM(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       const codexCalls = requestUsageProviderBilling.mock.calls.filter(
@@ -252,13 +258,14 @@ describe("useUsageDashboardVM", () => {
       const codexCalls = requestUsageProviderBilling.mock.calls.filter(
         ([args]) => args.provider === "codex",
       );
-      expect(codexCalls).toHaveLength(1);
+      expect(codexCalls.map(([args]) => args.refresh)).toEqual([false, true]);
     });
 
     resolveCodexBilling?.(createProviderSnapshot("codex"));
 
     await waitFor(() => {
       expect(result.current.billingLoadingByProvider.codex).toBe(false);
+      expect(result.current.billingRefreshingByProvider.codex).toBe(false);
     });
   });
 
@@ -299,7 +306,7 @@ describe("useUsageDashboardVM", () => {
       resolveErrorMessage: (_error: unknown, fallback: string) => fallback,
     });
 
-    const { result } = renderHook(() => useUsageDashboardVM());
+    const { result } = renderHook(() => useUsageDashboardVM(), { wrapper: createWrapper() });
 
     await act(async () => {
       result.current.onRefreshAll();
@@ -321,5 +328,133 @@ describe("useUsageDashboardVM", () => {
     });
     expect(requestUsageDashboard).toHaveBeenCalledTimes(2);
     expect(requestUsageGlobalTimeline).toHaveBeenCalledTimes(2);
+  });
+
+  it("starts forced billing after dashboard succeeds without waiting for other resources", async () => {
+    const refreshedDashboard = createDeferred<UsageDashboardResponse>();
+    const refreshedTimeline = createDeferred<UsageGlobalTimelineResponse>();
+    const refreshedActivity = createDeferred<{
+      range: "24h";
+      rangeStart: string;
+      rangeEnd: string;
+      coverage: {
+        status: "complete";
+        trackingStartedAt: string;
+        gapDurationMs: number;
+        unattributedRunningMs: number;
+        unattributedCompletedRunCount: number;
+        unverifiedCompletedRunCount: number;
+      };
+      items: never[];
+      fetchedAt: string;
+    }>();
+    const requestUsageProviderBilling = vi.fn(
+      async ({ provider }: { provider: "codex" | "claude"; refresh?: boolean }) =>
+        createProviderSnapshot(provider),
+    );
+    const requestUsageDashboard = vi
+      .fn()
+      .mockResolvedValueOnce(createDashboardResponse())
+      .mockReturnValueOnce(refreshedDashboard.promise);
+    const requestUsageGlobalTimeline = vi
+      .fn()
+      .mockResolvedValueOnce(createTimelineResponse())
+      .mockReturnValueOnce(refreshedTimeline.promise);
+    const initialActivity = {
+      range: "24h" as const,
+      rangeStart: "2026-02-26T00:00:00.000Z",
+      rangeEnd: NOW_ISO,
+      coverage: {
+        status: "complete" as const,
+        trackingStartedAt: "2026-02-01T00:00:00.000Z",
+        gapDurationMs: 0,
+        unattributedRunningMs: 0,
+        unattributedCompletedRunCount: 0,
+        unverifiedCompletedRunCount: 0,
+      },
+      items: [],
+      fetchedAt: NOW_ISO,
+    };
+    const requestUsageRepositoryActivity = vi
+      .fn()
+      .mockResolvedValueOnce(initialActivity)
+      .mockReturnValueOnce(refreshedActivity.promise);
+
+    mockUseUsageApi.mockReturnValue({
+      requestUsageDashboard,
+      requestUsageProviderBilling,
+      requestUsageGlobalTimeline,
+      requestUsageRepositoryActivity,
+      resolveErrorMessage: (_error: unknown, fallback: string) => fallback,
+    });
+
+    const { result } = renderHook(() => useUsageDashboardVM(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(
+        requestUsageProviderBilling.mock.calls.filter(([args]) => args.refresh !== true),
+      ).toHaveLength(2);
+    });
+
+    act(() => result.current.onRefreshAll());
+    await act(async () => {
+      refreshedDashboard.resolve(createDashboardResponse("2026-02-27T00:00:02.000Z"));
+    });
+
+    await waitFor(() => {
+      expect(
+        requestUsageProviderBilling.mock.calls.filter(([args]) => args.refresh === true),
+      ).toHaveLength(2);
+    });
+    expect(requestUsageGlobalTimeline).toHaveBeenCalledTimes(2);
+    expect(requestUsageRepositoryActivity).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not force billing when the dashboard refresh fails", async () => {
+    const requestUsageProviderBilling = vi.fn(
+      async ({ provider }: { provider: "codex" | "claude"; refresh?: boolean }) =>
+        createProviderSnapshot(provider),
+    );
+    const requestUsageDashboard = vi
+      .fn()
+      .mockResolvedValueOnce(createDashboardResponse())
+      .mockRejectedValueOnce(new Error("dashboard failed"));
+
+    mockUseUsageApi.mockReturnValue({
+      requestUsageDashboard,
+      requestUsageProviderBilling,
+      requestUsageGlobalTimeline: vi.fn(async () => createTimelineResponse()),
+      requestUsageRepositoryActivity: vi.fn(async () => ({
+        range: "24h" as const,
+        rangeStart: "2026-02-26T00:00:00.000Z",
+        rangeEnd: NOW_ISO,
+        coverage: {
+          status: "complete" as const,
+          trackingStartedAt: "2026-02-01T00:00:00.000Z",
+          gapDurationMs: 0,
+          unattributedRunningMs: 0,
+          unattributedCompletedRunCount: 0,
+          unverifiedCompletedRunCount: 0,
+        },
+        items: [],
+        fetchedAt: NOW_ISO,
+      })),
+      resolveErrorMessage: (_error: unknown, fallback: string) => fallback,
+    });
+
+    const { result } = renderHook(() => useUsageDashboardVM(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(
+        requestUsageProviderBilling.mock.calls.filter(([args]) => args.refresh !== true),
+      ).toHaveLength(2);
+    });
+    act(() => result.current.onRefreshAll());
+    await waitFor(() => expect(requestUsageDashboard).toHaveBeenCalledTimes(2));
+    await act(async () => Promise.resolve());
+
+    expect(
+      requestUsageProviderBilling.mock.calls.filter(([args]) => args.refresh === true),
+    ).toHaveLength(0);
   });
 });

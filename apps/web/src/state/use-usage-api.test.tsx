@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { HttpResponse, http, server } from "@/test/msw/server";
 
@@ -66,5 +66,29 @@ describe("useUsageApi", () => {
     await expect(result.current.requestUsageRepositoryActivity({ range: "24h" })).rejects.toThrow(
       "Invalid response",
     );
+  });
+
+  it("forwards cancellation signals to every usage resource request", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const controller = new AbortController();
+    const { result } = renderHook(() => useUsageApi({ token: "token", apiBaseUrl: API_BASE_URL }));
+
+    await Promise.allSettled([
+      result.current.requestUsageDashboard({}, controller.signal),
+      result.current.requestUsageGlobalTimeline({}, controller.signal),
+      result.current.requestUsageProviderBilling({ provider: "codex" }, controller.signal),
+      result.current.requestUsageRepositoryActivity({ range: "24h" }, controller.signal),
+    ]);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    for (const [, options] of fetchSpy.mock.calls) {
+      expect(options?.signal).toBe(controller.signal);
+    }
+    fetchSpy.mockRestore();
   });
 });

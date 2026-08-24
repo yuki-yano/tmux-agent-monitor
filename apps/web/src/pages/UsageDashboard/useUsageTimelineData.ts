@@ -1,108 +1,163 @@
+import {
+  type QueryClient,
+  type QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { SessionStateTimelineRange, UsageGlobalTimelineResponse } from "@vde-monitor/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
-import { useVisibilityPolling } from "@/lib/use-visibility-polling";
+
+import {
+  type UsageDashboardQueryScope,
+  usageDashboardQueryKeys,
+} from "./usage-dashboard-query-keys";
 
 const TIMELINE_POLL_INTERVAL_MS = 15_000;
 const TIMELINE_DEFAULT_RANGE: SessionStateTimelineRange = "24h";
 const COMPACT_ONLY_TIMELINE_RANGES = new Set<SessionStateTimelineRange>(["3d", "7d", "14d", "30d"]);
 
-type RequestUsageGlobalTimeline = (options: {
-  range?: SessionStateTimelineRange;
-}) => Promise<UsageGlobalTimelineResponse>;
-
+type RequestUsageGlobalTimeline = (
+  options: {
+    range?: SessionStateTimelineRange;
+  },
+  signal?: AbortSignal,
+) => Promise<UsageGlobalTimelineResponse>;
 type ResolveErrorMessage = (error: unknown, fallback: string) => string;
+
+type TimelineRefreshSnapshot = {
+  queryClient: QueryClient;
+  queryKey: QueryKey;
+  operationKey: string;
+  requestUsageGlobalTimeline: RequestUsageGlobalTimeline;
+  range: SessionStateTimelineRange;
+};
+
+const requestTimeline = async (
+  requestUsageGlobalTimeline: RequestUsageGlobalTimeline,
+  range: SessionStateTimelineRange,
+  signal?: AbortSignal,
+) => {
+  const response = await requestUsageGlobalTimeline({ range }, signal);
+  if (response.timeline.range !== range) throw new Error(API_ERROR_MESSAGES.invalidResponse);
+  return response;
+};
+
+const refreshUsageTimeline = async ({
+  queryClient,
+  queryKey,
+  requestUsageGlobalTimeline,
+  range,
+}: TimelineRefreshSnapshot) => {
+  await queryClient.cancelQueries({ queryKey, exact: true });
+  try {
+    await queryClient.fetchQuery({
+      queryKey,
+      queryFn: ({ signal }) => requestTimeline(requestUsageGlobalTimeline, range, signal),
+      staleTime: 0,
+      gcTime: 0,
+      retry: false,
+      networkMode: "always",
+    });
+  } catch {
+    // Query state owns the visible error.
+  }
+};
 
 export const useUsageTimelineData = ({
   canRequest,
+  queryScope,
   requestUsageGlobalTimeline,
   resolveErrorMessage,
 }: {
   canRequest: boolean;
+  queryScope: UsageDashboardQueryScope;
   requestUsageGlobalTimeline: RequestUsageGlobalTimeline;
   resolveErrorMessage: ResolveErrorMessage;
 }) => {
-  const [timeline, setTimeline] = useState<UsageGlobalTimelineResponse | null>(null);
-  const [timelineLoading, setTimelineLoading] = useState(false);
-  const [timelineError, setTimelineError] = useState<string | null>(null);
-  const [timelineRange, setTimelineRange] =
+  const queryClient = useQueryClient();
+  const [timelineRange, setTimelineRangeState] =
     useState<SessionStateTimelineRange>(TIMELINE_DEFAULT_RANGE);
   const [compactTimeline, setCompactTimeline] = useState(true);
-  const timelineRequestIdRef = useRef(0);
-
-  const loadTimeline = useCallback(
-    async ({
-      silent = false,
-      range,
-    }: {
-      silent?: boolean;
-      range?: SessionStateTimelineRange;
-    } = {}) => {
-      const requestId = ++timelineRequestIdRef.current;
-      if (!canRequest) {
-        setTimeline(null);
-        setTimelineError(API_ERROR_MESSAGES.missingToken);
-        return;
-      }
-      const nextRange = range ?? timelineRange;
-      if (!silent) {
-        setTimelineLoading(true);
-      }
-      try {
-        const next = await requestUsageGlobalTimeline({ range: nextRange });
-        if (requestId !== timelineRequestIdRef.current) {
-          return;
-        }
-        setTimeline(next);
-        setTimelineError(null);
-      } catch (error) {
-        if (requestId !== timelineRequestIdRef.current) {
-          return;
-        }
-        setTimelineError(resolveErrorMessage(error, API_ERROR_MESSAGES.usageGlobalTimeline));
-      } finally {
-        if (!silent && requestId === timelineRequestIdRef.current) {
-          // The loading flag is intentionally reset on the finally path for both outcomes.
-          // react-doctor-disable-next-line no-loading-flag-reset-outside-finally
-          setTimelineLoading(false);
-        }
-      }
-    },
-    [canRequest, requestUsageGlobalTimeline, resolveErrorMessage, timelineRange],
+  const queryKey = useMemo(
+    () => usageDashboardQueryKeys.timeline(queryScope, timelineRange),
+    [queryScope, timelineRange],
   );
-
-  // Reload whenever the user switches range.
-  useEffect(() => {
-    // This is lifecycle data loading, not live child state forwarded to a parent callback.
-    /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecycle request. */
-    // react-doctor-disable-next-line no-pass-live-state-to-parent
-    void loadTimeline({ range: timelineRange });
-    /* oxlint-enable react/set-state-in-effect */
-  }, [loadTimeline, timelineRange]);
-
-  const handleTimelineRangeChange = useCallback((nextRange: SessionStateTimelineRange) => {
-    setTimelineRange(nextRange);
-    if (COMPACT_ONLY_TIMELINE_RANGES.has(nextRange)) {
-      setCompactTimeline(true);
-    }
-  }, []);
-
-  useVisibilityPolling({
+  const operationKey = JSON.stringify(queryKey);
+  const requestCurrentTimeline = useCallback(
+    (signal?: AbortSignal) => requestTimeline(requestUsageGlobalTimeline, timelineRange, signal),
+    [requestUsageGlobalTimeline, timelineRange],
+  );
+  const {
+    data: timeline = null,
+    error: queryError,
+    isLoading,
+  } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => requestCurrentTimeline(signal),
     enabled: canRequest,
-    intervalMs: TIMELINE_POLL_INTERVAL_MS,
-    onTick: () => {
-      void loadTimeline({ silent: true });
-    },
-    onResume: () => {
-      void loadTimeline({ silent: true });
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    networkMode: "online",
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
+    refetchInterval: TIMELINE_POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
+  });
+  const timelineRefresh = useMutation({
+    mutationFn: refreshUsageTimeline,
+    networkMode: "always",
+    onSuccess: (_data, variables) => {
+      void variables.queryClient.invalidateQueries({
+        queryKey: variables.queryKey,
+        exact: true,
+        refetchType: "none",
+      });
     },
   });
+  const loadTimeline = useCallback(() => {
+    if (!canRequest) return Promise.resolve();
+    return timelineRefresh.mutateAsync({
+      queryClient,
+      queryKey,
+      operationKey,
+      requestUsageGlobalTimeline,
+      range: timelineRange,
+    });
+  }, [
+    canRequest,
+    operationKey,
+    queryClient,
+    queryKey,
+    requestUsageGlobalTimeline,
+    timelineRefresh,
+    timelineRange,
+  ]);
+
+  const handleTimelineRangeChange = useCallback(
+    (nextRange: SessionStateTimelineRange) => {
+      if (nextRange === timelineRange) return;
+      queryClient.removeQueries({ queryKey, exact: true });
+      setTimelineRangeState(nextRange);
+      if (COMPACT_ONLY_TIMELINE_RANGES.has(nextRange)) setCompactTimeline(true);
+    },
+    [queryClient, queryKey, timelineRange],
+  );
 
   return {
     timeline,
-    timelineLoading,
-    timelineError,
+    timelineLoading: isLoading,
+    timelineRefreshing:
+      timelineRefresh.isPending && timelineRefresh.variables.operationKey === operationKey,
+    timelineError: !canRequest
+      ? API_ERROR_MESSAGES.missingToken
+      : queryError == null
+        ? null
+        : resolveErrorMessage(queryError, API_ERROR_MESSAGES.usageGlobalTimeline),
     timelineRange,
     setTimelineRange: handleTimelineRangeChange,
     compactTimeline,

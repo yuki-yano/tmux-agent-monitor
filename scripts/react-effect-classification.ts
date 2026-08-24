@@ -87,9 +87,6 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch::useEffect::9acec1c5844e::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenPanelLogReferenceLinking.ts::useScreenPanelLogReferenceLinking::useEffect::bdbf0aacc451::1",
     "apps/web/src/pages/SessionDetail/hooks/useSessionDoneAcknowledgement.ts::useSessionDoneAcknowledgement::useEffect::f0d483687d9d::1",
-    "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts::useRepositoryActivityData::useEffect::aa6b86e68fd4::1",
-    "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts::useUsageDashboardData::useEffect::3bb65cbc9349::1",
-    "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts::useUsageTimelineData::useEffect::5e0909d43bf2::1",
     "apps/web/src/state/use-session-polling.ts::useSessionPolling::useEffect::cc037ef9dc2a::1",
   ],
   "event-migration": [

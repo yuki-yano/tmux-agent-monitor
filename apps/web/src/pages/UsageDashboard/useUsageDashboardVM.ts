@@ -1,6 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import type { UsageDashboardResponse } from "@vde-monitor/shared";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { createLaunchRequestId } from "@/lib/request-id";
 
 import { useWorkspaceTabs } from "@/features/pwa-tabs/context/workspace-tabs-context";
@@ -20,10 +19,11 @@ import {
 import { useTheme } from "@/state/theme-context";
 import { useUsageApi } from "@/state/use-usage-api";
 
-import { useUsageBillingData } from "./useUsageBillingData";
+import { resolveBillingProviders, useUsageBillingData } from "./useUsageBillingData";
 import { useUsageDashboardData } from "./useUsageDashboardData";
 import { useUsageTimelineData } from "./useUsageTimelineData";
 import { useRepositoryActivityData } from "./useRepositoryActivityData";
+import { createUsageDashboardQueryScope } from "./usage-dashboard-query-keys";
 
 export const useUsageDashboardVM = () => {
   const { sessions, connected, connectionIssue } = useSessionStreamData();
@@ -49,31 +49,36 @@ export const useUsageDashboardVM = () => {
 
   const canRequest = Boolean(token);
   const nowMs = useNowMs(30_000);
+  const queryScope = useMemo(
+    () => createUsageDashboardQueryScope(apiBaseUrl, token),
+    [apiBaseUrl, token],
+  );
 
-  // dashboard state is lifted to the VM so both the dashboard-data and billing hooks
-  // can read/update it without circular hook dependencies.
-  const [dashboard, setDashboard] = useState<UsageDashboardResponse | null>(null);
-
-  const { billingLoadingByProvider, loadAllProviderBilling, resetBillingState } =
-    useUsageBillingData({
+  const { dashboardCore, dashboardLoading, dashboardRefreshing, dashboardError, loadDashboard } =
+    useUsageDashboardData({
       canRequest,
-      requestUsageProviderBilling,
+      queryScope,
+      requestUsageDashboard,
       resolveErrorMessage,
-      setDashboard,
     });
 
-  const { dashboardLoading, dashboardError, loadDashboard } = useUsageDashboardData({
-    canRequest,
-    requestUsageDashboard,
-    resolveErrorMessage,
-    setDashboard,
+  const {
+    dashboard,
+    billingLoadingByProvider,
+    billingRefreshingByProvider,
     loadAllProviderBilling,
-    resetBillingState,
+  } = useUsageBillingData({
+    canRequest,
+    queryScope,
+    dashboardCore,
+    requestUsageProviderBilling,
+    resolveErrorMessage,
   });
 
   const {
     timeline,
     timelineLoading,
+    timelineRefreshing,
     timelineError,
     timelineRange,
     setTimelineRange,
@@ -82,6 +87,7 @@ export const useUsageDashboardVM = () => {
     loadTimeline,
   } = useUsageTimelineData({
     canRequest,
+    queryScope,
     requestUsageGlobalTimeline,
     resolveErrorMessage,
   });
@@ -89,12 +95,14 @@ export const useUsageDashboardVM = () => {
   const {
     activity: repositoryActivity,
     loading: repositoryActivityLoading,
+    refreshing: repositoryActivityRefreshing,
     error: repositoryActivityError,
     range: repositoryActivityRange,
     setRange: setRepositoryActivityRange,
     load: loadRepositoryActivity,
   } = useRepositoryActivityData({
     canRequest,
+    queryScope,
     requestRepositoryActivity: requestUsageRepositoryActivity,
     resolveErrorMessage,
   });
@@ -129,12 +137,16 @@ export const useUsageDashboardVM = () => {
   });
 
   const refreshAll = useCallback(() => {
-    void Promise.all([
-      loadDashboard({ forceRefresh: true, withBilling: true }),
-      loadTimeline({ range: timelineRange }),
-      loadRepositoryActivity({ requestedRange: repositoryActivityRange }),
-    ]);
-  }, [loadDashboard, loadRepositoryActivity, loadTimeline, repositoryActivityRange, timelineRange]);
+    void loadTimeline();
+    void loadRepositoryActivity();
+    void loadDashboard({ forceRefresh: true }).then((nextDashboard) => {
+      if (nextDashboard == null) return;
+      return loadAllProviderBilling({
+        providers: resolveBillingProviders(nextDashboard),
+        forceRefresh: true,
+      });
+    });
+  }, [loadAllProviderBilling, loadDashboard, loadRepositoryActivity, loadTimeline]);
 
   const handleOpenPaneInNewWindow = useCallback(
     (targetPaneId: string) => {
@@ -194,14 +206,18 @@ export const useUsageDashboardVM = () => {
     sidebarWidth,
     dashboard,
     dashboardLoading,
+    dashboardRefreshing,
     billingLoadingByProvider,
+    billingRefreshingByProvider,
     dashboardError,
     timeline,
     timelineLoading,
+    timelineRefreshing,
     timelineError,
     timelineRange,
     repositoryActivity,
     repositoryActivityLoading,
+    repositoryActivityRefreshing,
     repositoryActivityError,
     repositoryActivityRange,
     compactTimeline,

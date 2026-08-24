@@ -6,22 +6,22 @@
     "excluded": ["*.test.*", "*.spec.*", "__tests__"]
   },
   "metrics": {
-    "productionFiles": 332,
-    "useEffect": 77,
+    "productionFiles": 333,
+    "useEffect": 74,
     "useLayoutEffect": 34,
-    "effectTotal": 111,
+    "effectTotal": 108,
     "sessionDetailEffects": 47,
-    "useMemo": 202,
+    "useMemo": 212,
     "useCallback": 380,
     "memo": 51,
     "sessionDetailAndLibUseMemo": 114,
     "sessionDetailAndLibUseCallback": 179,
-    "visibilityPollingCallerFiles": 8,
+    "visibilityPollingCallerFiles": 4,
     "sessionDetailOwnershipLines": 1383,
     "sessionFilesHookFamilyLines": 2433,
     "largestSessionFilesHookModuleLines": 936,
-    "reactOxlintDisable": 10,
-    "reactDoctorDisable": 42,
+    "reactOxlintDisable": 7,
+    "reactDoctorDisable": 38,
     "exhaustiveDepsSuppression": 0,
     "useNoMemoDirective": 0
   },
@@ -36,7 +36,7 @@
     "external-sync": 43,
     "identity-reset": 20,
     "ref-mirror": 6,
-    "request-bridge": 13
+    "request-bridge": 10
   },
   "inventory": [
     {
@@ -2546,75 +2546,6 @@
       "id": "E101"
     },
     {
-      "file": "apps/web/src/pages/UsageDashboard/useRepositoryActivityData.ts",
-      "line": 82,
-      "column": 3,
-      "owner": "useRepositoryActivityData",
-      "hook": "useEffect",
-      "dependencies": ["load", "range"],
-      "fingerprint": "aa6b86e68fd4",
-      "category": "request-bridge",
-      "disposition": "query",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": ["apps/web/src/pages/UsageDashboard/useRepositoryActivityData.test.tsx"],
-        "behaviorVerified": false
-      },
-      "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E102"
-    },
-    {
-      "file": "apps/web/src/pages/UsageDashboard/useUsageDashboardData.ts",
-      "line": 153,
-      "column": 3,
-      "owner": "useUsageDashboardData",
-      "hook": "useEffect",
-      "dependencies": ["loadDashboard"],
-      "fingerprint": "3bb65cbc9349",
-      "category": "request-bridge",
-      "disposition": "query",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { // oxlint-disable-next-line react/set-state-in-effect -- This effect owns initial loading and request guards. void loadDashboard(); }",
-      "id": "E103"
-    },
-    {
-      "file": "apps/web/src/pages/UsageDashboard/useUsageTimelineData.ts",
-      "line": 76,
-      "column": 3,
-      "owner": "useUsageTimelineData",
-      "hook": "useEffect",
-      "dependencies": ["loadTimeline", "timelineRange"],
-      "fingerprint": "5e0909d43bf2",
-      "category": "request-bridge",
-      "disposition": "query",
-      "confidence": "high",
-      "effectEvent": {
-        "readsLatestReactiveValuesInsideCallback": "not-applicable",
-        "callbackIdentityIsNotSubscriptionContract": "not-applicable",
-        "effectEventIsNotExported": "not-applicable"
-      },
-      "testEvidence": {
-        "adjacentFiles": [],
-        "behaviorVerified": false
-      },
-      "preview": "() => { // This is lifecycle data loading, not live child state forwarded to a parent callback. /* oxlint-disable react/set-state-in-effect -- Range changes start a guarded lifecyc",
-      "id": "E104"
-    },
-    {
       "file": "apps/web/src/state/session-context.tsx",
       "line": 387,
       "column": 3,
@@ -2641,7 +2572,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { setFileNavigatorConfig({ autoExpandMatchLimit: 100 }); setWorkspaceTabsDisplayMode(\"all\"); setLaunchConfig(defaultLaunchConfig); setCapabilities({ screenImage: false, launc",
-      "id": "E105"
+      "id": "E102"
     },
     {
       "file": "apps/web/src/state/session-context.tsx",
@@ -2664,7 +2595,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!hasToken) { notificationTitleFingerprintRef.current = \"\"; return; } const nextEntries = toNotificationSessionTitleEntries(sessions); const nextFingerprint = buildNotif",
-      "id": "E106"
+      "id": "E103"
     },
     {
       "file": "apps/web/src/state/theme-context.tsx",
@@ -2687,7 +2618,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof window === \"undefined\") return; const applyTheme = (nextTheme: Theme) => { document.documentElement.dataset.theme = nextTheme; setResolvedTheme(nextTheme); }; co",
-      "id": "E107"
+      "id": "E104"
     },
     {
       "file": "apps/web/src/state/use-session-polling.ts",
@@ -2710,7 +2641,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled) { return; } void refreshSessions(); }",
-      "id": "E108"
+      "id": "E105"
     },
     {
       "file": "apps/web/src/state/use-session-token.ts",
@@ -2733,7 +2664,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!initialAccess.hasAccessDirective) { return; } if (initialAccess.token) { localStorage.setItem(TOKEN_KEY, initialAccess.token); } else { localStorage.removeItem(TOKEN_K",
-      "id": "E109"
+      "id": "E106"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -2756,7 +2687,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || !token) { transportRef.current = \"polling\"; handleTransportChange(\"polling\"); return; } const normalized = apiBaseUrl?.trim(); const basePath = normalized &",
-      "id": "E110"
+      "id": "E107"
     },
     {
       "file": "apps/web/src/state/use-sessions-stream.ts",
@@ -2779,7 +2710,7 @@
         "behaviorVerified": false
       },
       "preview": "() => { if (!enabled || typeof window === \"undefined\") return; const handleResume = () => { // If SSE is already open, nothing to do. if (transportRef.current === \"sse\") return; re",
-      "id": "E111"
+      "id": "E108"
     }
   ]
 }

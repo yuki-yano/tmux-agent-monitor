@@ -69,7 +69,10 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
   }, [token]);
 
   const requestUsageDashboard = useCallback(
-    async (options: RequestUsageDashboardOptions = {}): Promise<UsageDashboardResponse> => {
+    async (
+      options: RequestUsageDashboardOptions = {},
+      signal?: AbortSignal,
+    ): Promise<UsageDashboardResponse> => {
       ensureToken();
       const query = new URLSearchParams();
       if (options.provider) {
@@ -79,6 +82,7 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
         query.set("refresh", "1");
       }
       const request = fetch(buildApiPath(apiBasePath, "/usage/dashboard", query), {
+        signal,
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -115,11 +119,13 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
   const requestUsageGlobalTimeline = useCallback(
     async (
       options: RequestUsageGlobalTimelineOptions = {},
+      signal?: AbortSignal,
     ): Promise<UsageGlobalTimelineResponse> => {
       ensureToken();
       const query = new URLSearchParams();
       query.set("range", options.range ?? DEFAULT_TIMELINE_RANGE);
       const request = fetch(buildApiPath(apiBasePath, "/usage/state-timeline", query), {
+        signal,
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -153,7 +159,10 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
   );
 
   const requestUsageProviderBilling = useCallback(
-    async (options: RequestUsageProviderBillingOptions): Promise<UsageProviderSnapshot> => {
+    async (
+      options: RequestUsageProviderBillingOptions,
+      signal?: AbortSignal,
+    ): Promise<UsageProviderSnapshot> => {
       ensureToken();
       const query = new URLSearchParams();
       query.set("provider", options.provider);
@@ -161,6 +170,7 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
         query.set("refresh", "1");
       }
       const request = fetch(buildApiPath(apiBasePath, "/usage/billing", query), {
+        signal,
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -201,11 +211,13 @@ export const useUsageApi = ({ token, apiBaseUrl }: UseUsageApiParams) => {
   const requestUsageRepositoryActivity = useCallback(
     async (
       options: RequestUsageRepositoryActivityOptions,
+      signal?: AbortSignal,
     ): Promise<UsageRepositoryActivityResponse> => {
       ensureToken();
       const query = new URLSearchParams();
       query.set("range", options.range);
       const request = fetch(buildApiPath(apiBasePath, "/usage/repository-activity", query), {
+        signal,
         headers: {
           Authorization: `Bearer ${token}`,
         },

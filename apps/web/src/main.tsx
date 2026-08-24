@@ -6,8 +6,9 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 
 import { router } from "./router";
-import { createAppQueryClient } from "./state/query-client";
+import { configureAppQueryFocusManager, createAppQueryClient } from "./state/query-client";
 
+configureAppQueryFocusManager();
 const queryClient = createAppQueryClient();
 
 if ("serviceWorker" in navigator) {
