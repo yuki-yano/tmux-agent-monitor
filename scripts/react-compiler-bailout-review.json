@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 2,
+  "entries": [
+    {
+      "key": "apps/web/src/features/launch-agent/LaunchAgentButton.tsx::LaunchAgentButton",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 cannot lower the existing try/catch value block; preserving the tested submission flow is safer than compiler-driven control-flow churn.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/launch-agent/LaunchAgentButton.test.tsx",
+          "fingerprint": "e331f83c98224b3509519d7f8695dc1d69464c344630fc432143529568e6a30a"
+        }
+      ],
+      "resultSignature": "75f9d3eefe3639b17fbb4ba775ff916da946eb7a8994888302ff3ddc3eebea3f",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx::ResumeWorktreeDialogOpenContent",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 cannot lower the existing try/catch value block; the reviewed dialog lifetime and submission semantics remain authoritative.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/launch-agent/ResumeWorktreeDialog.test.tsx",
+          "fingerprint": "3ff3598611bf5c27c392c0c9c1a22676bd2519da3ee64ec72952bbe0f18207ac"
+        }
+      ],
+      "resultSignature": "c33c31a1a94703c492abe3791bb41d2e2c425858a5238a0552fca7b8d16b2ff4",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/notifications/use-push-notifications.ts::usePushNotifications",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; notification cleanup semantics must not be rewritten only to raise coverage.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/notifications/use-push-notifications.test.tsx",
+          "fingerprint": "50ee817cca4e5d2f3e51e6a807eb91964f60be79b61a3b2e8f181177a8bb942f"
+        }
+      ],
+      "resultSignature": "a106e96189fbca6d48bc1018e4dac3ae408b2e89a10b14f0a7ed627dfef9a2b2",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx::useWorkspaceTabs",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static inventory sees the React 19 use() call, while Compiler 1.0.0 inference emits no terminal event for this context accessor.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.test.tsx",
+          "fingerprint": "9a7ae5f3a56445702da9d21e9724893da4057687f5edccde780ddf45eef4062c"
+        }
+      ],
+      "resultSignature": "eb6d4df9bebec2b4384aada18e1b17bfccec31b60e7672667632e31a2d0e8663",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx::AnsiVirtualizedViewport",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "TanStack Virtual intentionally owns mutable measurements and is an incompatible-library boundary already covered by scroll and bottom-follow tests.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.test.tsx",
+          "fingerprint": "8b96bfdb70f9b40fcf699987cb18970218dd0fc1c61e14ead52834c0375c021b"
+        }
+      ],
+      "resultSignature": "b4c5360091657ad81562a9aecf57559451e6dc82196ed6c506a75a414db012a7",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/components/prompt-completion/usePromptCompletion.ts::usePromptCompletion",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 cannot lower the optional logical block; prompt completion behavior remains covered without restructuring for the compiler.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/shared-session-ui/components/PaneTextComposer.test.tsx",
+          "fingerprint": "3f685b4d942f0de9108f6fd45b9a066a189274a7ec6686fa5d41562ef3e75a4e"
+        }
+      ],
+      "resultSignature": "a62c177c0eca8222c05cee842324a9ede3ef08d310f8a3fe9ca08e90a7489cdf",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/hooks/usePaneSendText.ts::usePaneSendText",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support the existing try statement; send ordering and error handling take precedence over compilation coverage.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/shared-session-ui/hooks/usePaneSendText.test.tsx",
+          "fingerprint": "a0aa87c91d122c4f4a3ebe8f200df14d1fe7d8dfd6219a915f454b0136df5ce1"
+        }
+      ],
+      "resultSignature": "0469fb22546a32de749516a3499062a5b1bb8ed69082f4d2b8782a7705bee8b7",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts::useRawInputHandlers",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 cannot lower the current try/catch value block; raw input sequencing must remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useRawInputHandlers.test.tsx",
+          "fingerprint": "2a930db2ca9dcd3f1320b394fa652bec48eac52ac6618cb318ad2e94281ebc76"
+        }
+      ],
+      "resultSignature": "8a1fb49260c697a507cd673e11a7ede6be8e62a17ad261f029cded73631954b8",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/hooks/useScreenCache.ts::useScreenCache",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; cache owner and cleanup guarantees are already regression-tested.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useScreenCache.test.tsx",
+          "fingerprint": "c159ca06b1d5619e8ef5963d80d60ae37b8d722147d4f118364b4b93dec769e1"
+        }
+      ],
+      "resultSignature": "cd24fb63ec91e17ce044b1e10ea8f86fe25188e2ddaaf0637147b1ed0b451e06",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/hooks/useSessionSidebarActions.ts::useSessionSidebarActions",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; session action completion semantics remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/features/shared-session-ui/hooks/useSessionSidebarActions.test.tsx",
+          "fingerprint": "e6b34b2ee62e6d2ee7438cb9c912e94c98c6dee231f5484ecbf2b7c7eaff6d95"
+        }
+      ],
+      "resultSignature": "c46777858d6354761ed3330c2b84ecb026f5a07a59fe30fa165b9562a32316e7",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache.ts::useSidebarPreviewTimelineCache",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; timeline cache cleanup is retained as tested.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSidebarPreview.test.tsx",
+          "fingerprint": "20104637826a745d949320cb48425d529e200f815a520944a62aa1bd1c50f156"
+        }
+      ],
+      "resultSignature": "585170415410fef1d2e7cd75f121ab8d93ce8c2f027084e0edea13943c02efa4",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/features/shared-session-ui/hooks/useTitleEditor.ts::useTitleEditor",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 cannot lower the existing try/catch value block; title editing selection and save behavior must not drift.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionTitleEditor.test.tsx",
+          "fingerprint": "33a7e9747251c752079890c73400cc329d3dd8d70e9bcddd2310cbeb9cc6032d"
+        }
+      ],
+      "resultSignature": "0c7c97f35c75f7740a3e36f517ea50535aaf1c222ac14567b95d5af42dde284b",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/components/branch-section/BranchEntryList.tsx::BranchEntryList",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The component returns JSX from a nested map callback, which the static contract includes but Compiler 1.0.0 inference does not select.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/components/BranchSection.test.tsx",
+          "fingerprint": "d5a438a9ad8606834031308f704b6009e851f2caff550191f6251a9ca4ec4cbd"
+        }
+      ],
+      "resultSignature": "d27f898b69bf0958957dde3844caa1ec36696a2fe8ec39ccd36b6cd7bb93f705",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/components/NotesSection.tsx::NotesSection",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support the existing try statement; note mutation ordering and errors remain behavior-tested.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/components/NotesSection.test.tsx",
+          "fingerprint": "a5773b0f9ce2cb93a5a63bd52d9afd2460097ff5009830f370fd8d6516c82b92"
+        }
+      ],
+      "resultSignature": "ac389924c9bc2fe7fd3cb50ad021a682eb021cb2fb7c0c646cb08bab93b84bd2",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/components/WorktreeEntryList.tsx::WorktreeEntryList",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The component returns JSX from a nested map callback, which the static contract includes but Compiler 1.0.0 inference does not select.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/components/WorktreeSection.test.tsx",
+          "fingerprint": "a34d6b71d2811aaccfcd24d5376bbbda8971a14d5593906539ee6b71b546612d"
+        }
+      ],
+      "resultSignature": "4c734af90d496b2475a06aacce26da7c1f27cfe8176db3f9729f76df2724b767",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts::useNoteAutoSave",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 cannot safely reorder the member expression; the recently reviewed autosave generation and queue semantics remain authoritative.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.test.tsx",
+          "fingerprint": "ec524ea42359495ef704172c3bb251cb6246b30df7bf8d473ffeb2458aa7042d"
+        }
+      ],
+      "resultSignature": "5b66909cfa01eb074cb3f482611c11a4eb4442a1296b575fc509e79566395087",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; fetch cancellation and stale-response guards remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.test.tsx",
+          "fingerprint": "78b603e8dedfd511221d8e5d6bae7dbc76c1b7a820b4aaf4decb7213d1202baa"
+        }
+      ],
+      "resultSignature": "3f25fd5587279eaf661804ce67c03548fa91e91bb07620da22529f8093d8af35",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelLogReferenceLinking.ts::useScreenPanelLogReferenceLinking",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "The bounded deterministic LRU reads a ref during render by reviewed design and already has a targeted react/refs suppression and regression tests.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelLogReferenceLinking.test.ts",
+          "fingerprint": "281a0933d8ff736fdf312cd92b56378aa5b3a3354a47c90343f7bc137f50118d"
+        }
+      ],
+      "resultSignature": "6018efc8b3fdb0f2cf5bc4abe77b7db33779edd4959cf7b632f5323b4349b48a",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts::useSessionBranches",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; branch mutation and refresh sequencing remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.test.tsx",
+          "fingerprint": "332fba2334baa367fc77da45e7033eb0fd3b55e6847a8d052d49bf2bbbac867f"
+        }
+      ],
+      "resultSignature": "e9ad06882ad1e52645ad3cdd34ec6a569d589e376d31981d0fb64fa056e46c1e",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts::useSessionCommits",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; commit pagination and refresh behavior remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.test.tsx",
+          "fingerprint": "544e142161645926ea91743fdbed6497752e2bbf05d94cb4521b1618e1291a75"
+        }
+      ],
+      "resultSignature": "6b09c6ca8e531ca7c283115135becae99af25e7ad0e768ae563febe6ffd35898",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts::useSessionDiffs",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 reports an internal local/context reference invariant; diff request and scope behavior remain covered and unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.test.tsx",
+          "fingerprint": "e9e9438bbb3b10f9048106798ac3f7563e1a178a236edafe46d4f85dec53c2a4"
+        }
+      ],
+      "resultSignature": "6029fa5bf0230fdac40b47731d1eaf8f1622819668d654d6444e095393c6e978",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-lookup-actions.ts::useSessionFilesLookupActions",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support throw inside this try/catch; lookup error propagation must remain intact.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.test.tsx",
+          "fingerprint": "19d0b3e11501736ba58fb525e4c8e1a822640acc9d14e817db520670006240cd"
+        }
+      ],
+      "resultSignature": "a8bec5ed5833075de03af5273b22d89c432e996fde2c02c93a3afce95562c549",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts::useSessionFiles",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 cannot lower the existing for-loop initialization or empty test; file navigation behavior is not rewritten for coverage.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.test.tsx",
+          "fingerprint": "19d0b3e11501736ba58fb525e4c8e1a822640acc9d14e817db520670006240cd"
+        }
+      ],
+      "resultSignature": "e897967149597fdc199ef4dc34140d33575df3ca4f65c2aab4c8de1586f513ed",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts::useSessionRepoNotes",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support the existing try statement; note CRUD cache and cancellation contracts remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.test.tsx",
+          "fingerprint": "3701bfea61915e7e7ec350a4442ed2d4d9cd28157f66d96f3e23dca4a2866a24"
+        }
+      ],
+      "resultSignature": "760604c96a008992480008167928e25fa1b23390b780c83ca03ee0ea024feab8",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts::useSessionTimeline",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support the existing try statement; timeline refresh and range behavior remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.test.tsx",
+          "fingerprint": "63627524c548958ededa318421172b34b85405f15471a42c512ec6efebbd5a13"
+        }
+      ],
+      "resultSignature": "d1e0c291deacf0af2e61e3889b7d48b7d435ccce01462fa9d6c46d173a8d36a3",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/SessionDetailCommitsProvider.tsx::useSessionDetailCommits",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
+          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+        }
+      ],
+      "resultSignature": "65eba6e770dfa190c9da4202e5fb62aa12f731e3af091339bc2fc80e35df4f1c",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/SessionDetailNotesProvider.tsx::useSessionDetailNotesSectionProps",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
+          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+        }
+      ],
+      "resultSignature": "b3865d22ece40ab7e2efca0177694b4602c68b3157d141448014e385574aa299",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/SessionDetailProvider.tsx::useSessionDetailContext",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context accessor.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
+          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+        }
+      ],
+      "resultSignature": "03a92a6e9c7044546757fbae4f6e54d30d66fc0ad4299c7d59c4c95c000a9e73",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/SessionDetailTimelineProvider.tsx::useSessionDetailTimelineSectionProps",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
+          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+        }
+      ],
+      "resultSignature": "899ea73afc9551f01a592ad17ae0efc8ab40f3044933cae98ea98e814e023591",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionDetail/SessionDetailTitleProvider.tsx::useSessionDetailTitle",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context accessor.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionDetail/SessionDetailTitleProvider.test.tsx",
+          "fingerprint": "08d2efa3ee04929b297b75a650225303932d33d7a81fdd914e0022cb83941eb8"
+        }
+      ],
+      "resultSignature": "7bab1bc91ef0a827f7a239bda2e314d78148ea59b9d01edcb921f359f0e8037b",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/pages/SessionList/useSessionListVM.ts::useSessionListVM",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support this try/finally shape; session list refresh and selection semantics remain unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/pages/SessionList/useSessionListVM.test.tsx",
+          "fingerprint": "9e16e1cdc6c0461ba0976e928cfb827316f71bd06d2a9d4b5edaf16a107429fb"
+        }
+      ],
+      "resultSignature": "08deccf756748d0a1c14440e844cdba7679256d4fd427b786bd84c41d6b854ad",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/state/session-context.tsx::useRequiredContext",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static inventory sees the React 19 use() call, while Compiler 1.0.0 inference emits no terminal event for this generic accessor.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/state/session-context.test.tsx",
+          "fingerprint": "1f286a06af9a963da5b01080015945933380ecabd9e37cdcf9cb088bf2a319b8"
+        }
+      ],
+      "resultSignature": "26da32e0c8b523bb389348b220d89a3817806737fe6f7435f02e8b8bf44481ab",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/state/theme-context.tsx::useTheme",
+      "status": "no-event",
+      "type": "accept",
+      "reason": "The static inventory sees the React 19 use() call, while Compiler 1.0.0 inference emits no terminal event for this context accessor.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/state/theme-context.test.tsx",
+          "fingerprint": "b6b17cd86c420d44be643995a0eb958a7405cddbe81836da81415587c4b58581"
+        }
+      ],
+      "resultSignature": "d7c1a21239188197b73c775c173719699896ec064ee75d49fc82ed6558c2a3e3",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    },
+    {
+      "key": "apps/web/src/state/use-usage-api.ts::useUsageApi",
+      "status": "bailout",
+      "type": "accept",
+      "reason": "Compiler 1.0.0 does not support throw inside this try/catch; usage API error propagation remains unchanged.",
+      "reviewedAt": "2026-08-25",
+      "evidenceTests": [
+        {
+          "path": "apps/web/src/state/use-usage-api.test.tsx",
+          "fingerprint": "478a85d04670e45cf433fbdac02fea435183014d4ec4f4f4d71381532e44f356"
+        }
+      ],
+      "resultSignature": "8cae0c5eeec8388557c02e1982d860a1bef983a38f55685ea1483f4ba8eb599e",
+      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+    }
+  ]
+}

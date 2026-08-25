@@ -2615,7 +2615,7 @@
         "effectEventIsNotExported": "not-applicable"
       },
       "testEvidence": {
-        "adjacentFiles": [],
+        "adjacentFiles": ["apps/web/src/state/theme-context.test.tsx"],
         "behaviorVerified": false
       },
       "preview": "() => { if (typeof window === \"undefined\") return; const applyTheme = (nextTheme: Theme) => { document.documentElement.dataset.theme = nextTheme; setResolvedTheme(nextTheme); }; co",
