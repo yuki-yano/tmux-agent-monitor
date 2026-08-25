@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "measurementCommit": "a9bb0b796b0818e876b0fe42bb5431bcc42fbb38",
+  "measuredAt": "2026-08-25",
+  "environment": {
+    "browser": "Chrome 151.0.0.0",
+    "viewport": "1440x1000@1x",
+    "react": "19.2.7",
+    "build": "Vite development server",
+    "data": "live tmux-backed session %24"
+  },
+  "metric": "CommitSection fiber actualDuration (ms)",
+  "aggregation": "peak commit per repetition; nearest-rank p95 over 5 repetitions",
+  "capture": "Chrome DevTools hook onCommitFiberRoot; production source unmodified",
+  "automation": "manual browser measurement; pnpm run react:performance does not reproduce or merge these values",
+  "procedure": [
+    "Run the RC-06 candidate Vite development server with live tmux-backed data.",
+    "Open session %24 and select the Commits panel.",
+    "Warm the e1d24955 commit detail, then collapse it before recording.",
+    "Expand and collapse e1d24955 five times and capture the peak CommitSection actualDuration for each expansion.",
+    "Use nearest-rank p95 across the five samples."
+  ],
+  "operations": {
+    "commitExpandLive": {
+      "description": "expand the cached e1d24955 commit detail in the live Commit panel",
+      "samplesMs": [7.2, 7.4, 7.3, 8.4, 7.2],
+      "p95Ms": 8.4
+    }
+  }
+}
