@@ -13,6 +13,9 @@ const repoRoot = path.resolve(import.meta.dirname, "../..");
 const webRoot = import.meta.dirname;
 const webSourceRoot = path.join(webRoot, "src");
 const compilerContractRoot = path.join(webRoot, "test/compiler-contract");
+// Vitest normalizes query-bearing module IDs. Coverage keeps a local pattern because its production
+// inventory and evidence inputs are already repo-relative TypeScript paths.
+const reactCompilerTestPattern = /(?:^|\/)(?:__tests__\/|[^/]+\.(?:test|spec)\.(?:ts|tsx)$)/u;
 
 const commitPilotContract = {
   annotation: "function-body-directive",
@@ -20,6 +23,21 @@ const commitPilotContract = {
   family: "commit",
   kind: "component",
   profilerOperation: "commit-expand-live",
+} as const;
+
+const screenPilotContract = {
+  annotation: "function-body-directive",
+  family: "screen",
+  kind: "component",
+  profilerOperation: "screen-output-follow",
+} as const;
+
+const composerPilotContract = {
+  annotation: "function-body-directive",
+  behaviorTest: "apps/web/src/features/shared-session-ui/components/PaneTextComposer.test.tsx",
+  family: "composer",
+  kind: "component",
+  profilerOperation: "prompt-completion-open",
 } as const;
 
 export const reactCompilerPilotManifest = [
@@ -73,14 +91,47 @@ export const reactCompilerPilotManifest = [
     symbol: "CommitLoadMoreButton",
     file: "apps/web/src/pages/SessionDetail/components/commit-section/commit-load-more-button.tsx",
   },
+  {
+    ...screenPilotContract,
+    behaviorTest: "apps/web/src/pages/SessionDetail/components/ScreenPanel.test.tsx",
+    symbol: "ScreenPanelWorktreeSelectorPanel",
+    file: "apps/web/src/pages/SessionDetail/components/ScreenPanelWorktreeSelectorPanel.tsx",
+  },
+  {
+    ...screenPilotContract,
+    behaviorTest: "apps/web/src/pages/SessionDetail/components/WorktreeStatusStack.test.tsx",
+    symbol: "WorktreeStatusStack",
+    file: "apps/web/src/pages/SessionDetail/components/WorktreeStatusStack.tsx",
+  },
+  {
+    ...screenPilotContract,
+    behaviorTest: "apps/web/src/pages/SessionDetail/components/ScreenPanelViewport.test.tsx",
+    symbol: "ScreenPanelViewport",
+    file: "apps/web/src/pages/SessionDetail/components/ScreenPanelViewport.tsx",
+  },
+  {
+    ...composerPilotContract,
+    symbol: "PromptCompletionList",
+    file: "apps/web/src/features/shared-session-ui/components/prompt-completion/PromptCompletionList.tsx",
+  },
+  {
+    ...composerPilotContract,
+    symbol: "PromptCompletionTriggerRail",
+    file: "apps/web/src/features/shared-session-ui/components/prompt-completion/PromptCompletionTriggerRail.tsx",
+  },
 ] as const;
 
-const compilerContract = {
-  compilationMode: "annotation",
-  panicThreshold: "all_errors",
-  sources: ["apps/web/src/**/*.{ts,tsx}", "apps/web/test/compiler-contract/**/*.{ts,tsx}"],
-  target: "19",
-} as const;
+export const REACT_COMPILER_PILOT_MANIFEST_COUNT = 15;
+
+export type ReactCompilerCompilationMode = "annotation" | "infer";
+
+const createCompilerContract = (compilationMode: ReactCompilerCompilationMode) =>
+  ({
+    compilationMode,
+    panicThreshold: compilationMode === "annotation" ? "all_errors" : "none",
+    sources: ["apps/web/src/**/*.{ts,tsx}", "apps/web/test/compiler-contract/**/*.{ts,tsx}"],
+    target: "19",
+  }) as const;
 
 const isWithinDirectory = (directory: string, filename: string): boolean => {
   const relativePath = path.relative(directory, filename);
@@ -100,12 +151,8 @@ export const isReactCompilerSource = (filename: string): boolean => {
   );
 };
 
-const compilerBaseOptions = {
-  compilationMode: compilerContract.compilationMode,
-  panicThreshold: compilerContract.panicThreshold,
-  sources: isReactCompilerSource,
-  target: compilerContract.target,
-} satisfies ReactCompilerOptions;
+export const isReactCompilerTestModule = (filename: string): boolean =>
+  reactCompilerTestPattern.test(filename.split(path.sep).join("/"));
 
 type CompilerEventRecord = {
   file: string | null;
@@ -146,7 +193,7 @@ export const assertReactCompilerPilotArtifact = (artifact: ReactCompilerPilotArt
     if (count !== 1) duplicateSuccesses.push({ key, count });
   }
   if (
-    artifact.manifest.length !== 10 ||
+    artifact.manifest.length !== REACT_COMPILER_PILOT_MANIFEST_COUNT ||
     artifact.failures.length > 0 ||
     unkeyed.length > 0 ||
     missing.length > 0 ||
@@ -173,10 +220,17 @@ const normalizeFilename = (filename: string | null): string | null => {
   return path.relative(repoRoot, filename).split(path.sep).join("/");
 };
 
-export const createReactCompilerCollector = (runKind: "production" | "vitest") => {
+export const createReactCompilerCollector = (
+  runKind: "production" | "vitest",
+  compilationMode: ReactCompilerCompilationMode = "annotation",
+) => {
+  const compilerContract = createCompilerContract(compilationMode);
   const records: CompilerEventRecord[] = [];
   const options: ReactCompilerOptions = {
-    ...compilerBaseOptions,
+    compilationMode: compilerContract.compilationMode,
+    panicThreshold: compilerContract.panicThreshold,
+    sources: isReactCompilerSource,
+    target: compilerContract.target,
     logger: {
       logEvent(filename, event) {
         records.push({ file: normalizeFilename(filename), event });
@@ -198,11 +252,22 @@ export const createReactCompilerCollector = (runKind: "production" | "vitest") =
           ]
         : [],
     );
-    const failures = records.flatMap(({ file, event }) =>
-      ["CompileError", "CompileDiagnostic", "CompileSkip", "PipelineError"].includes(event.kind)
-        ? [{ file, kind: event.kind }]
-        : [],
-    );
+    const failures = records.flatMap(({ file, event }) => {
+      switch (event.kind) {
+        case "CompileError":
+        case "CompileDiagnostic":
+        case "CompileSkip":
+        case "PipelineError":
+          return [
+            {
+              file,
+              kind: event.kind,
+            },
+          ];
+        default:
+          return [];
+      }
+    });
 
     return {
       schemaVersion: 1,
@@ -234,7 +299,7 @@ export const createReactCompilerCollector = (runKind: "production" | "vitest") =
     assertReactCompilerPilotArtifact(artifact);
   };
 
-  return { assertPilot, getArtifact, options };
+  return { assertPilot, compilationMode, getArtifact, options };
 };
 
 export type ReactCompilerCollector = ReturnType<typeof createReactCompilerCollector>;

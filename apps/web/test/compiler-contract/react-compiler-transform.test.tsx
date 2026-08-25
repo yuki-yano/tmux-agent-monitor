@@ -1,15 +1,29 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { PaneTextComposer } from "@/features/shared-session-ui/components/PaneTextComposer";
+import { PromptCompletionTriggerRail } from "@/features/shared-session-ui/components/prompt-completion/PromptCompletionTriggerRail";
 import { CommitSection } from "@/pages/SessionDetail/components/CommitSection";
+import { ScreenPanel } from "@/pages/SessionDetail/components/ScreenPanel";
+import { ScreenPanelViewport } from "@/pages/SessionDetail/components/ScreenPanelViewport";
+import { ScreenPanelWorktreeSelectorPanel } from "@/pages/SessionDetail/components/ScreenPanelWorktreeSelectorPanel";
+import { SmartScreenViewport } from "@/pages/SessionDetail/components/SmartScreenViewport";
+import { WorktreeStatusStack } from "@/pages/SessionDetail/components/WorktreeStatusStack";
 
 import { CompilerContractAnnotated } from "./CompilerContractAnnotated";
 import { CompilerContractUnannotated } from "./CompilerContractUnannotated";
 
 void CommitSection;
+void PaneTextComposer;
+void PromptCompletionTriggerRail;
+void ScreenPanel;
+void ScreenPanelViewport;
+void ScreenPanelWorktreeSelectorPanel;
+void SmartScreenViewport;
+void WorktreeStatusStack;
 
 describe("React Compiler annotation transform", () => {
-  it("compiles annotated symbols and leaves the negative fixture uncompiled", async () => {
+  it("compiles all annotated families and leaves the negative fixture uncompiled", async () => {
     expect(renderToStaticMarkup(<CompilerContractAnnotated value={2} />)).toBe("<span>4</span>");
     expect(renderToStaticMarkup(<CompilerContractUnannotated value={3} />)).toBe("<span>9</span>");
     expect(CompilerContractAnnotated.toString()).toContain("const $ =");
@@ -23,6 +37,7 @@ describe("React Compiler annotation transform", () => {
       ),
     );
     const manifestKeys = artifact.manifest.map(({ file, symbol }) => `${file}\0${symbol}`);
+    const manifestFamilies = new Set(artifact.manifest.map(({ family }) => family));
     const unkeyedSuccesses = artifact.successes.filter(
       ({ file, symbol }) => file == null || symbol == null,
     );
@@ -35,7 +50,8 @@ describe("React Compiler annotation transform", () => {
     expect(artifact.failures).toEqual([]);
     expect(compiledSymbols).toContain("CompilerContractAnnotated");
     expect(compiledSymbols).not.toContain("CompilerContractUnannotated");
-    expect(artifact.manifest).toHaveLength(10);
+    expect(artifact.manifest).toHaveLength(15);
+    expect(manifestFamilies).toEqual(new Set(["commit", "composer", "screen"]));
     expect(new Set(manifestKeys).size).toBe(manifestKeys.length);
     expect(unkeyedSuccesses).toEqual([]);
     expect(manifestKeys.filter((key) => compiledPilotKeys.has(key))).toHaveLength(

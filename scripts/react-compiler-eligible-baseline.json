@@ -12,7 +12,7 @@
     "components": 229,
     "hooks": 120
   },
-  "fingerprint": "039b7aa6459e25e7",
+  "fingerprint": "552f8541a82b1664",
   "inventory": [
     {
       "file": "apps/web/src/App.tsx",
@@ -1496,11 +1496,11 @@
           "column": 36
         },
         "end": {
-          "line": 103,
+          "line": 107,
           "column": 1
         }
       },
-      "fingerprint": "c52fb3a684914917"
+      "fingerprint": "9b776f44800f61e5"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/prompt-completion/PromptCompletionTriggerRail.tsx",
@@ -1512,11 +1512,11 @@
           "column": 43
         },
         "end": {
-          "line": 65,
+          "line": 67,
           "column": 1
         }
       },
-      "fingerprint": "79a494cfc07a34be"
+      "fingerprint": "62d3e659eb51a8fe"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/prompt-completion/usePromptCompletion.ts",
@@ -3240,11 +3240,11 @@
           "column": 35
         },
         "end": {
-          "line": 119,
+          "line": 121,
           "column": 1
         }
       },
-      "fingerprint": "22532419edba8461"
+      "fingerprint": "5164b512998d6a1e"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/ScreenPanelWorktreeSelectorPanel.tsx",
@@ -3256,11 +3256,11 @@
           "column": 48
         },
         "end": {
-          "line": 92,
+          "line": 94,
           "column": 1
         }
       },
-      "fingerprint": "6f3a10641beb49a1"
+      "fingerprint": "858a66b15f1c7da0"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/session-shell/ConnectedControlsPanel.tsx",
@@ -3688,11 +3688,11 @@
           "column": 35
         },
         "end": {
-          "line": 29,
+          "line": 31,
           "column": 1
         }
       },
-      "fingerprint": "a09a80e8995af5e3"
+      "fingerprint": "1c76ff961cd09f6d"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoFocus.ts",

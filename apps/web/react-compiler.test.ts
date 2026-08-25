@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { assertReactCompilerPilotArtifact, reactCompilerPilotManifest } from "./react-compiler";
+import {
+  REACT_COMPILER_PILOT_MANIFEST_COUNT,
+  assertReactCompilerPilotArtifact,
+  reactCompilerPilotManifest,
+} from "./react-compiler";
 
 const validArtifact = () => ({
   manifest: [...reactCompilerPilotManifest],
@@ -9,7 +13,13 @@ const validArtifact = () => ({
 });
 
 describe("React Compiler pilot artifact", () => {
-  it("accepts exactly one keyed success for each of the ten manifest entries", () => {
+  it("accepts exactly one keyed success for each manifest entry", () => {
+    expect(reactCompilerPilotManifest).toHaveLength(REACT_COMPILER_PILOT_MANIFEST_COUNT);
+    expect(reactCompilerPilotManifest.filter(({ family }) => family === "commit")).toHaveLength(10);
+    expect(reactCompilerPilotManifest.filter(({ family }) => family === "screen")).toHaveLength(3);
+    expect(reactCompilerPilotManifest.filter(({ family }) => family === "composer")).toHaveLength(
+      2,
+    );
     expect(() => assertReactCompilerPilotArtifact(validArtifact())).not.toThrow();
   });
 
