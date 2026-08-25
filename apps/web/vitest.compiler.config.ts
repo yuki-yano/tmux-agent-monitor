@@ -18,6 +18,7 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     include: [
+      "react-compiler.test.ts",
       "test/compiler-contract/react-compiler-transform.test.tsx",
       "src/pages/SessionDetail/components/CommitSection.test.tsx",
     ],

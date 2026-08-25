@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "measurementCommit": "e1d2495567a1bb28cde5b881f534ac0496a21a81",
+  "measuredAt": "2026-08-25",
+  "environment": {
+    "node": "v24.18.0",
+    "pnpm": "10.28.2",
+    "platform": "darwin-arm64",
+    "vite": "8.1.4",
+    "reactTransform": "@vitejs/plugin-react-swc 4.3.1"
+  },
+  "reproduce": {
+    "worktreeCommit": "e1d2495567a1bb28cde5b881f534ac0496a21a81",
+    "script": "scripts/measure-react-performance.ts",
+    "temporaryTargetOverride": "/src/pages/SessionDetail/components/CommitSection.tsx",
+    "command": "pnpm --silent run react:performance -- --runs 5"
+  },
+  "hmr": {
+    "target": "/src/pages/SessionDetail/components/CommitSection.tsx",
+    "definition": "mtime update to Vite websocket update message",
+    "samplesMs": [62, 74, 68, 37, 51],
+    "medianMs": 62,
+    "messageType": "update"
+  },
+  "candidate": {
+    "artifact": "scripts/react-performance-rc06-candidate.json",
+    "medianMs": 29,
+    "changePercent": -53.2
+  }
+}

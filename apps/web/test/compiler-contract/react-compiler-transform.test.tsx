@@ -22,6 +22,10 @@ describe("React Compiler annotation transform", () => {
         file == null || symbol == null ? [] : [`${file}\0${symbol}`],
       ),
     );
+    const manifestKeys = artifact.manifest.map(({ file, symbol }) => `${file}\0${symbol}`);
+    const unkeyedSuccesses = artifact.successes.filter(
+      ({ file, symbol }) => file == null || symbol == null,
+    );
 
     expect(artifact.compiler).toMatchObject({
       compilationMode: "annotation",
@@ -31,10 +35,11 @@ describe("React Compiler annotation transform", () => {
     expect(artifact.failures).toEqual([]);
     expect(compiledSymbols).toContain("CompilerContractAnnotated");
     expect(compiledSymbols).not.toContain("CompilerContractUnannotated");
-    expect(
-      artifact.manifest
-        .map(({ file, symbol }) => `${file}\0${symbol}`)
-        .filter((key) => compiledPilotKeys.has(key)),
-    ).toHaveLength(artifact.manifest.length);
+    expect(artifact.manifest).toHaveLength(10);
+    expect(new Set(manifestKeys).size).toBe(manifestKeys.length);
+    expect(unkeyedSuccesses).toEqual([]);
+    expect(manifestKeys.filter((key) => compiledPilotKeys.has(key))).toHaveLength(
+      artifact.manifest.length,
+    );
   });
 });

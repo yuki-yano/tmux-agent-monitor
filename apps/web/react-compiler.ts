@@ -120,6 +120,54 @@ type CompilerSuccess = {
   memoValues: number;
 };
 
+type ReactCompilerPilotArtifact = {
+  manifest: readonly { file: string; symbol: string }[];
+  successes: readonly { file: string | null; symbol: string | null }[];
+  failures: readonly unknown[];
+};
+
+export const assertReactCompilerPilotArtifact = (artifact: ReactCompilerPilotArtifact): void => {
+  const expectedKeys = artifact.manifest.map(({ file, symbol }) => `${file}\0${symbol}`);
+  const expectedKeySet = new Set(expectedKeys);
+  const unkeyed = artifact.successes.filter(({ file, symbol }) => file == null || symbol == null);
+  const successCounts = new Map<string, number>();
+  for (const { file, symbol } of artifact.successes) {
+    if (file == null || symbol == null) continue;
+    const key = `${file}\0${symbol}`;
+    successCounts.set(key, (successCounts.get(key) ?? 0) + 1);
+  }
+  const missing = expectedKeys.filter((key) => !successCounts.has(key));
+  const unexpected = [...successCounts.keys()].filter((key) => !expectedKeySet.has(key));
+  const duplicateManifest = expectedKeys.filter(
+    (key, index) => expectedKeys.indexOf(key) !== index,
+  );
+  const duplicateSuccesses: Array<{ key: string; count: number }> = [];
+  for (const [key, count] of successCounts) {
+    if (count !== 1) duplicateSuccesses.push({ key, count });
+  }
+  if (
+    artifact.manifest.length !== 10 ||
+    artifact.failures.length > 0 ||
+    unkeyed.length > 0 ||
+    missing.length > 0 ||
+    unexpected.length > 0 ||
+    duplicateManifest.length > 0 ||
+    duplicateSuccesses.length > 0
+  ) {
+    throw new Error(
+      `React Compiler pilot mismatch: ${JSON.stringify({
+        manifestCount: artifact.manifest.length,
+        failures: artifact.failures.length,
+        unkeyed: unkeyed.length,
+        missing,
+        unexpected,
+        duplicateManifest,
+        duplicateSuccesses,
+      })}`,
+    );
+  }
+};
+
 const normalizeFilename = (filename: string | null): string | null => {
   if (filename == null) return null;
   return path.relative(repoRoot, filename).split(path.sep).join("/");
@@ -181,41 +229,12 @@ export const createReactCompilerCollector = (runKind: "production" | "vitest") =
     };
   };
 
-  const assertSymbols = (expectedSymbols: readonly string[]): void => {
-    const artifact = getArtifact();
-    if (artifact.failures.length > 0) {
-      throw new Error(`React Compiler reported failures: ${JSON.stringify(artifact.failures)}`);
-    }
-
-    const successCounts = new Map<string, number>();
-    for (const success of artifact.successes) {
-      if (success.symbol == null) continue;
-      successCounts.set(success.symbol, (successCounts.get(success.symbol) ?? 0) + 1);
-    }
-    const missing = expectedSymbols.filter((symbol) => !successCounts.has(symbol));
-    if (missing.length > 0) {
-      throw new Error(`React Compiler did not compile: ${missing.join(", ")}`);
-    }
-  };
-
   const assertPilot = (): void => {
-    const pilotManifest: readonly { file: string; symbol: string }[] = reactCompilerPilotManifest;
-    assertSymbols(pilotManifest.map(({ symbol }) => symbol));
     const artifact = getArtifact();
-    const expectedKeys = new Set(pilotManifest.map(({ file, symbol }) => `${file}\0${symbol}`));
-    const successKeys = new Set(
-      artifact.successes.flatMap(({ file, symbol }) =>
-        file == null || symbol == null ? [] : [`${file}\0${symbol}`],
-      ),
-    );
-    const missing = [...expectedKeys].filter((key) => !successKeys.has(key));
-    const unexpected = [...successKeys].filter((key) => !expectedKeys.has(key));
-    if (missing.length > 0 || unexpected.length > 0) {
-      throw new Error(`React Compiler pilot mismatch: ${JSON.stringify({ missing, unexpected })}`);
-    }
+    assertReactCompilerPilotArtifact(artifact);
   };
 
-  return { assertPilot, assertSymbols, getArtifact, options };
+  return { assertPilot, getArtifact, options };
 };
 
 export type ReactCompilerCollector = ReturnType<typeof createReactCompilerCollector>;
