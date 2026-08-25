@@ -14,7 +14,66 @@ const webRoot = import.meta.dirname;
 const webSourceRoot = path.join(webRoot, "src");
 const compilerContractRoot = path.join(webRoot, "test/compiler-contract");
 
-export const reactCompilerPilotManifest = [] as const;
+const commitPilotContract = {
+  annotation: "function-body-directive",
+  behaviorTest: "apps/web/src/pages/SessionDetail/components/CommitSection.test.tsx",
+  family: "commit",
+  kind: "component",
+  profilerOperation: "commit-expand-live",
+} as const;
+
+export const reactCompilerPilotManifest = [
+  {
+    ...commitPilotContract,
+    symbol: "CommitReasonCallout",
+    file: "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitVirtualBranchNotice",
+    file: "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitRepoRoot",
+    file: "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitFileRows",
+    file: "apps/web/src/pages/SessionDetail/components/commit-section/commit-file-row.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitItem",
+    file: "apps/web/src/pages/SessionDetail/components/commit-section/commit-item.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitList",
+    file: "apps/web/src/pages/SessionDetail/components/commit-section/commit-list.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitSection",
+    file: "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitExpandedSection",
+    file: "apps/web/src/pages/SessionDetail/components/commit-section/commit-expanded-section.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitFileDetailContent",
+    file: "apps/web/src/pages/SessionDetail/components/commit-section/commit-file-detail-content.tsx",
+  },
+  {
+    ...commitPilotContract,
+    symbol: "CommitLoadMoreButton",
+    file: "apps/web/src/pages/SessionDetail/components/commit-section/commit-load-more-button.tsx",
+  },
+] as const;
 
 const compilerContract = {
   compilationMode: "annotation",

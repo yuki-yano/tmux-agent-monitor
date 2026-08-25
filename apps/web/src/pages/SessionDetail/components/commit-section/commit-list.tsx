@@ -20,23 +20,25 @@ type CommitListProps = {
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
 };
 
-export const CommitList = memo(
-  ({
-    commits,
-    commitDetails,
-    commitLoadingDetails,
-    commitOpen,
-    copiedHash,
-    commitFileOpen,
-    commitFileDetails,
-    commitFileLoading,
-    renderedPatches,
-    onToggleCommit,
-    onToggleCommitFile,
-    onCopyHash,
-    onResolveFileReference,
-    onResolveFileReferenceCandidates,
-  }: CommitListProps) => (
+export const CommitList = memo(function CommitList({
+  commits,
+  commitDetails,
+  commitLoadingDetails,
+  commitOpen,
+  copiedHash,
+  commitFileOpen,
+  commitFileDetails,
+  commitFileLoading,
+  renderedPatches,
+  onToggleCommit,
+  onToggleCommitFile,
+  onCopyHash,
+  onResolveFileReference,
+  onResolveFileReferenceCandidates,
+}: CommitListProps) {
+  "use memo";
+
+  return (
     <div className="flex flex-col gap-1.5 sm:gap-2">
       {commits.map((commit) => (
         <CommitItem
@@ -58,7 +60,7 @@ export const CommitList = memo(
         />
       ))}
     </div>
-  ),
-);
+  );
+});
 
 CommitList.displayName = "CommitList";

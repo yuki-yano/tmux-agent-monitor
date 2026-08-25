@@ -64,12 +64,28 @@ const buildCommitFilesSection = ({
   );
 };
 
-export const CommitExpandedSection = memo(
-  ({
+export const CommitExpandedSection = memo(function CommitExpandedSection({
+  commitHash,
+  detail,
+  loadingDetail,
+  commitBody,
+  commitFileOpen,
+  commitFileDetails,
+  commitFileLoading,
+  renderedPatches,
+  onToggleCommitFile,
+  onResolveFileReference,
+  onResolveFileReferenceCandidates,
+}: CommitExpandedSectionProps) {
+  "use memo";
+
+  if (loadingDetail) {
+    return <p className="text-latte-subtext0 text-xs">Loading commit…</p>;
+  }
+  const totals = sumFileStats(detail?.files);
+  const commitFilesSection = buildCommitFilesSection({
     commitHash,
     detail,
-    loadingDetail,
-    commitBody,
     commitFileOpen,
     commitFileDetails,
     commitFileLoading,
@@ -77,39 +93,23 @@ export const CommitExpandedSection = memo(
     onToggleCommitFile,
     onResolveFileReference,
     onResolveFileReferenceCandidates,
-  }: CommitExpandedSectionProps) => {
-    if (loadingDetail) {
-      return <p className="text-latte-subtext0 text-xs">Loading commit…</p>;
-    }
-    const totals = sumFileStats(detail?.files);
-    const commitFilesSection = buildCommitFilesSection({
-      commitHash,
-      detail,
-      commitFileOpen,
-      commitFileDetails,
-      commitFileLoading,
-      renderedPatches,
-      onToggleCommitFile,
-      onResolveFileReference,
-      onResolveFileReferenceCandidates,
-    });
+  });
 
-    return (
-      <>
-        {commitBody && (
-          <pre className="text-latte-subtext0 mb-3 whitespace-pre-wrap text-xs">{commitBody}</pre>
-        )}
-        {totals && (
-          <div className="mb-2 flex items-center gap-2 text-xs">
-            <span className="text-latte-subtext0">Total changes</span>
-            <span className="text-latte-green-text">+{totals.additions}</span>
-            <span className="text-latte-red-text">-{totals.deletions}</span>
-          </div>
-        )}
-        {commitFilesSection}
-      </>
-    );
-  },
-);
+  return (
+    <>
+      {commitBody && (
+        <pre className="text-latte-subtext0 mb-3 whitespace-pre-wrap text-xs">{commitBody}</pre>
+      )}
+      {totals && (
+        <div className="mb-2 flex items-center gap-2 text-xs">
+          <span className="text-latte-subtext0">Total changes</span>
+          <span className="text-latte-green-text">+{totals.additions}</span>
+          <span className="text-latte-red-text">-{totals.deletions}</span>
+        </div>
+      )}
+      {commitFilesSection}
+    </>
+  );
+});
 
 CommitExpandedSection.displayName = "CommitExpandedSection";

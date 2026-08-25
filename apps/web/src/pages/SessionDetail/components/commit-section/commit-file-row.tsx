@@ -110,18 +110,20 @@ export const CommitFileRow = memo(
 
 CommitFileRow.displayName = "CommitFileRow";
 
-export const CommitFileRows = memo(
-  ({
-    commitHash,
-    files,
-    commitFileOpen,
-    commitFileDetails,
-    commitFileLoading,
-    renderedPatches,
-    onToggleCommitFile,
-    onResolveFileReference,
-    onResolveFileReferenceCandidates,
-  }: CommitFileRowsProps) => (
+export const CommitFileRows = memo(function CommitFileRows({
+  commitHash,
+  files,
+  commitFileOpen,
+  commitFileDetails,
+  commitFileLoading,
+  renderedPatches,
+  onToggleCommitFile,
+  onResolveFileReference,
+  onResolveFileReferenceCandidates,
+}: CommitFileRowsProps) {
+  "use memo";
+
+  return (
     <div className="flex flex-col gap-1.5 text-xs sm:gap-2">
       {files.map((file) => {
         const fileKey = `${commitHash}:${file.path}`;
@@ -143,7 +145,7 @@ export const CommitFileRows = memo(
         );
       })}
     </div>
-  ),
-);
+  );
+});
 
 CommitFileRows.displayName = "CommitFileRows";

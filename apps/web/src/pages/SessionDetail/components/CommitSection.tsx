@@ -51,7 +51,13 @@ type CommitSectionProps = {
   actions: CommitSectionActions;
 };
 
-const CommitReasonCallout = memo(({ reason }: { reason: CommitLog["reason"] | undefined }) => {
+const CommitReasonCallout = memo(function CommitReasonCallout({
+  reason,
+}: {
+  reason: CommitLog["reason"] | undefined;
+}) {
+  "use memo";
+
   switch (reason) {
     case "cwd_unknown":
       return (
@@ -78,41 +84,49 @@ const CommitReasonCallout = memo(({ reason }: { reason: CommitLog["reason"] | un
 
 CommitReasonCallout.displayName = "CommitReasonCallout";
 
-const CommitVirtualBranchNotice = memo(
-  ({ virtualBranch, onClear }: { virtualBranch: string | null; onClear: () => void }) => {
-    if (virtualBranch == null) {
-      return null;
-    }
-    return (
-      <div
-        className="-mt-1 flex items-center justify-between gap-2"
-        data-testid="commit-virtual-branch-notice"
+const CommitVirtualBranchNotice = memo(function CommitVirtualBranchNotice({
+  virtualBranch,
+  onClear,
+}: {
+  virtualBranch: string | null;
+  onClear: () => void;
+}) {
+  "use memo";
+
+  if (virtualBranch == null) {
+    return null;
+  }
+  return (
+    <div
+      className="-mt-1 flex items-center justify-between gap-2"
+      data-testid="commit-virtual-branch-notice"
+    >
+      <span
+        className="text-latte-subtext0 min-w-0 truncate font-mono text-xs"
+        title={virtualBranch}
       >
-        <span
-          className="text-latte-subtext0 min-w-0 truncate font-mono text-xs"
-          title={virtualBranch}
-        >
-          Virtual active · {virtualBranch}
-        </span>
-        <IconButton
-          type="button"
-          size="xs"
-          variant="dangerOutline"
-          aria-label="Clear virtual branch"
-          title="Clear virtual branch"
-          className="shrink-0"
-          onClick={onClear}
-        >
-          <X className="h-3 w-3" />
-        </IconButton>
-      </div>
-    );
-  },
-);
+        Virtual active · {virtualBranch}
+      </span>
+      <IconButton
+        type="button"
+        size="xs"
+        variant="dangerOutline"
+        aria-label="Clear virtual branch"
+        title="Clear virtual branch"
+        className="shrink-0"
+        onClick={onClear}
+      >
+        <X className="h-3 w-3" />
+      </IconButton>
+    </div>
+  );
+});
 
 CommitVirtualBranchNotice.displayName = "CommitVirtualBranchNotice";
 
-const CommitRepoRoot = memo(({ repoRoot }: { repoRoot?: string | null }) => {
+const CommitRepoRoot = memo(function CommitRepoRoot({ repoRoot }: { repoRoot?: string | null }) {
+  "use memo";
+
   if (!repoRoot) {
     return null;
   }
@@ -121,7 +135,11 @@ const CommitRepoRoot = memo(({ repoRoot }: { repoRoot?: string | null }) => {
 
 CommitRepoRoot.displayName = "CommitRepoRoot";
 
-const CommitErrorCallout = memo(({ commitError }: { commitError: string | null }) => {
+const CommitErrorCallout = memo(function CommitErrorCallout({
+  commitError,
+}: {
+  commitError: string | null;
+}) {
   if (!commitError) {
     return null;
   }
@@ -134,7 +152,11 @@ const CommitErrorCallout = memo(({ commitError }: { commitError: string | null }
 
 CommitErrorCallout.displayName = "CommitErrorCallout";
 
-const CommitLoadingOverlay = memo(({ commitLoading }: { commitLoading: boolean }) => {
+const CommitLoadingOverlay = memo(function CommitLoadingOverlay({
+  commitLoading,
+}: {
+  commitLoading: boolean;
+}) {
   if (!commitLoading) {
     return null;
   }
@@ -143,7 +165,11 @@ const CommitLoadingOverlay = memo(({ commitLoading }: { commitLoading: boolean }
 
 CommitLoadingOverlay.displayName = "CommitLoadingOverlay";
 
-const CommitEmptyStateNotice = memo(({ showEmptyState }: { showEmptyState: boolean }) => {
+const CommitEmptyStateNotice = memo(function CommitEmptyStateNotice({
+  showEmptyState,
+}: {
+  showEmptyState: boolean;
+}) {
   if (!showEmptyState) {
     return null;
   }
@@ -158,7 +184,9 @@ const CommitEmptyStateNotice = memo(({ showEmptyState }: { showEmptyState: boole
 
 CommitEmptyStateNotice.displayName = "CommitEmptyStateNotice";
 
-export const CommitSection = memo(({ state, actions }: CommitSectionProps) => {
+export const CommitSection = memo(function CommitSection({ state, actions }: CommitSectionProps) {
+  "use memo";
+
   const {
     commitLog,
     commitBranch,
