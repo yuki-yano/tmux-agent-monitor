@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "scope": {
     "root": "apps/web/src",
     "productionExtensions": [".ts", ".tsx"],
@@ -14,6 +14,7 @@
     "useMemo": 212,
     "useCallback": 380,
     "memo": 51,
+    "manualMemoFingerprint": "31fb7306b44c4988",
     "sessionDetailAndLibUseMemo": 114,
     "sessionDetailAndLibUseCallback": 179,
     "visibilityPollingCallerFiles": 4,

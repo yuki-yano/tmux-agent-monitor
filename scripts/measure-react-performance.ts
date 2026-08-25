@@ -9,8 +9,16 @@ import { gzipSync } from "node:zlib";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const webDistRoot = path.join(repoRoot, "apps/web/dist");
-const hmrTargetPath = "/src/pages/SessionDetail/SessionDetailView.tsx";
-const hmrTargetFile = path.join(repoRoot, "apps/web", hmrTargetPath);
+const hmrTargets = [
+  {
+    name: "annotated",
+    path: "/src/pages/SessionDetail/components/CommitSection.tsx",
+  },
+  {
+    name: "unannotated",
+    path: "/src/pages/SessionDetail/SessionDetailView.tsx",
+  },
+] as const;
 const requireFromWeb = createRequire(path.join(repoRoot, "apps/web/package.json"));
 const viteEntrypoint = path.join(
   path.dirname(requireFromWeb.resolve("vite/package.json")),
@@ -19,10 +27,10 @@ const viteEntrypoint = path.join(
 type StopSignal = "SIGKILL" | "SIGTERM";
 
 let stopActiveProcess: ((signal: StopSignal) => void) | null = null;
-let restoreTargetMtime: (() => void) | null = null;
+let restoreTargetMtimes: (() => void) | null = null;
 
 const handleTermination = (exitCode: number): void => {
-  restoreTargetMtime?.();
+  restoreTargetMtimes?.();
   stopActiveProcess?.("SIGTERM");
   process.exit(exitCode);
 };
@@ -172,10 +180,20 @@ const waitForHmrMessage = async (
 
 const measureVite = async () => {
   const coldStartSamplesMs: number[] = [];
-  const hmrSamplesMs: number[] = [];
-  const originalStat = statSync(hmrTargetFile);
-  restoreTargetMtime = () => {
-    utimesSync(hmrTargetFile, originalStat.atime, originalStat.mtime);
+  const hmrSamplesMs = Object.fromEntries(
+    hmrTargets.map(({ name }) => [name, [] as number[]]),
+  ) as Record<(typeof hmrTargets)[number]["name"], number[]>;
+  const targetsWithFiles = hmrTargets.map((target) => ({
+    ...target,
+    file: path.join(repoRoot, "apps/web", target.path),
+  }));
+  const originalStats = new Map(
+    targetsWithFiles.map(({ file }) => [file, statSync(file)] as const),
+  );
+  restoreTargetMtimes = () => {
+    for (const [file, originalStat] of originalStats) {
+      utimesSync(file, originalStat.atime, originalStat.mtime);
+    }
   };
 
   for (let index = 0; index < runCount; index += 1) {
@@ -209,7 +227,9 @@ const measureVite = async () => {
       const origin = `http://127.0.0.1:${port}`;
       await waitForHttp(`${origin}/`, () => logs);
       coldStartSamplesMs.push(Math.round(performance.now() - startedAt));
-      await fetch(`${origin}${hmrTargetPath}`);
+      await Promise.all(
+        targetsWithFiles.map(({ path: targetPath }) => fetch(`${origin}${targetPath}`)),
+      );
       const clientSource = await (await fetch(`${origin}/@vite/client`)).text();
       const token = clientSource.match(/const wsToken = "([^"]+)"/u)?.[1];
       if (token == null) throw new Error("Could not read the Vite websocket token");
@@ -221,22 +241,25 @@ const measureVite = async () => {
         });
       });
       await waitForHmrMessage(socket, (payload) => payload.type === "connected");
-      const hmrStartedAt = performance.now();
-      utimesSync(hmrTargetFile, originalStat.atime, new Date());
-      await waitForHmrMessage(socket, (message) => {
-        if (message.type !== "update" || !Array.isArray(message.updates)) return false;
-        return message.updates.some(
-          (update) =>
-            typeof update === "object" &&
-            update != null &&
-            (Reflect.get(update, "path") === hmrTargetPath ||
-              Reflect.get(update, "acceptedPath") === hmrTargetPath),
-        );
-      });
-      hmrSamplesMs.push(Math.round(performance.now() - hmrStartedAt));
+      for (const target of targetsWithFiles) {
+        const originalStat = originalStats.get(target.file)!;
+        const hmrStartedAt = performance.now();
+        utimesSync(target.file, originalStat.atime, new Date());
+        await waitForHmrMessage(socket, (message) => {
+          if (message.type !== "update" || !Array.isArray(message.updates)) return false;
+          return message.updates.some(
+            (update) =>
+              typeof update === "object" &&
+              update != null &&
+              (Reflect.get(update, "path") === target.path ||
+                Reflect.get(update, "acceptedPath") === target.path),
+          );
+        });
+        hmrSamplesMs[target.name].push(Math.round(performance.now() - hmrStartedAt));
+      }
     } finally {
       socket?.close();
-      restoreTargetMtime();
+      restoreTargetMtimes();
       if (child.exitCode == null && child.signalCode == null) {
         const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
         stopProcessGroup("SIGTERM");
@@ -248,7 +271,7 @@ const measureVite = async () => {
     }
   }
 
-  restoreTargetMtime = null;
+  restoreTargetMtimes = null;
 
   return {
     command:
@@ -258,13 +281,18 @@ const measureVite = async () => {
       samplesMs: coldStartSamplesMs,
       medianMs: median(coldStartSamplesMs),
     },
-    hmr: {
-      target: hmrTargetPath,
-      definition: "mtime update to Vite websocket update message",
-      samplesMs: hmrSamplesMs,
-      medianMs: median(hmrSamplesMs),
-      messageType: "update",
-    },
+    hmr: Object.fromEntries(
+      hmrTargets.map((target) => [
+        target.name,
+        {
+          target: target.path,
+          definition: "mtime update to Vite websocket update message",
+          samplesMs: hmrSamplesMs[target.name],
+          medianMs: median(hmrSamplesMs[target.name]),
+          messageType: "update",
+        },
+      ]),
+    ),
   };
 };
 
@@ -287,7 +315,7 @@ const measurementCommit = execFileSync("git", ["rev-parse", "HEAD"], {
 console.log(
   JSON.stringify(
     {
-      schemaVersion: 2,
+      schemaVersion: 3,
       measurementCommit,
       measuredAt: new Date().toISOString().slice(0, 10),
       environment: {
@@ -295,9 +323,13 @@ console.log(
         pnpm: rootPackage.packageManager.replace(/^pnpm@/u, ""),
         platform: `${process.platform}-${process.arch}`,
         vite: normalizeVersion(webPackage.devDependencies.vite!),
-        reactTransform: `@vitejs/plugin-react-swc ${normalizeVersion(
-          webPackage.devDependencies["@vitejs/plugin-react-swc"]!,
-        )}`,
+        reactTransform: [
+          `@vitejs/plugin-react ${normalizeVersion(webPackage.devDependencies["@vitejs/plugin-react"]!)}`,
+          `@rolldown/plugin-babel ${normalizeVersion(webPackage.devDependencies["@rolldown/plugin-babel"]!)}`,
+          `babel-plugin-react-compiler ${normalizeVersion(
+            webPackage.devDependencies["babel-plugin-react-compiler"]!,
+          )}`,
+        ].join(" / "),
       },
       reproduce: `pnpm --silent run react:performance -- --runs ${runCount}`,
       build,

@@ -42,11 +42,12 @@
     "test": "vitest",
     "test:diff": "pnpm exec vitest related --run --passWithNoTests $(bash scripts/list-diff-related-files.sh)",
     "test:run": "vitest run",
+    "test:compiler": "pnpm --filter @vde-monitor/web exec vitest run --config vitest.compiler.config.ts",
     "react:architecture": "tsx scripts/analyze-react-architecture.ts",
     "react:architecture:check": "tsx scripts/analyze-react-architecture.ts --check scripts/react-architecture-baseline.json",
     "react:architecture:update": "tsx scripts/analyze-react-architecture.ts --write scripts/react-architecture-baseline.json",
     "react:performance": "tsx scripts/measure-react-performance.ts",
-    "ci": "concurrently -n format,typecheck,lint,architecture,test -p \"{name}\" --pad-prefix --kill-others-on-fail \"pnpm run format:check\" \"pnpm run typecheck\" \"pnpm run lint\" \"pnpm run react:architecture:check\" \"pnpm run test:run\"",
+    "ci": "concurrently -n format,typecheck,lint,architecture,compiler,test -p \"{name}\" --pad-prefix --kill-others-on-fail \"pnpm run format:check\" \"pnpm run typecheck\" \"pnpm run lint\" \"pnpm run react:architecture:check\" \"pnpm run test:compiler\" \"pnpm run test:run\"",
     "ci:diff": "concurrently -n format,typecheck,lint,architecture -p \"{name}\" --pad-prefix --kill-others-on-fail \"pnpm run format:check\" \"pnpm run typecheck\" \"pnpm run lint\" \"pnpm run react:architecture:check\" && pnpm run test:diff",
     "ci:fix": "pnpm run format && pnpm run typecheck && pnpm run lint:fix && pnpm run test:run"
   },
@@ -72,7 +73,7 @@
     "oxfmt": "^0.58.0",
     "oxlint": "^1.79.0",
     "oxlint-tsgolint": "^7.0.2001",
-    "tsdown": "^0.22.4",
+    "tsdown": "^0.22.14",
     "tsx": "^4.23.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"

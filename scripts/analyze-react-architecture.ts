@@ -67,7 +67,7 @@ interface Classification {
 }
 
 interface ArchitectureReport {
-  schemaVersion: 1;
+  schemaVersion: 2;
   scope: {
     root: "apps/web/src";
     productionExtensions: [".ts", ".tsx"];
@@ -82,6 +82,7 @@ interface ArchitectureReport {
     useMemo: number;
     useCallback: number;
     memo: number;
+    manualMemoFingerprint: string;
     sessionDetailAndLibUseMemo: number;
     sessionDetailAndLibUseCallback: number;
     visibilityPollingCallerFiles: number;
@@ -356,6 +357,74 @@ const resolveReactCall = (
   return null;
 };
 
+const normalizeNodeText = (text: string): string => text.replaceAll(/\s+/gu, " ").trim();
+
+const getStructuralNodeContract = (node: ts.Node, sourceFile: ts.SourceFile): string => {
+  if (ts.isParenthesizedExpression(node) || ts.isParenthesizedTypeNode(node)) {
+    return getStructuralNodeContract(node.expression, sourceFile);
+  }
+  const children: string[] = [];
+  node.forEachChild((child) => {
+    children.push(getStructuralNodeContract(child, sourceFile));
+  });
+  return children.length === 0
+    ? `${node.kind}:${normalizeNodeText(node.getText(sourceFile))}`
+    : `${node.kind}[${children.join("|")}]`;
+};
+
+const isCompilerDirective = (statement: ts.Statement): boolean =>
+  ts.isExpressionStatement(statement) &&
+  ts.isStringLiteral(statement.expression) &&
+  (statement.expression.text === "use memo" || statement.expression.text === "use no memo");
+
+const getMemoCallbackContract = (
+  expression: ts.Expression | undefined,
+  sourceFile: ts.SourceFile,
+): string => {
+  if (
+    expression == null ||
+    (!ts.isArrowFunction(expression) && !ts.isFunctionExpression(expression))
+  ) {
+    return expression == null ? "<missing>" : getStructuralNodeContract(expression, sourceFile);
+  }
+
+  const parameters = expression.parameters
+    .map((parameter) => getStructuralNodeContract(parameter, sourceFile))
+    .join(",");
+  const body = (() => {
+    if (!ts.isBlock(expression.body)) {
+      return getStructuralNodeContract(expression.body, sourceFile);
+    }
+    const statements = expression.body.statements.filter(
+      (statement) => !isCompilerDirective(statement),
+    );
+    if (
+      statements.length === 1 &&
+      ts.isReturnStatement(statements[0]) &&
+      statements[0].expression != null
+    ) {
+      return getStructuralNodeContract(statements[0].expression, sourceFile);
+    }
+    return statements
+      .map((statement) => getStructuralNodeContract(statement, sourceFile))
+      .join(";");
+  })();
+  return `${expression.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword) ? "async" : "sync"}\0${parameters}\0${body}`;
+};
+
+const getManualMemoSignature = (
+  call: ts.CallExpression,
+  reactCall: "memo" | "useCallback" | "useMemo",
+  sourceFile: ts.SourceFile,
+): string => {
+  const callback = getMemoCallbackContract(call.arguments[0], sourceFile);
+  const remainingArguments = call.arguments
+    .slice(1)
+    .map((argument) => getStructuralNodeContract(argument, sourceFile))
+    .join("\0");
+  return `${reactCall}\0${callback}\0${remainingArguments}`;
+};
+
 const analyzeFile = (file: string, tests: Set<string>, program: Program) => {
   const sourcePath = toRepoPath(file);
   const sourceFile = program.getSourceFile(file);
@@ -367,6 +436,7 @@ const analyzeFile = (file: string, tests: Set<string>, program: Program) => {
   let useMemo = 0;
   let useCallback = 0;
   let memo = 0;
+  const manualMemoSignatures: string[] = [];
   let visibilityPollingCalls = 0;
 
   const visit = (node: ts.Node): void => {
@@ -374,10 +444,13 @@ const analyzeFile = (file: string, tests: Set<string>, program: Program) => {
       const reactCall = resolveReactCall(node.expression, bindings);
       if (reactCall === "useMemo") {
         useMemo += 1;
+        manualMemoSignatures.push(getManualMemoSignature(node, reactCall, sourceFile));
       } else if (reactCall === "useCallback") {
         useCallback += 1;
+        manualMemoSignatures.push(getManualMemoSignature(node, reactCall, sourceFile));
       } else if (reactCall === "memo") {
         memo += 1;
+        manualMemoSignatures.push(getManualMemoSignature(node, reactCall, sourceFile));
       } else if (reactCall === "useEffect" || reactCall === "useLayoutEffect") {
         const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
         const callback = node.arguments[0];
@@ -421,7 +494,14 @@ const analyzeFile = (file: string, tests: Set<string>, program: Program) => {
     node.forEachChild(visit);
   };
   visit(sourceFile);
-  return { effects, useMemo, useCallback, memo, visibilityPollingCalls };
+  return {
+    effects,
+    useMemo,
+    useCallback,
+    memo,
+    manualMemoSignatures,
+    visibilityPollingCalls,
+  };
 };
 
 const countMatches = (texts: string[], pattern: RegExp): number =>
@@ -617,7 +697,7 @@ export const buildArchitectureReport = (): ArchitectureReport => {
   }
 
   const report: ArchitectureReport = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     scope: {
       root: "apps/web/src",
       productionExtensions: [".ts", ".tsx"],
@@ -634,6 +714,19 @@ export const buildArchitectureReport = (): ArchitectureReport => {
       useMemo: results.reduce((total, result) => total + result.useMemo, 0),
       useCallback: results.reduce((total, result) => total + result.useCallback, 0),
       memo: results.reduce((total, result) => total + result.memo, 0),
+      manualMemoFingerprint: createHash("sha256")
+        .update(
+          results
+            .flatMap((result, index) =>
+              result.manualMemoSignatures.map(
+                (signature, ordinal) =>
+                  `${toRepoPath(productionFiles[index]!)}\0${ordinal}\0${signature}`,
+              ),
+            )
+            .join("\n"),
+        )
+        .digest("hex")
+        .slice(0, 16),
       sessionDetailAndLibUseMemo: results.reduce(
         (total, result, index) =>
           total + (isSessionDetailOrLib(productionFiles[index]!) ? result.useMemo : 0),
