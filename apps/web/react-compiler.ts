@@ -150,11 +150,11 @@ export const createReactCompilerCollector = (runKind: "production" | "vitest") =
           ]
         : [],
     );
-    const failures = records
-      .filter(({ event }) =>
-        ["CompileError", "CompileDiagnostic", "CompileSkip", "PipelineError"].includes(event.kind),
-      )
-      .map(({ file, event }) => ({ file, kind: event.kind }));
+    const failures = records.flatMap(({ file, event }) =>
+      ["CompileError", "CompileDiagnostic", "CompileSkip", "PipelineError"].includes(event.kind)
+        ? [{ file, kind: event.kind }]
+        : [],
+    );
 
     return {
       schemaVersion: 1,
