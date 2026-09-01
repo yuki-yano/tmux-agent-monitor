@@ -8,11 +8,11 @@
   },
   "metrics": {
     "productionFiles": 333,
-    "eligible": 349,
+    "eligible": 350,
     "components": 229,
-    "hooks": 120
+    "hooks": 121
   },
-  "fingerprint": "552f8541a82b1664",
+  "fingerprint": "18b2f7278c4dd287",
   "inventory": [
     {
       "file": "apps/web/src/App.tsx",
@@ -1548,7 +1548,7 @@
           "column": 1
         }
       },
-      "fingerprint": "6abad3cb873f8ebd"
+      "fingerprint": "ad39e51db8423c73"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/QuickPanel.tsx",
@@ -2061,6 +2061,22 @@
         }
       },
       "fingerprint": "0ee7185ee6aed880"
+    },
+    {
+      "file": "apps/web/src/lib/pwa-display-mode.ts",
+      "symbol": "usePwaDisplayMode",
+      "kind": "hook",
+      "span": {
+        "start": {
+          "line": 40,
+          "column": 33
+        },
+        "end": {
+          "line": 41,
+          "column": 90
+        }
+      },
+      "fingerprint": "4682528a6f416e8f"
     },
     {
       "file": "apps/web/src/lib/use-debounced-callback.ts",
@@ -3096,11 +3112,11 @@
           "column": 37
         },
         "end": {
-          "line": 123,
+          "line": 117,
           "column": 1
         }
       },
-      "fingerprint": "720658dfddbf21c3"
+      "fingerprint": "e4a1a91764f991b1"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/notes-section-list.tsx",

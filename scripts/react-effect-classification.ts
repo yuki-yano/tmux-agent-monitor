@@ -114,7 +114,6 @@ export const reviewedEffectClassifications: Record<ReviewedEffectCategory, reado
     "apps/web/src/features/shared-session-ui/hooks/usePaneSendText.ts::usePaneSendText::useLayoutEffect::5cc2c6efbf17::1",
     "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts::useRawInputHandlers::useEffect::93e786f949fe::1",
     "apps/web/src/pages/ChatGrid/components/ChatGridTile.tsx::useChatGridScreenViewport::useLayoutEffect::f8e55dfb319d::1",
-    "apps/web/src/pages/SessionDetail/components/LogFileCandidateModal.tsx::LogFileCandidateModal::useEffect::cbb3ee99b855::1",
     "apps/web/src/pages/SessionDetail/components/SmartScreenViewport.tsx::SmartScreenViewport::useEffect::c5b069e422c7::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch::useEffect::6f46129aafbe::1",
     "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch::useEffect::ff02e8f42a46::1",

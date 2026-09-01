@@ -381,11 +381,11 @@
       "status": "no-event",
       "type": "accept",
       "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
-      "reviewedAt": "2026-08-25",
+      "reviewedAt": "2026-09-01",
       "evidenceTests": [
         {
           "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
-          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+          "fingerprint": "9fd164b1667a19e50c5475f885134a62a1d39a996f8fa9f1e72dff3b933131aa"
         }
       ],
       "resultSignature": "65eba6e770dfa190c9da4202e5fb62aa12f731e3af091339bc2fc80e35df4f1c",
@@ -396,11 +396,11 @@
       "status": "no-event",
       "type": "accept",
       "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
-      "reviewedAt": "2026-08-25",
+      "reviewedAt": "2026-09-01",
       "evidenceTests": [
         {
           "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
-          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+          "fingerprint": "9fd164b1667a19e50c5475f885134a62a1d39a996f8fa9f1e72dff3b933131aa"
         }
       ],
       "resultSignature": "b3865d22ece40ab7e2efca0177694b4602c68b3157d141448014e385574aa299",
@@ -411,11 +411,11 @@
       "status": "no-event",
       "type": "accept",
       "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context accessor.",
-      "reviewedAt": "2026-08-25",
+      "reviewedAt": "2026-09-01",
       "evidenceTests": [
         {
           "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
-          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+          "fingerprint": "9fd164b1667a19e50c5475f885134a62a1d39a996f8fa9f1e72dff3b933131aa"
         }
       ],
       "resultSignature": "03a92a6e9c7044546757fbae4f6e54d30d66fc0ad4299c7d59c4c95c000a9e73",
@@ -426,11 +426,11 @@
       "status": "no-event",
       "type": "accept",
       "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
-      "reviewedAt": "2026-08-25",
+      "reviewedAt": "2026-09-01",
       "evidenceTests": [
         {
           "path": "apps/web/src/pages/SessionDetail/SessionDetailProvider.test.tsx",
-          "fingerprint": "bcf73294331e7bf224756829f7e342ed5931ed8b207cb8e36cb0969e15a6977a"
+          "fingerprint": "9fd164b1667a19e50c5475f885134a62a1d39a996f8fa9f1e72dff3b933131aa"
         }
       ],
       "resultSignature": "899ea73afc9551f01a592ad17ae0efc8ab40f3044933cae98ea98e814e023591",

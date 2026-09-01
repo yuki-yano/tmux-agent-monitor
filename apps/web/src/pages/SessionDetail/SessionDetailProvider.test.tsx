@@ -1,4 +1,5 @@
 import { QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import type { CommitLog } from "@vde-monitor/shared";
 import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
@@ -35,7 +36,7 @@ import {
 import { SessionDetailNotesProvider } from "./SessionDetailNotesProvider";
 import { SessionDetailTitleProvider, useSessionDetailTitle } from "./SessionDetailTitleProvider";
 import { sessionDetailQueryKeys } from "./session-detail-query-keys";
-import { COMMIT_PAGE_SIZE } from "./sessionDetailUtils";
+import { COMMIT_PAGE_SIZE, buildCommitLogSnapshot } from "./sessionDetailUtils";
 import { createSessionDetail } from "./test-helpers";
 
 const session = createSessionDetail({ paneId: "pane-1" });
@@ -767,11 +768,18 @@ describe("SessionDetailProvider", () => {
       limit: COMMIT_PAGE_SIZE,
     });
     await waitFor(() => expect(queryClient.getQueryData(headKey)).toBeDefined());
-    const tailKey = queryClient
-      .getQueryCache()
-      .findAll({ queryKey: sessionDetailQueryKeys.commitLogRoot("pane-1") })
-      .find((query) => query.queryKey[4] === "tail")?.queryKey;
-    expect(tailKey).toBeDefined();
+    const headData = queryClient.getQueryData<CommitLog>(headKey)!;
+    const tailKey = sessionDetailQueryKeys.commitLogTail("pane-1", {
+      repoRoot: session.repoRoot,
+      worktreePath: null,
+      branch: null,
+      expectedRev: headData.rev,
+      headSnapshot: buildCommitLogSnapshot(headData),
+      limit: COMMIT_PAGE_SIZE,
+    });
+    await waitFor(() => {
+      expect(queryClient.getQueryCache().find({ queryKey: tailKey, exact: true })).toBeDefined();
+    });
     const detailKey = sessionDetailQueryKeys.commitDetail("pane-1", {
       repoRoot: session.repoRoot,
       worktreePath: null,
@@ -799,7 +807,7 @@ describe("SessionDetailProvider", () => {
     };
     const detailData = { marker: "detail" };
     const fileData = { marker: "file" };
-    queryClient.setQueryData(tailKey!, tailData);
+    queryClient.setQueryData(tailKey, tailData);
     queryClient.setQueryData(detailKey, detailData);
     queryClient.setQueryData(fileKey, fileData);
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
@@ -827,7 +835,7 @@ describe("SessionDetailProvider", () => {
     expect(
       refetchSpy.mock.calls.filter(([filters]) => filters?.queryKey?.[2] === "commits"),
     ).toEqual([[{ queryKey: headKey, exact: true, type: "active" }]]);
-    expect(queryClient.getQueryData(tailKey!)).toBe(tailData);
+    expect(queryClient.getQueryData(tailKey)).toBe(tailData);
     expect(queryClient.getQueryData(detailKey)).toBe(detailData);
     expect(queryClient.getQueryData(fileKey)).toBe(fileData);
   });

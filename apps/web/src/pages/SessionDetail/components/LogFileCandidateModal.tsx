@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import {
   Command,
@@ -39,18 +39,6 @@ export const LogFileCandidateModal = ({ state, actions }: LogFileCandidateModalP
   const { onClose, onSelect } = actions;
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const rafId = window.requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-    });
-    return () => {
-      window.cancelAnimationFrame(rafId);
-    };
-  }, [open]);
-
   if (!open) {
     return null;
   }
@@ -66,7 +54,13 @@ export const LogFileCandidateModal = ({ state, actions }: LogFileCandidateModalP
         }
       }}
     >
-      <DialogContent className="p-0">
+      <DialogContent
+        className="p-0"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          searchInputRef.current?.focus();
+        }}
+      >
         <div className="relative p-3 pb-1.5 sm:p-4 sm:pb-2 md:p-5 md:pb-2">
           <IconButton
             type="button"

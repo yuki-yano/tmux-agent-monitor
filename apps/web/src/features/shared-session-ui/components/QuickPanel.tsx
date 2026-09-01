@@ -21,7 +21,7 @@ import {
   getSessionWindowGroupKey,
 } from "@/features/shared-session-ui/model/session-window-group";
 import { cn } from "@/lib/cn";
-import { isPwaDisplayMode } from "@/lib/pwa-display-mode";
+import { usePwaDisplayMode } from "@/lib/pwa-display-mode";
 import { agentIconMeta, formatRepoDirLabel, statusIconMeta } from "@/lib/quick-panel-utils";
 import { formatBranchLabel, formatRelativeTime, getLastInputTone } from "@/lib/session-format";
 import type { SessionGroup } from "@/lib/session-group";
@@ -211,7 +211,7 @@ export const QuickPanel = ({ state, actions }: QuickPanelProps) => {
     actions;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const touchStartYRef = useRef<number | null>(null);
-  const pwaDisplayMode = isPwaDisplayMode();
+  const pwaDisplayMode = usePwaDisplayMode();
   // Keep the card mounted while the exit animation plays.
   const { panelPhase, finishClosing } = useQuickPanelPhase(open);
 

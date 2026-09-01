@@ -194,28 +194,29 @@ describe("UsageDashboardView", () => {
   });
 
   it("shows history controls only in pwa display mode", () => {
-    const isPwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "isPwaDisplayMode");
+    const usePwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "usePwaDisplayMode");
     const viewModel = createViewModel(createProvider("codex"));
-    isPwaDisplayModeSpy.mockReturnValue(false);
+    usePwaDisplayModeSpy.mockReturnValue(false);
     const { rerender } = render(<UsageDashboardView {...viewModel} />);
 
     expect(screen.queryByLabelText("Go back")).toBeNull();
     expect(screen.queryByLabelText("Go forward")).toBeNull();
 
-    isPwaDisplayModeSpy.mockReturnValue(true);
-    rerender(<UsageDashboardView {...viewModel} />);
+    usePwaDisplayModeSpy.mockReturnValue(true);
+    // Change a QuickPanel prop so Compiler does not reuse the child element while the hook mock changes.
+    rerender(<UsageDashboardView {...viewModel} nowMs={viewModel.nowMs + 1} />);
 
     expect(screen.getByLabelText("Go back")).toBeTruthy();
     expect(screen.getByLabelText("Go forward")).toBeTruthy();
 
-    isPwaDisplayModeSpy.mockRestore();
+    usePwaDisplayModeSpy.mockRestore();
   });
 
   it("calls browser history methods from history controls", () => {
-    const isPwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "isPwaDisplayMode");
+    const usePwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "usePwaDisplayMode");
     const backSpy = vi.spyOn(window.history, "back").mockImplementation(() => undefined);
     const forwardSpy = vi.spyOn(window.history, "forward").mockImplementation(() => undefined);
-    isPwaDisplayModeSpy.mockReturnValue(true);
+    usePwaDisplayModeSpy.mockReturnValue(true);
     render(<UsageDashboardView {...createViewModel(createProvider("codex"))} />);
 
     fireEvent.click(screen.getByLabelText("Go back"));
@@ -224,7 +225,7 @@ describe("UsageDashboardView", () => {
     expect(backSpy).toHaveBeenCalledTimes(1);
     expect(forwardSpy).toHaveBeenCalledTimes(1);
 
-    isPwaDisplayModeSpy.mockRestore();
+    usePwaDisplayModeSpy.mockRestore();
     backSpy.mockRestore();
     forwardSpy.mockRestore();
   });

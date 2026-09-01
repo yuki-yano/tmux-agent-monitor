@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 const DISPLAY_MODE_QUERIES = [
   "(display-mode: standalone)",
   "(display-mode: fullscreen)",
@@ -21,5 +23,21 @@ export const isPwaDisplayMode = () => {
   }
   return (navigator as Navigator & { standalone?: boolean }).standalone === true;
 };
+
+const subscribePwaDisplayMode = (onStoreChange: () => void) => {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => undefined;
+  }
+  const mediaQueries = DISPLAY_MODE_QUERIES.map((query) => window.matchMedia(query));
+  mediaQueries.forEach((mediaQuery) => mediaQuery.addEventListener("change", onStoreChange));
+  return () => {
+    mediaQueries.forEach((mediaQuery) => mediaQuery.removeEventListener("change", onStoreChange));
+  };
+};
+
+const getServerPwaDisplayMode = () => false;
+
+export const usePwaDisplayMode = () =>
+  useSyncExternalStore(subscribePwaDisplayMode, isPwaDisplayMode, getServerPwaDisplayMode);
 
 export const PWA_DISPLAY_MODE_QUERIES = DISPLAY_MODE_QUERIES;

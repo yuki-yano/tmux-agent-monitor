@@ -1,17 +1,26 @@
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PWA_DISPLAY_MODE_QUERIES, isPwaDisplayMode } from "./pwa-display-mode";
+import { PWA_DISPLAY_MODE_QUERIES, isPwaDisplayMode, usePwaDisplayMode } from "./pwa-display-mode";
 
 const originalMatchMedia = window.matchMedia;
 const originalStandalone = (navigator as Navigator & { standalone?: boolean }).standalone;
 
 const mockMatchMedia = (matchedQueries: string[]) => {
+  let currentMatches = new Set(matchedQueries);
+  const listeners = new Set<EventListener>();
   const mock = vi.fn((query: string) => ({
-    matches: matchedQueries.includes(query),
+    get matches() {
+      return currentMatches.has(query);
+    },
     media: query,
     onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
+    addEventListener: (_type: string, listener: EventListener) => {
+      listeners.add(listener);
+    },
+    removeEventListener: (_type: string, listener: EventListener) => {
+      listeners.delete(listener);
+    },
     addListener: vi.fn(),
     removeListener: vi.fn(),
     dispatchEvent: vi.fn(),
@@ -21,6 +30,12 @@ const mockMatchMedia = (matchedQueries: string[]) => {
     writable: true,
     value: mock,
   });
+  return {
+    setMatchedQueries(nextMatchedQueries: string[]) {
+      currentMatches = new Set(nextMatchedQueries);
+      listeners.forEach((listener) => listener(new Event("change")));
+    },
+  };
 };
 
 describe("pwa-display-mode", () => {
@@ -68,5 +83,18 @@ describe("pwa-display-mode", () => {
     });
 
     expect(isPwaDisplayMode()).toBe(false);
+  });
+
+  it("updates subscribers when the display mode changes", () => {
+    const media = mockMatchMedia([]);
+    const { result } = renderHook(() => usePwaDisplayMode());
+
+    expect(result.current).toBe(false);
+
+    act(() => {
+      media.setMatchedQueries([PWA_DISPLAY_MODE_QUERIES[0]]);
+    });
+
+    expect(result.current).toBe(true);
   });
 });

@@ -45,8 +45,8 @@ describe("QuickPanel", () => {
   });
 
   it("shows history controls only in pwa display mode", () => {
-    const isPwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "isPwaDisplayMode");
-    isPwaDisplayModeSpy.mockReturnValue(false);
+    const usePwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "usePwaDisplayMode");
+    usePwaDisplayModeSpy.mockReturnValue(false);
     const state = buildState({ open: false });
     const actions = buildActions();
     const { rerender } = render(<QuickPanel state={state} actions={actions} />);
@@ -54,7 +54,7 @@ describe("QuickPanel", () => {
     expect(screen.queryByLabelText("Go back")).toBeNull();
     expect(screen.queryByLabelText("Go forward")).toBeNull();
 
-    isPwaDisplayModeSpy.mockReturnValue(true);
+    usePwaDisplayModeSpy.mockReturnValue(true);
     rerender(<QuickPanel state={state} actions={actions} />);
 
     expect(screen.getByLabelText("Go back").className).toContain("h-11");
@@ -62,14 +62,14 @@ describe("QuickPanel", () => {
     expect(screen.getByLabelText("Go forward").className).toContain("h-11");
     expect(screen.getByLabelText("Go forward").className).toContain("w-11");
 
-    isPwaDisplayModeSpy.mockRestore();
+    usePwaDisplayModeSpy.mockRestore();
   });
 
   it("calls browser history methods from history controls", () => {
-    const isPwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "isPwaDisplayMode");
+    const usePwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "usePwaDisplayMode");
     const backSpy = vi.spyOn(window.history, "back").mockImplementation(() => undefined);
     const forwardSpy = vi.spyOn(window.history, "forward").mockImplementation(() => undefined);
-    isPwaDisplayModeSpy.mockReturnValue(true);
+    usePwaDisplayModeSpy.mockReturnValue(true);
     const state = buildState({ open: false });
     const actions = buildActions();
     render(<QuickPanel state={state} actions={actions} />);
@@ -80,7 +80,7 @@ describe("QuickPanel", () => {
     expect(backSpy).toHaveBeenCalledTimes(1);
     expect(forwardSpy).toHaveBeenCalledTimes(1);
 
-    isPwaDisplayModeSpy.mockRestore();
+    usePwaDisplayModeSpy.mockRestore();
     backSpy.mockRestore();
     forwardSpy.mockRestore();
   });
@@ -295,8 +295,8 @@ describe("QuickPanel", () => {
   });
 
   it("does not close when clicking history controls", () => {
-    const isPwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "isPwaDisplayMode");
-    isPwaDisplayModeSpy.mockReturnValue(true);
+    const usePwaDisplayModeSpy = vi.spyOn(pwaDisplayMode, "usePwaDisplayMode");
+    usePwaDisplayModeSpy.mockReturnValue(true);
     const onClose = vi.fn();
     const state = buildState({ open: true, sessionGroups: [] });
     const actions = buildActions({ onClose });
@@ -305,7 +305,7 @@ describe("QuickPanel", () => {
     fireEvent.pointerDown(screen.getByLabelText("Go back"));
     expect(onClose).not.toHaveBeenCalled();
 
-    isPwaDisplayModeSpy.mockRestore();
+    usePwaDisplayModeSpy.mockRestore();
   });
 
   it("uses window-level pane totals from all sessions", () => {

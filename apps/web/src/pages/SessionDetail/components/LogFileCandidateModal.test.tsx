@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LogFileCandidateModal } from "./LogFileCandidateModal";
@@ -53,6 +53,26 @@ describe("LogFileCandidateModal", () => {
 
     expect(screen.getByText("apps/server/src/index.ts")).toBeTruthy();
     expect(screen.queryByText("apps/web/src/index.ts")).toBeNull();
+  });
+
+  it("focuses the search input when opened", async () => {
+    render(
+      <LogFileCandidateModal
+        state={{
+          open: true,
+          reference: "index.ts",
+          items: [{ path: "apps/server/src/index.ts", name: "index.ts" }],
+        }}
+        actions={{
+          onClose: vi.fn(),
+          onSelect: vi.fn(),
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByPlaceholderText("Search files..."));
+    });
   });
 
   it("closes when close button is clicked", () => {

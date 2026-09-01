@@ -10,15 +10,15 @@
     "optionsHash": "59cbf50cac24742c3d89ef21ee7b0c1e38024988573c78353b6e65dd5041feb9"
   },
   "eligible": {
-    "total": 349,
-    "baselineFingerprint": "552f8541a82b1664"
+    "total": 350,
+    "baselineFingerprint": "18b2f7278c4dd287"
   },
   "annotatedManifest": {
     "total": 15,
     "success": 15
   },
   "summary": {
-    "success": 315,
+    "success": 316,
     "bailout": 24,
     "skip": 0,
     "pipelineError": 0,
@@ -27,7 +27,7 @@
     "unmatchedTerminalEvents": 0,
     "unmatchedDiagnosticEvents": 0,
     "unreconciled": 0,
-    "successRate": 0.9025787965616046
+    "successRate": 0.9028571428571428
   },
   "results": [
     {
@@ -3307,7 +3307,7 @@
           "column": 1
         }
       },
-      "fingerprint": "6abad3cb873f8ebd",
+      "fingerprint": "ad39e51db8423c73",
       "status": "success",
       "events": {
         "success": 1,
@@ -3319,9 +3319,9 @@
       "detail": null,
       "eventDetails": [],
       "memo": {
-        "slots": 20,
-        "blocks": 9,
-        "values": 11,
+        "slots": 21,
+        "blocks": 8,
+        "values": 10,
         "prunedBlocks": 1,
         "prunedValues": 4
       },
@@ -4457,6 +4457,40 @@
         "slots": 11,
         "blocks": 4,
         "values": 4,
+        "prunedBlocks": 0,
+        "prunedValues": 0
+      },
+      "disposition": null
+    },
+    {
+      "file": "apps/web/src/lib/pwa-display-mode.ts",
+      "symbol": "usePwaDisplayMode",
+      "kind": "hook",
+      "span": {
+        "start": {
+          "line": 40,
+          "column": 33
+        },
+        "end": {
+          "line": 41,
+          "column": 90
+        }
+      },
+      "fingerprint": "4682528a6f416e8f",
+      "status": "success",
+      "events": {
+        "success": 1,
+        "diagnostic": 0,
+        "error": 0,
+        "skip": 0,
+        "pipelineError": 0
+      },
+      "detail": null,
+      "eventDetails": [],
+      "memo": {
+        "slots": 0,
+        "blocks": 0,
+        "values": 0,
         "prunedBlocks": 0,
         "prunedValues": 0
       },
@@ -6646,11 +6680,11 @@
           "column": 37
         },
         "end": {
-          "line": 123,
+          "line": 117,
           "column": 1
         }
       },
-      "fingerprint": "720658dfddbf21c3",
+      "fingerprint": "e4a1a91764f991b1",
       "status": "success",
       "events": {
         "success": 1,
@@ -6662,9 +6696,9 @@
       "detail": null,
       "eventDetails": [],
       "memo": {
-        "slots": 32,
+        "slots": 30,
         "blocks": 15,
-        "values": 16,
+        "values": 15,
         "prunedBlocks": 0,
         "prunedValues": 0
       },
@@ -9383,7 +9417,7 @@
       "disposition": {
         "type": "accept",
         "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
-        "reviewedAt": "2026-08-25"
+        "reviewedAt": "2026-09-01"
       }
     },
     {
@@ -9959,7 +9993,7 @@
       "disposition": {
         "type": "accept",
         "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
-        "reviewedAt": "2026-08-25"
+        "reviewedAt": "2026-09-01"
       }
     },
     {
@@ -10093,7 +10127,7 @@
       "disposition": {
         "type": "accept",
         "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context accessor.",
-        "reviewedAt": "2026-08-25"
+        "reviewedAt": "2026-09-01"
       }
     },
     {
@@ -10193,7 +10227,7 @@
       "disposition": {
         "type": "accept",
         "reason": "The static contract includes the custom hook, while Compiler 1.0.0 emits no terminal event for this context selector wrapper.",
-        "reviewedAt": "2026-08-25"
+        "reviewedAt": "2026-09-01"
       }
     },
     {
