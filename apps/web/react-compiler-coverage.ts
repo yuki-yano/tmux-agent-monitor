@@ -1,4 +1,4 @@
-import { transformAsync } from "@babel/core";
+import { transformSync } from "@babel/core";
 import reactCompiler from "babel-plugin-react-compiler";
 import type {
   LoggerEvent,
@@ -10,6 +10,11 @@ import path from "node:path";
 
 import * as ts from "typescript/unstable/ast";
 import { API } from "typescript/unstable/sync";
+
+import {
+  REACT_COMPILER_PRODUCTION_MODE,
+  REACT_COMPILER_PRODUCTION_PANIC_THRESHOLD,
+} from "./react-compiler";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const webSourceRoot = path.join(import.meta.dirname, "src");
@@ -123,13 +128,13 @@ export type CompilerCoverageReport = {
     panicThreshold: "none";
     target: "19";
     optionsHash: string;
-    overridesFromProduction: ["compilationMode", "panicThreshold"];
+    overridesFromProduction: Array<"compilationMode" | "panicThreshold">;
   };
   eligible: {
     total: number;
     baselineFingerprint: string;
   };
-  annotatedManifest: {
+  requiredCompileSuccesses: {
     total: number;
     success: number;
   };
@@ -436,7 +441,7 @@ export const createCompilerCoverageReport = (
   eligibility: CompilerEligibilityReport,
   events: readonly NormalizedCompilerEvent[],
   compilerVersion: string,
-  annotatedManifest: readonly { file: string; symbol: string }[] = [],
+  requiredCompileSuccesses: readonly { file: string; symbol: string }[] = [],
 ): CompilerCoverageReport => {
   const eventsByKey = new Map<string, NormalizedCompilerEvent[]>();
   const unmatchedEvents: NormalizedCompilerEvent[] = [];
@@ -490,15 +495,14 @@ export const createCompilerCoverageReport = (
             : null;
     const detailEvent = entryEvents.find(({ kind }) => kind === detailKind);
     const successEvent = entryEvents.find(({ kind }) => kind === "CompileSuccess");
-    const eventDetails = entryEvents
-      .filter(
-        ({ kind }) =>
-          kind === "CompileError" ||
-          kind === "CompileDiagnostic" ||
-          kind === "CompileSkip" ||
-          kind === "PipelineError",
-      )
-      .map(({ kind, category, reason }) => ({ kind, category, reason }));
+    const eventDetails = entryEvents.flatMap(({ kind, category, reason }) =>
+      kind === "CompileError" ||
+      kind === "CompileDiagnostic" ||
+      kind === "CompileSkip" ||
+      kind === "PipelineError"
+        ? [{ kind, category, reason }]
+        : [],
+    );
     return {
       ...entry,
       status,
@@ -529,10 +533,7 @@ export const createCompilerCoverageReport = (
     package: "babel-plugin-react-compiler",
     version: compilerVersion,
     ...compilerCoverageOptions,
-    overridesFromProduction: ["compilationMode", "panicThreshold"] as [
-      "compilationMode",
-      "panicThreshold",
-    ],
+    overridesFromProduction: compilerCoverageOverrides,
   } as const;
   return {
     schemaVersion: 1,
@@ -544,9 +545,9 @@ export const createCompilerCoverageReport = (
       total: eligibility.metrics.eligible,
       baselineFingerprint: eligibility.fingerprint,
     },
-    annotatedManifest: {
-      total: annotatedManifest.length,
-      success: annotatedManifest.filter(({ file, symbol }) =>
+    requiredCompileSuccesses: {
+      total: requiredCompileSuccesses.length,
+      success: requiredCompileSuccesses.filter(({ file, symbol }) =>
         results.some(
           (result) =>
             result.file === file && result.symbol === symbol && result.status === "success",
@@ -567,6 +568,15 @@ const compilerCoverageOptions = {
   panicThreshold: "none",
   target: "19",
 } as const satisfies ReactCompilerOptions;
+
+const compilerCoverageOverrides: Array<"compilationMode" | "panicThreshold"> = [
+  ...(compilerCoverageOptions.compilationMode === REACT_COMPILER_PRODUCTION_MODE
+    ? []
+    : (["compilationMode"] as const)),
+  ...(compilerCoverageOptions.panicThreshold === REACT_COMPILER_PRODUCTION_PANIC_THRESHOLD
+    ? []
+    : (["panicThreshold"] as const)),
+];
 
 export const createCompilerCoverageReviewSignatures = (
   report: CompilerCoverageReport,
@@ -698,41 +708,43 @@ export const reconcileCompilerCoverage = (
   if (reviewedByKey.size !== review.entries.length) {
     throw new Error("React Compiler disposition review has duplicate keys");
   }
-  const nonSuccessKeys = new Set(
-    report.results
-      .filter(({ status }) => status !== "success")
-      .map(({ file, symbol }) => `${file}::${symbol}`),
-  );
+  const nonSuccessResults: CompilerCoverageResult[] = [];
+  const nonSuccessKeys = new Set<string>();
+  for (const result of report.results) {
+    if (result.status === "success") continue;
+    nonSuccessResults.push(result);
+    nonSuccessKeys.add(`${result.file}::${result.symbol}`);
+  }
   const stale = [...reviewedByKey.keys()].filter((key) => !nonSuccessKeys.has(key));
   if (stale.length > 0) {
     throw new Error(`React Compiler disposition review is stale: ${stale.join(", ")}`);
   }
-  const staleStatuses = report.results
-    .filter(({ status }) => status !== "success")
-    .flatMap((result) => {
-      const key = `${result.file}::${result.symbol}`;
-      const reviewed = reviewedByKey.get(key);
-      return reviewed != null && reviewed.status !== result.status ? [key] : [];
-    });
+  const staleStatuses: string[] = [];
+  for (const result of nonSuccessResults) {
+    const key = `${result.file}::${result.symbol}`;
+    const reviewed = reviewedByKey.get(key);
+    if (reviewed != null && reviewed.status !== result.status) staleStatuses.push(key);
+  }
   if (staleStatuses.length > 0) {
     throw new Error(`React Compiler disposition status is stale: ${staleStatuses.join(", ")}`);
   }
-  const staleContexts = report.results
-    .filter(({ status }) => status !== "success")
-    .flatMap((result) => {
-      const key = `${result.file}::${result.symbol}`;
-      const reviewed = reviewedByKey.get(key);
-      if (reviewed == null || reviewed.status !== result.status) return [];
-      const signatures = createCompilerCoverageReviewSignatures(report, result);
-      const evidenceIsCurrent = reviewed.evidenceTests.every(
-        (test) => createCompilerCoverageEvidenceTest(test.path).fingerprint === test.fingerprint,
-      );
-      return reviewed.resultSignature === signatures.resultSignature &&
-        reviewed.compilerSignature === signatures.compilerSignature &&
-        evidenceIsCurrent
-        ? []
-        : [key];
-    });
+  const staleContexts: string[] = [];
+  for (const result of nonSuccessResults) {
+    const key = `${result.file}::${result.symbol}`;
+    const reviewed = reviewedByKey.get(key);
+    if (reviewed == null || reviewed.status !== result.status) continue;
+    const signatures = createCompilerCoverageReviewSignatures(report, result);
+    const evidenceIsCurrent = reviewed.evidenceTests.every(
+      (test) => createCompilerCoverageEvidenceTest(test.path).fingerprint === test.fingerprint,
+    );
+    if (
+      reviewed.resultSignature !== signatures.resultSignature ||
+      reviewed.compilerSignature !== signatures.compilerSignature ||
+      !evidenceIsCurrent
+    ) {
+      staleContexts.push(key);
+    }
+  }
   if (staleContexts.length > 0) {
     throw new Error(`React Compiler disposition context is stale: ${staleContexts.join(", ")}`);
   }
@@ -766,7 +778,7 @@ export const reconcileCompilerCoverage = (
 
 export const buildCompilerCoverageReport = async (
   eligibility: CompilerEligibilityReport,
-  annotatedManifest: readonly { file: string; symbol: string }[] = [],
+  requiredCompileSuccesses: readonly { file: string; symbol: string }[] = [],
 ): Promise<CompilerCoverageReport> => {
   const packageJson = JSON.parse(
     readFileSync(
@@ -794,7 +806,7 @@ export const buildCompilerCoverageReport = async (
     },
   };
   for (const file of collectProductionFiles()) {
-    await transformAsync(readFileSync(file, "utf8"), {
+    transformSync(readFileSync(file, "utf8"), {
       ast: false,
       babelrc: false,
       code: false,
@@ -805,5 +817,10 @@ export const buildCompilerCoverageReport = async (
       sourceMaps: false,
     });
   }
-  return createCompilerCoverageReport(eligibility, events, packageJson.version, annotatedManifest);
+  return createCompilerCoverageReport(
+    eligibility,
+    events,
+    packageJson.version,
+    requiredCompileSuccesses,
+  );
 };

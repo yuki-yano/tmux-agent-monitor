@@ -31,8 +31,6 @@ export const ScreenPanelWorktreeSelectorPanel = function ScreenPanelWorktreeSele
   onClose,
   onSelectVirtualWorktree,
 }: ScreenPanelWorktreeSelectorPanelProps) {
-  "use memo";
-
   const showBlockingWorktreeLoading = worktreeSelectorLoading && entries.length === 0;
 
   return (

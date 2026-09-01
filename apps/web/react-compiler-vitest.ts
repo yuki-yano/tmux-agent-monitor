@@ -11,22 +11,12 @@ import {
 const virtualArtifactId = "virtual:react-compiler-artifact";
 const resolvedVirtualArtifactId = `\0${virtualArtifactId}`;
 
-export const shouldTransformReactCompilerVitestModule = (
-  code: string,
-  id: string,
-  collector: ReactCompilerCollector,
-): boolean => {
+export const shouldTransformReactCompilerVitestModule = (id: string): boolean => {
   const sourceId = id.split("?", 1)[0]!;
   if (!isReactCompilerSource(sourceId)) return false;
 
   const normalizedSourceId = sourceId.replaceAll("\\", "/");
-  if (isReactCompilerTestModule(normalizedSourceId)) return false;
-
-  return (
-    collector.compilationMode === "infer" ||
-    code.includes('"use memo"') ||
-    normalizedSourceId.includes("/compiler-contract/")
-  );
+  return !isReactCompilerTestModule(normalizedSourceId);
 };
 
 export const createReactCompilerVitestPlugin = (collector: ReactCompilerCollector): Plugin => ({
@@ -40,7 +30,7 @@ export const createReactCompilerVitestPlugin = (collector: ReactCompilerCollecto
     return `export default ${JSON.stringify(collector.getArtifact())};`;
   },
   async transform(code, id) {
-    if (!shouldTransformReactCompilerVitestModule(code, id, collector)) return null;
+    if (!shouldTransformReactCompilerVitestModule(id)) return null;
 
     const sourceId = id.split("?", 1)[0]!;
 

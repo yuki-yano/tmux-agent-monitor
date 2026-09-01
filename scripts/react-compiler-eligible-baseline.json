@@ -12,7 +12,7 @@
     "components": 229,
     "hooks": 121
   },
-  "fingerprint": "18b2f7278c4dd287",
+  "fingerprint": "b0cb58e3a0f49805",
   "inventory": [
     {
       "file": "apps/web/src/App.tsx",
@@ -1496,11 +1496,11 @@
           "column": 36
         },
         "end": {
-          "line": 107,
+          "line": 105,
           "column": 1
         }
       },
-      "fingerprint": "9b776f44800f61e5"
+      "fingerprint": "0f9b0756284fb550"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/prompt-completion/PromptCompletionTriggerRail.tsx",
@@ -1512,11 +1512,11 @@
           "column": 43
         },
         "end": {
-          "line": 67,
+          "line": 65,
           "column": 1
         }
       },
-      "fingerprint": "62d3e659eb51a8fe"
+      "fingerprint": "57f5be7b2a241936"
     },
     {
       "file": "apps/web/src/features/shared-session-ui/components/prompt-completion/usePromptCompletion.ts",
@@ -2532,15 +2532,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 67,
-          "column": 42
+          "line": 66,
+          "column": 37
         },
         "end": {
-          "line": 113,
+          "line": 110,
           "column": 1
         }
       },
-      "fingerprint": "6b92e686030f9660"
+      "fingerprint": "dd14956a5e250b48"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/commit-section/commit-file-detail-content.tsx",
@@ -2548,15 +2548,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 14,
-          "column": 44
+          "line": 13,
+          "column": 39
         },
         "end": {
-          "line": 44,
+          "line": 41,
           "column": 1
         }
       },
-      "fingerprint": "63d1d0629c2a9e2c"
+      "fingerprint": "68737644a0e1cb38"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/commit-section/commit-file-row.tsx",
@@ -2564,15 +2564,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 38,
-          "column": 2
+          "line": 37,
+          "column": 29
         },
         "end": {
-          "line": 108,
-          "column": 3
+          "line": 105,
+          "column": 1
         }
       },
-      "fingerprint": "6feaf869557e3ddf"
+      "fingerprint": "47c408ab0b85bce6"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/commit-section/commit-file-row.tsx",
@@ -2580,15 +2580,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 113,
-          "column": 35
+          "line": 107,
+          "column": 30
         },
         "end": {
-          "line": 149,
+          "line": 141,
           "column": 1
         }
       },
-      "fingerprint": "7efee78965866ab8"
+      "fingerprint": "9f0ae164acbee754"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/commit-section/commit-item.tsx",
@@ -2596,15 +2596,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 27,
-          "column": 31
+          "line": 26,
+          "column": 26
         },
         "end": {
-          "line": 107,
+          "line": 104,
           "column": 1
         }
       },
-      "fingerprint": "3f56a2eeb56fa329"
+      "fingerprint": "8fe2c726653a79c6"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/commit-section/commit-list.tsx",
@@ -2612,15 +2612,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 23,
-          "column": 31
+          "line": 22,
+          "column": 26
         },
         "end": {
-          "line": 64,
+          "line": 61,
           "column": 1
         }
       },
-      "fingerprint": "cdb997c8ccbf31db"
+      "fingerprint": "0aa12d12f62863a6"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/commit-section/commit-load-more-button.tsx",
@@ -2628,15 +2628,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 12,
-          "column": 41
+          "line": 11,
+          "column": 36
         },
         "end": {
-          "line": 28,
+          "line": 25,
           "column": 1
         }
       },
-      "fingerprint": "70403c08d314fc92"
+      "fingerprint": "a4dffb221dd3b4ec"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
@@ -2644,11 +2644,11 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 168,
-          "column": 36
+          "line": 151,
+          "column": 31
         },
         "end": {
-          "line": 183,
+          "line": 166,
           "column": 1
         }
       },
@@ -2660,11 +2660,11 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 138,
-          "column": 32
+          "line": 125,
+          "column": 27
         },
         "end": {
-          "line": 151,
+          "line": 138,
           "column": 1
         }
       },
@@ -2676,11 +2676,11 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 155,
-          "column": 34
+          "line": 140,
+          "column": 29
         },
         "end": {
-          "line": 164,
+          "line": 149,
           "column": 1
         }
       },
@@ -2692,15 +2692,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 54,
-          "column": 33
+          "line": 53,
+          "column": 28
         },
         "end": {
-          "line": 83,
+          "line": 80,
           "column": 1
         }
       },
-      "fingerprint": "182c0fe9e9c93041"
+      "fingerprint": "c8088ee3c146f772"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
@@ -2708,15 +2708,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 127,
-          "column": 28
+          "line": 118,
+          "column": 23
         },
         "end": {
-          "line": 134,
+          "line": 123,
           "column": 1
         }
       },
-      "fingerprint": "2870fc19458f224c"
+      "fingerprint": "a9647b288fd08818"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
@@ -2724,15 +2724,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 187,
-          "column": 34
+          "line": 168,
+          "column": 29
         },
         "end": {
-          "line": 297,
+          "line": 267,
           "column": 1
         }
       },
-      "fingerprint": "88f3d83367b68c59"
+      "fingerprint": "454c89b30c1996e0"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/CommitSection.tsx",
@@ -2740,15 +2740,15 @@
       "kind": "component",
       "span": {
         "start": {
-          "line": 87,
-          "column": 39
+          "line": 82,
+          "column": 34
         },
         "end": {
-          "line": 123,
+          "line": 116,
           "column": 1
         }
       },
-      "fingerprint": "0f79db66ca334c04"
+      "fingerprint": "bd5174ac637cc8dd"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/controls-panel-ui.tsx",
@@ -3256,11 +3256,11 @@
           "column": 35
         },
         "end": {
-          "line": 121,
+          "line": 119,
           "column": 1
         }
       },
-      "fingerprint": "5164b512998d6a1e"
+      "fingerprint": "f562577ac9e3055e"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/ScreenPanelWorktreeSelectorPanel.tsx",
@@ -3272,11 +3272,11 @@
           "column": 48
         },
         "end": {
-          "line": 94,
+          "line": 92,
           "column": 1
         }
       },
-      "fingerprint": "858a66b15f1c7da0"
+      "fingerprint": "ac51ed6b9021dd9b"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/components/session-shell/ConnectedControlsPanel.tsx",
@@ -3704,11 +3704,11 @@
           "column": 35
         },
         "end": {
-          "line": 31,
+          "line": 29,
           "column": 1
         }
       },
-      "fingerprint": "1c76ff961cd09f6d"
+      "fingerprint": "3d5a0ac3ba1f67e8"
     },
     {
       "file": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoFocus.ts",

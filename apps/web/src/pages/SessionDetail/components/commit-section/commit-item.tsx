@@ -1,6 +1,5 @@
 import type { CommitDetail, CommitFileDiff, CommitLog } from "@vde-monitor/shared";
 import { Check, ChevronDown, ChevronUp, Copy } from "lucide-react";
-import { memo } from "react";
 
 import { ChipButton, InsetPanel, PanelSection } from "@/components/ui";
 
@@ -24,7 +23,7 @@ type CommitItemProps = {
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
 };
 
-export const CommitItem = memo(function CommitItem({
+export const CommitItem = function CommitItem({
   commit,
   detail,
   loadingDetail,
@@ -40,8 +39,6 @@ export const CommitItem = memo(function CommitItem({
   onResolveFileReference,
   onResolveFileReferenceCandidates,
 }: CommitItemProps) {
-  "use memo";
-
   const commitBody = detail?.body ?? commit.body;
   const toggleCommit = () => {
     onToggleCommit(commit.hash);
@@ -104,6 +101,4 @@ export const CommitItem = memo(function CommitItem({
       )}
     </InsetPanel>
   );
-});
-
-CommitItem.displayName = "CommitItem";
+};

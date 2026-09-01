@@ -17,17 +17,6 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
-    include: [
-      "react-compiler.test.ts",
-      "react-compiler-vitest.test.ts",
-      "test/compiler-contract/react-compiler-transform.test.tsx",
-      "src/features/shared-session-ui/components/PaneTextComposer.test.tsx",
-      "src/pages/SessionDetail/components/CommitSection.test.tsx",
-      "src/pages/SessionDetail/components/ScreenPanel.test.tsx",
-      "src/pages/SessionDetail/components/ScreenPanelViewport.test.tsx",
-      "src/pages/SessionDetail/components/SmartScreenViewport.test.tsx",
-      "src/pages/SessionDetail/components/WorktreeStatusStack.test.tsx",
-    ],
     setupFiles: ["../../vitest.setup.ts"],
   },
 });

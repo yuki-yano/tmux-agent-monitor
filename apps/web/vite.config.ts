@@ -6,7 +6,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 import {
-  createReactCompilerBuildArtifactPlugin,
+  createReactCompilerBuildValidationPlugin,
   createReactCompilerCollector,
 } from "./react-compiler";
 
@@ -20,7 +20,7 @@ export default defineConfig({
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset(compilerCollector.options)] }),
-    createReactCompilerBuildArtifactPlugin(compilerCollector),
+    createReactCompilerBuildValidationPlugin(compilerCollector),
     tailwindcss(),
   ],
   server: {

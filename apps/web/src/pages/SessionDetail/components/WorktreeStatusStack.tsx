@@ -13,8 +13,6 @@ export const WorktreeStatusStack = function WorktreeStatusStack({
   loadingMessage = "Loading worktrees...",
   emptyMessage = "No worktrees available.",
 }: WorktreeStatusStackProps) {
-  "use memo";
-
   const showBlockingLoading = loading && entriesCount === 0;
 
   return (

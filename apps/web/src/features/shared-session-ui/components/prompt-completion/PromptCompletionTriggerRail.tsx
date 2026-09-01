@@ -14,8 +14,6 @@ export const PromptCompletionTriggerRail = function PromptCompletionTriggerRail(
   activeTrigger: PromptCompletionTokenTrigger | null;
   onTrigger: (trigger: PromptCompletionTokenTrigger) => void;
 }) {
-  "use memo";
-
   const triggerButtonClass = (trigger: PromptCompletionTokenTrigger) =>
     cn(
       TRIGGER_BUTTON_CLASS,

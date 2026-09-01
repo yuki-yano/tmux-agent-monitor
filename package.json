@@ -42,9 +42,7 @@
     "test": "vitest",
     "test:diff": "pnpm exec vitest related --run --passWithNoTests $(bash scripts/list-diff-related-files.sh)",
     "test:run": "vitest run",
-    "test:compiler": "pnpm --filter @vde-monitor/web exec vitest run --config vitest.compiler.config.ts && pnpm run test:compiler:infer:full",
-    "test:compiler:infer:critical": "pnpm --filter @vde-monitor/web exec vitest run --config vitest.compiler-infer.config.ts",
-    "test:compiler:infer:full": "VDE_REACT_COMPILER_FULL_SUITE=1 pnpm --filter @vde-monitor/web exec vitest run --config vitest.compiler-infer.config.ts",
+    "test:compiler": "pnpm --filter @vde-monitor/web exec vitest run --config vitest.compiler.config.ts",
     "react:architecture": "tsx scripts/analyze-react-architecture.ts",
     "react:architecture:check": "tsx scripts/analyze-react-architecture.ts --check scripts/react-architecture-baseline.json",
     "react:architecture:update": "tsx scripts/analyze-react-architecture.ts --write scripts/react-architecture-baseline.json",
@@ -54,7 +52,7 @@
     "react:compiler:coverage:update": "tsx scripts/analyze-react-compiler-coverage.ts --write",
     "react:performance": "tsx scripts/measure-react-performance.ts",
     "ci": "concurrently -n format,typecheck,lint,architecture,compiler-coverage,compiler,test -p \"{name}\" --pad-prefix --kill-others-on-fail \"pnpm run format:check\" \"pnpm run typecheck\" \"pnpm run lint\" \"pnpm run react:architecture:check\" \"pnpm run react:compiler:coverage:check\" \"pnpm run test:compiler\" \"pnpm run test:run\"",
-    "ci:diff": "concurrently -n format,typecheck,lint,architecture,compiler-coverage -p \"{name}\" --pad-prefix --kill-others-on-fail \"pnpm run format:check\" \"pnpm run typecheck\" \"pnpm run lint\" \"pnpm run react:architecture:check\" \"pnpm run react:compiler:coverage:check\" && pnpm run test:diff",
+    "ci:diff": "concurrently -n format,typecheck,lint,architecture,compiler-coverage,compiler -p \"{name}\" --pad-prefix --kill-others-on-fail \"pnpm run format:check\" \"pnpm run typecheck\" \"pnpm run lint\" \"pnpm run react:architecture:check\" \"pnpm run react:compiler:coverage:check\" \"pnpm run test:compiler\" && pnpm run test:diff",
     "ci:fix": "pnpm run format && pnpm run typecheck && pnpm run lint:fix && pnpm run test:run"
   },
   "dependencies": {

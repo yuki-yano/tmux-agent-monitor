@@ -21,8 +21,6 @@ export const PromptCompletionList = function PromptCompletionList({
   emptyMessage: string | null;
   onSelect: (option: PromptCompletionOption) => void;
 }) {
-  "use memo";
-
   return (
     <div
       id={PROMPT_COMPLETION_LIST_ID}

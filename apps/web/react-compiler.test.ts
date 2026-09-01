@@ -1,59 +1,68 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  REACT_COMPILER_PILOT_MANIFEST_COUNT,
-  assertReactCompilerPilotArtifact,
-  reactCompilerPilotManifest,
+  REACT_COMPILER_PRODUCTION_MODE,
+  REACT_COMPILER_PRODUCTION_PANIC_THRESHOLD,
+  assertReactCompilerRequiredCompileSuccesses,
+  reactCompilerRequiredCompileSuccesses,
 } from "./react-compiler";
 
 const validArtifact = () => ({
-  manifest: [...reactCompilerPilotManifest],
-  successes: reactCompilerPilotManifest.map(({ file, symbol }) => ({ file, symbol })),
+  requiredCompileSuccesses: [...reactCompilerRequiredCompileSuccesses],
+  successes: reactCompilerRequiredCompileSuccesses.map(({ file, symbol }) => ({ file, symbol })),
   failures: [],
 });
 
-describe("React Compiler pilot artifact", () => {
-  it("accepts exactly one keyed success for each manifest entry", () => {
-    expect(reactCompilerPilotManifest).toHaveLength(REACT_COMPILER_PILOT_MANIFEST_COUNT);
-    expect(reactCompilerPilotManifest.filter(({ family }) => family === "commit")).toHaveLength(10);
-    expect(reactCompilerPilotManifest.filter(({ family }) => family === "screen")).toHaveLength(3);
-    expect(reactCompilerPilotManifest.filter(({ family }) => family === "composer")).toHaveLength(
-      2,
-    );
-    expect(() => assertReactCompilerPilotArtifact(validArtifact())).not.toThrow();
+describe("React Compiler production contract", () => {
+  it("uses the infer production settings and tracks every cleanup owner", () => {
+    expect(REACT_COMPILER_PRODUCTION_MODE).toBe("infer");
+    expect(REACT_COMPILER_PRODUCTION_PANIC_THRESHOLD).toBe("none");
+    expect(reactCompilerRequiredCompileSuccesses).toHaveLength(19);
+    expect(() => assertReactCompilerRequiredCompileSuccesses(validArtifact())).not.toThrow();
   });
 
-  it("rejects an unkeyed or unexpected success", () => {
+  it("allows unrelated infer outcomes", () => {
     expect(() =>
-      assertReactCompilerPilotArtifact({
-        ...validArtifact(),
-        successes: [...validArtifact().successes, { file: null, symbol: null }],
-      }),
-    ).toThrow(/"unkeyed":1/u);
-    expect(() =>
-      assertReactCompilerPilotArtifact({
+      assertReactCompilerRequiredCompileSuccesses({
         ...validArtifact(),
         successes: [
           ...validArtifact().successes,
-          { file: "apps/web/src/Unexpected.tsx", symbol: "Unexpected" },
+          { file: "apps/web/src/Additional.tsx", symbol: "Additional" },
+          { file: null, symbol: null },
         ],
+        failures: [{ file: "apps/web/src/Additional.tsx", kind: "CompileError" }],
       }),
-    ).toThrow(/Unexpected/u);
+    ).not.toThrow();
   });
 
-  it("rejects duplicate manifest entries and duplicate successes", () => {
-    const duplicate = reactCompilerPilotManifest[0]!;
+  it("rejects missing, duplicate, or repeated required successes", () => {
+    const firstRequired = reactCompilerRequiredCompileSuccesses[0]!;
     expect(() =>
-      assertReactCompilerPilotArtifact({
+      assertReactCompilerRequiredCompileSuccesses({
         ...validArtifact(),
-        manifest: [...reactCompilerPilotManifest.slice(0, -1), duplicate],
+        successes: validArtifact().successes.slice(1),
       }),
-    ).toThrow(/duplicateManifest/u);
+    ).toThrow(/missing/u);
     expect(() =>
-      assertReactCompilerPilotArtifact({
+      assertReactCompilerRequiredCompileSuccesses({
         ...validArtifact(),
-        successes: [...validArtifact().successes, duplicate],
+        requiredCompileSuccesses: [
+          ...reactCompilerRequiredCompileSuccesses.slice(0, -1),
+          firstRequired,
+        ],
+      }),
+    ).toThrow(/duplicateRequiredCompileSuccesses/u);
+    expect(() =>
+      assertReactCompilerRequiredCompileSuccesses({
+        ...validArtifact(),
+        successes: [...validArtifact().successes, firstRequired],
       }),
     ).toThrow(/duplicateSuccesses/u);
+    expect(() =>
+      assertReactCompilerRequiredCompileSuccesses({
+        ...validArtifact(),
+        failures: [{ file: firstRequired.file, kind: "CompileError" }],
+      }),
+    ).toThrow(/blockingFailures/u);
   });
 });

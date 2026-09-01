@@ -53,8 +53,6 @@ export const ScreenPanelViewport = function ScreenPanelViewport({
   onResolveFileReference,
   onResolveFileReferenceKeyDown,
 }: ScreenPanelViewportProps) {
-  "use memo";
-
   const showImage = mode === "image" && Boolean(imageBase64);
 
   if (showImage) {

@@ -1,5 +1,4 @@
 import type { CommitFileDiff } from "@vde-monitor/shared";
-import { memo } from "react";
 
 import { DiffPatch } from "../DiffPatch";
 
@@ -11,15 +10,13 @@ type CommitFileDetailContentProps = {
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
 };
 
-export const CommitFileDetailContent = memo(function CommitFileDetailContent({
+export const CommitFileDetailContent = function CommitFileDetailContent({
   loadingFile,
   fileDetail,
   renderedPatch,
   onResolveFileReference,
   onResolveFileReferenceCandidates,
 }: CommitFileDetailContentProps) {
-  "use memo";
-
   if (loadingFile) {
     return <p className="text-latte-subtext0 text-xs">Loading diff…</p>;
   }
@@ -41,6 +38,4 @@ export const CommitFileDetailContent = memo(function CommitFileDetailContent({
       {fileDetail.truncated && <p className="text-latte-subtext0 mt-2 text-xs">Diff truncated.</p>}
     </div>
   );
-});
-
-CommitFileDetailContent.displayName = "CommitFileDetailContent";
+};

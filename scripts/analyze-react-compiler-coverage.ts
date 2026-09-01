@@ -9,7 +9,7 @@ import {
   createCompilerCoverageReviewTemplate,
   reconcileCompilerCoverage,
 } from "../apps/web/react-compiler-coverage.ts";
-import { reactCompilerPilotManifest } from "../apps/web/react-compiler.ts";
+import { reactCompilerRequiredCompileSuccesses } from "../apps/web/react-compiler.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const eligibilityPath = path.join(repoRoot, "scripts/react-compiler-eligible-baseline.json");
@@ -31,7 +31,10 @@ const main = async (): Promise<void> => {
   const dispositionReview = JSON.parse(
     readFileSync(dispositionPath, "utf8"),
   ) as CompilerCoverageDispositionReview;
-  const rawCoverage = await buildCompilerCoverageReport(eligibility, reactCompilerPilotManifest);
+  const rawCoverage = await buildCompilerCoverageReport(
+    eligibility,
+    reactCompilerRequiredCompileSuccesses,
+  );
   if (process.argv.includes("--review-template")) {
     process.stdout.write(
       serialize(createCompilerCoverageReviewTemplate(rawCoverage, dispositionReview)),
@@ -57,7 +60,7 @@ const main = async (): Promise<void> => {
       coverage.summary.unmatchedTerminalEvents > 0 ||
       coverage.summary.unmatchedDiagnosticEvents > 0 ||
       coverage.summary.unreconciled > 0 ||
-      coverage.annotatedManifest.success !== coverage.annotatedManifest.total
+      coverage.requiredCompileSuccesses.success !== coverage.requiredCompileSuccesses.total
     ) {
       throw new Error(
         `React Compiler coverage has blocking outcomes: ${JSON.stringify(coverage.summary)}`,

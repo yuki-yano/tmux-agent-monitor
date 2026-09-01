@@ -1,6 +1,5 @@
 import type { CommitDetail, CommitFileDiff, CommitLog } from "@vde-monitor/shared";
 import { GitCommitHorizontal, RefreshCw, X } from "lucide-react";
-import { memo, useMemo } from "react";
 
 import { Button, Callout, EmptyState, IconButton, LoadingOverlay } from "@/components/ui";
 import { PaneSectionShell } from "@/features/shared-session-ui/components/PaneSectionShell";
@@ -51,13 +50,11 @@ type CommitSectionProps = {
   actions: CommitSectionActions;
 };
 
-const CommitReasonCallout = memo(function CommitReasonCallout({
+const CommitReasonCallout = function CommitReasonCallout({
   reason,
 }: {
   reason: CommitLog["reason"] | undefined;
 }) {
-  "use memo";
-
   switch (reason) {
     case "cwd_unknown":
       return (
@@ -80,19 +77,15 @@ const CommitReasonCallout = memo(function CommitReasonCallout({
     default:
       return null;
   }
-});
+};
 
-CommitReasonCallout.displayName = "CommitReasonCallout";
-
-const CommitVirtualBranchNotice = memo(function CommitVirtualBranchNotice({
+const CommitVirtualBranchNotice = function CommitVirtualBranchNotice({
   virtualBranch,
   onClear,
 }: {
   virtualBranch: string | null;
   onClear: () => void;
 }) {
-  "use memo";
-
   if (virtualBranch == null) {
     return null;
   }
@@ -120,22 +113,16 @@ const CommitVirtualBranchNotice = memo(function CommitVirtualBranchNotice({
       </IconButton>
     </div>
   );
-});
+};
 
-CommitVirtualBranchNotice.displayName = "CommitVirtualBranchNotice";
-
-const CommitRepoRoot = memo(function CommitRepoRoot({ repoRoot }: { repoRoot?: string | null }) {
-  "use memo";
-
+const CommitRepoRoot = function CommitRepoRoot({ repoRoot }: { repoRoot?: string | null }) {
   if (!repoRoot) {
     return null;
   }
   return <p className="text-latte-subtext0 text-xs">Repo: {formatPath(repoRoot)}</p>;
-});
+};
 
-CommitRepoRoot.displayName = "CommitRepoRoot";
-
-const CommitErrorCallout = memo(function CommitErrorCallout({
+const CommitErrorCallout = function CommitErrorCallout({
   commitError,
 }: {
   commitError: string | null;
@@ -148,11 +135,9 @@ const CommitErrorCallout = memo(function CommitErrorCallout({
       {commitError}
     </Callout>
   );
-});
+};
 
-CommitErrorCallout.displayName = "CommitErrorCallout";
-
-const CommitLoadingOverlay = memo(function CommitLoadingOverlay({
+const CommitLoadingOverlay = function CommitLoadingOverlay({
   commitLoading,
 }: {
   commitLoading: boolean;
@@ -161,11 +146,9 @@ const CommitLoadingOverlay = memo(function CommitLoadingOverlay({
     return null;
   }
   return <LoadingOverlay label="Loading commits..." blocking={false} />;
-});
+};
 
-CommitLoadingOverlay.displayName = "CommitLoadingOverlay";
-
-const CommitEmptyStateNotice = memo(function CommitEmptyStateNotice({
+const CommitEmptyStateNotice = function CommitEmptyStateNotice({
   showEmptyState,
 }: {
   showEmptyState: boolean;
@@ -180,13 +163,9 @@ const CommitEmptyStateNotice = memo(function CommitEmptyStateNotice({
       iconWrapperClassName="bg-latte-surface1/50"
     />
   );
-});
+};
 
-CommitEmptyStateNotice.displayName = "CommitEmptyStateNotice";
-
-export const CommitSection = memo(function CommitSection({ state, actions }: CommitSectionProps) {
-  "use memo";
-
+export const CommitSection = function CommitSection({ state, actions }: CommitSectionProps) {
   const {
     commitLog,
     commitBranch,
@@ -213,10 +192,7 @@ export const CommitSection = memo(function CommitSection({ state, actions }: Com
     onResolveFileReference,
     onResolveFileReferenceCandidates,
   } = actions;
-  const renderedPatches = useMemo(
-    () => buildRenderedPatches(commitFileOpen, commitFileDetails),
-    [commitFileDetails, commitFileOpen],
-  );
+  const renderedPatches = buildRenderedPatches(commitFileOpen, commitFileDetails);
   const commitCountDescription = formatCommitCountDescription(commitLog);
   const commitHeaderDescription = (
     <span className="inline-flex items-center gap-1.5">
@@ -232,32 +208,26 @@ export const CommitSection = memo(function CommitSection({ state, actions }: Com
   const commits = getCommits(commitLog);
   const showEmptyState = isCommitListEmpty(commitLog);
   const canLoadMore = shouldShowLoadMore(commitLog, commitHasMore);
-  const sectionAction = useMemo(
-    () => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-latte-subtext0 hover:text-latte-text relative h-[30px] w-[30px] shrink-0 self-start p-0 after:absolute after:-inset-[7px] after:content-['']"
-        onClick={onRefresh}
-        disabled={commitLoading}
-        aria-label="Refresh commit log"
-      >
-        <RefreshCw className="h-4 w-4" />
-        <span className="sr-only">Refresh</span>
-      </Button>
-    ),
-    [commitLoading, onRefresh],
+  const sectionAction = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-latte-subtext0 hover:text-latte-text relative h-[30px] w-[30px] shrink-0 self-start p-0 after:absolute after:-inset-[7px] after:content-['']"
+      onClick={onRefresh}
+      disabled={commitLoading}
+      aria-label="Refresh commit log"
+    >
+      <RefreshCw className="h-4 w-4" />
+      <span className="sr-only">Refresh</span>
+    </Button>
   );
-  const sectionStatus = useMemo(
-    () => (
-      <>
-        <CommitVirtualBranchNotice virtualBranch={virtualBranch} onClear={onClearVirtualBranch} />
-        <CommitRepoRoot repoRoot={commitLog?.repoRoot} />
-        <CommitReasonCallout reason={commitLog?.reason} />
-        <CommitErrorCallout commitError={commitError} />
-      </>
-    ),
-    [commitError, commitLog?.reason, commitLog?.repoRoot, onClearVirtualBranch, virtualBranch],
+  const sectionStatus = (
+    <>
+      <CommitVirtualBranchNotice virtualBranch={virtualBranch} onClear={onClearVirtualBranch} />
+      <CommitRepoRoot repoRoot={commitLog?.repoRoot} />
+      <CommitReasonCallout reason={commitLog?.reason} />
+      <CommitErrorCallout commitError={commitError} />
+    </>
   );
 
   return (
@@ -294,6 +264,4 @@ export const CommitSection = memo(function CommitSection({ state, actions }: Com
       />
     </PaneSectionShell>
   );
-});
-
-CommitSection.displayName = "CommitSection";
+};

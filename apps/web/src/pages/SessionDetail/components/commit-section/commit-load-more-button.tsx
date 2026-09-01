@@ -1,5 +1,4 @@
 import { ArrowDown } from "lucide-react";
-import { memo } from "react";
 
 import { Button } from "@/components/ui";
 
@@ -9,13 +8,11 @@ type CommitLoadMoreButtonProps = {
   onLoadMore: () => void;
 };
 
-export const CommitLoadMoreButton = memo(function CommitLoadMoreButton({
+export const CommitLoadMoreButton = function CommitLoadMoreButton({
   canLoadMore,
   commitLoadingMore,
   onLoadMore,
 }: CommitLoadMoreButtonProps) {
-  "use memo";
-
   if (!canLoadMore) {
     return null;
   }
@@ -25,6 +22,4 @@ export const CommitLoadMoreButton = memo(function CommitLoadMoreButton({
       {commitLoadingMore ? "Loading…" : "Load more"}
     </Button>
   );
-});
-
-CommitLoadMoreButton.displayName = "CommitLoadMoreButton";
+};

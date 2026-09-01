@@ -1,5 +1,4 @@
 import type { CommitDetail, CommitFileDiff } from "@vde-monitor/shared";
-import { memo } from "react";
 
 import { sumFileStats } from "../../sessionDetailUtils";
 import { CommitFileRows } from "./commit-file-row";
@@ -64,7 +63,7 @@ const buildCommitFilesSection = ({
   );
 };
 
-export const CommitExpandedSection = memo(function CommitExpandedSection({
+export const CommitExpandedSection = function CommitExpandedSection({
   commitHash,
   detail,
   loadingDetail,
@@ -77,8 +76,6 @@ export const CommitExpandedSection = memo(function CommitExpandedSection({
   onResolveFileReference,
   onResolveFileReferenceCandidates,
 }: CommitExpandedSectionProps) {
-  "use memo";
-
   if (loadingDetail) {
     return <p className="text-latte-subtext0 text-xs">Loading commit…</p>;
   }
@@ -110,6 +107,4 @@ export const CommitExpandedSection = memo(function CommitExpandedSection({
       {commitFilesSection}
     </>
   );
-});
-
-CommitExpandedSection.displayName = "CommitExpandedSection";
+};

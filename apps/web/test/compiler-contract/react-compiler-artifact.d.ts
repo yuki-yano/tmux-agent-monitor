@@ -22,13 +22,8 @@ declare module "virtual:react-compiler-artifact" {
       sources: readonly string[];
       target: string;
     };
-    manifest: Array<{
-      annotation: string;
-      behaviorTest: string;
-      family: string;
+    requiredCompileSuccesses: Array<{
       file: string;
-      kind: string;
-      profilerOperation: string;
       symbol: string;
     }>;
     successes: CompilerSuccess[];

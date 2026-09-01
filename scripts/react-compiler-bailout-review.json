@@ -14,7 +14,7 @@
         }
       ],
       "resultSignature": "75f9d3eefe3639b17fbb4ba775ff916da946eb7a8994888302ff3ddc3eebea3f",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/launch-agent/ResumeWorktreeDialog.tsx::ResumeWorktreeDialogOpenContent",
@@ -29,7 +29,7 @@
         }
       ],
       "resultSignature": "c33c31a1a94703c492abe3791bb41d2e2c425858a5238a0552fca7b8d16b2ff4",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/notifications/use-push-notifications.ts::usePushNotifications",
@@ -44,7 +44,7 @@
         }
       ],
       "resultSignature": "a106e96189fbca6d48bc1018e4dac3ae408b2e89a10b14f0a7ed627dfef9a2b2",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/pwa-tabs/context/workspace-tabs-context.tsx::useWorkspaceTabs",
@@ -59,7 +59,7 @@
         }
       ],
       "resultSignature": "eb6d4df9bebec2b4384aada18e1b17bfccec31b60e7672667632e31a2d0e8663",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/components/AnsiVirtualizedViewport.tsx::AnsiVirtualizedViewport",
@@ -74,7 +74,7 @@
         }
       ],
       "resultSignature": "b4c5360091657ad81562a9aecf57559451e6dc82196ed6c506a75a414db012a7",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/components/prompt-completion/usePromptCompletion.ts::usePromptCompletion",
@@ -89,7 +89,7 @@
         }
       ],
       "resultSignature": "a62c177c0eca8222c05cee842324a9ede3ef08d310f8a3fe9ca08e90a7489cdf",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/hooks/usePaneSendText.ts::usePaneSendText",
@@ -104,7 +104,7 @@
         }
       ],
       "resultSignature": "0469fb22546a32de749516a3499062a5b1bb8ed69082f4d2b8782a7705bee8b7",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/hooks/useRawInputHandlers.ts::useRawInputHandlers",
@@ -119,7 +119,7 @@
         }
       ],
       "resultSignature": "8a1fb49260c697a507cd673e11a7ede6be8e62a17ad261f029cded73631954b8",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/hooks/useScreenCache.ts::useScreenCache",
@@ -134,7 +134,7 @@
         }
       ],
       "resultSignature": "cd24fb63ec91e17ce044b1e10ea8f86fe25188e2ddaaf0637147b1ed0b451e06",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/hooks/useSessionSidebarActions.ts::useSessionSidebarActions",
@@ -149,7 +149,7 @@
         }
       ],
       "resultSignature": "c46777858d6354761ed3330c2b84ecb026f5a07a59fe30fa165b9562a32316e7",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/hooks/useSidebarPreviewTimelineCache.ts::useSidebarPreviewTimelineCache",
@@ -164,7 +164,7 @@
         }
       ],
       "resultSignature": "585170415410fef1d2e7cd75f121ab8d93ce8c2f027084e0edea13943c02efa4",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/features/shared-session-ui/hooks/useTitleEditor.ts::useTitleEditor",
@@ -179,7 +179,7 @@
         }
       ],
       "resultSignature": "0c7c97f35c75f7740a3e36f517ea50535aaf1c222ac14567b95d5af42dde284b",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/components/branch-section/BranchEntryList.tsx::BranchEntryList",
@@ -194,7 +194,7 @@
         }
       ],
       "resultSignature": "d27f898b69bf0958957dde3844caa1ec36696a2fe8ec39ccd36b6cd7bb93f705",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/components/NotesSection.tsx::NotesSection",
@@ -209,7 +209,7 @@
         }
       ],
       "resultSignature": "ac389924c9bc2fe7fd3cb50ad021a682eb021cb2fb7c0c646cb08bab93b84bd2",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/components/WorktreeEntryList.tsx::WorktreeEntryList",
@@ -224,7 +224,7 @@
         }
       ],
       "resultSignature": "4c734af90d496b2475a06aacce26da7c1f27cfe8176db3f9729f76df2724b767",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useNoteAutoSave.ts::useNoteAutoSave",
@@ -239,7 +239,7 @@
         }
       ],
       "resultSignature": "5b66909cfa01eb074cb3f482611c11a4eb4442a1296b575fc509e79566395087",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useScreenFetch.ts::useScreenFetch",
@@ -254,7 +254,7 @@
         }
       ],
       "resultSignature": "3f25fd5587279eaf661804ce67c03548fa91e91bb07620da22529f8093d8af35",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useScreenPanelLogReferenceLinking.ts::useScreenPanelLogReferenceLinking",
@@ -269,7 +269,7 @@
         }
       ],
       "resultSignature": "6018efc8b3fdb0f2cf5bc4abe77b7db33779edd4959cf7b632f5323b4349b48a",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useSessionBranches.ts::useSessionBranches",
@@ -284,7 +284,7 @@
         }
       ],
       "resultSignature": "e9ad06882ad1e52645ad3cdd34ec6a569d589e376d31981d0fb64fa056e46c1e",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useSessionCommits.ts::useSessionCommits",
@@ -299,7 +299,7 @@
         }
       ],
       "resultSignature": "6b09c6ca8e531ca7c283115135becae99af25e7ad0e768ae563febe6ffd35898",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useSessionDiffs.ts::useSessionDiffs",
@@ -314,7 +314,7 @@
         }
       ],
       "resultSignature": "6029fa5bf0230fdac40b47731d1eaf8f1622819668d654d6444e095393c6e978",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles-lookup-actions.ts::useSessionFilesLookupActions",
@@ -329,7 +329,7 @@
         }
       ],
       "resultSignature": "a8bec5ed5833075de03af5273b22d89c432e996fde2c02c93a3afce95562c549",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useSessionFiles.ts::useSessionFiles",
@@ -344,7 +344,7 @@
         }
       ],
       "resultSignature": "e897967149597fdc199ef4dc34140d33575df3ca4f65c2aab4c8de1586f513ed",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useSessionRepoNotes.ts::useSessionRepoNotes",
@@ -359,7 +359,7 @@
         }
       ],
       "resultSignature": "760604c96a008992480008167928e25fa1b23390b780c83ca03ee0ea024feab8",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/hooks/useSessionTimeline.ts::useSessionTimeline",
@@ -374,7 +374,7 @@
         }
       ],
       "resultSignature": "d1e0c291deacf0af2e61e3889b7d48b7d435ccce01462fa9d6c46d173a8d36a3",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/SessionDetailCommitsProvider.tsx::useSessionDetailCommits",
@@ -389,7 +389,7 @@
         }
       ],
       "resultSignature": "65eba6e770dfa190c9da4202e5fb62aa12f731e3af091339bc2fc80e35df4f1c",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/SessionDetailNotesProvider.tsx::useSessionDetailNotesSectionProps",
@@ -404,7 +404,7 @@
         }
       ],
       "resultSignature": "b3865d22ece40ab7e2efca0177694b4602c68b3157d141448014e385574aa299",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/SessionDetailProvider.tsx::useSessionDetailContext",
@@ -419,7 +419,7 @@
         }
       ],
       "resultSignature": "03a92a6e9c7044546757fbae4f6e54d30d66fc0ad4299c7d59c4c95c000a9e73",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/SessionDetailTimelineProvider.tsx::useSessionDetailTimelineSectionProps",
@@ -434,7 +434,7 @@
         }
       ],
       "resultSignature": "899ea73afc9551f01a592ad17ae0efc8ab40f3044933cae98ea98e814e023591",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionDetail/SessionDetailTitleProvider.tsx::useSessionDetailTitle",
@@ -449,7 +449,7 @@
         }
       ],
       "resultSignature": "7bab1bc91ef0a827f7a239bda2e314d78148ea59b9d01edcb921f359f0e8037b",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/pages/SessionList/useSessionListVM.ts::useSessionListVM",
@@ -464,7 +464,7 @@
         }
       ],
       "resultSignature": "08deccf756748d0a1c14440e844cdba7679256d4fd427b786bd84c41d6b854ad",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/state/session-context.tsx::useRequiredContext",
@@ -479,7 +479,7 @@
         }
       ],
       "resultSignature": "26da32e0c8b523bb389348b220d89a3817806737fe6f7435f02e8b8bf44481ab",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/state/theme-context.tsx::useTheme",
@@ -494,7 +494,7 @@
         }
       ],
       "resultSignature": "d7c1a21239188197b73c775c173719699896ec064ee75d49fc82ed6558c2a3e3",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     },
     {
       "key": "apps/web/src/state/use-usage-api.ts::useUsageApi",
@@ -509,7 +509,7 @@
         }
       ],
       "resultSignature": "8cae0c5eeec8388557c02e1982d860a1bef983a38f55685ea1483f4ba8eb599e",
-      "compilerSignature": "6a935a0d53f5d91ed28a4ec53455b613b08861847ec9e094803b3a6b18d6decf"
+      "compilerSignature": "8d38c58f762281ee06e417229af4517009078003677418b3fdada2bbe644695d"
     }
   ]
 }
