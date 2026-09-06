@@ -1,58 +1,16 @@
-import type {
-  PromptCompletionItem,
-  PromptCompletionResult,
-  PromptCompletionTrigger,
-  RepoFileSearchPage,
-} from "@vde-monitor/shared";
 import type { KeyboardEvent, RefObject } from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 
+import type { PromptCompletionConfig, PromptCompletionOption } from "./prompt-completion-options";
 import {
-  type PromptCompletionToken,
-  type PromptCompletionTokenTrigger,
-  findPromptCompletionToken,
-  quotePromptFilePath,
-} from "./prompt-completion-token";
+  insertPromptCompletionTrigger,
+  replacePromptCompletionToken,
+} from "./prompt-completion-textarea";
+import type { PromptCompletionTokenTrigger } from "./prompt-completion-token";
+import { usePromptCompletionInput } from "./use-prompt-completion-input";
+import { usePromptCompletionOptions } from "./use-prompt-completion-options";
 
-export type PromptCompletionOption = Omit<PromptCompletionItem, "kind"> & {
-  trigger: PromptCompletionTokenTrigger;
-  kind: PromptCompletionItem["kind"] | "file";
-};
-
-export type PromptCompletionConfig = {
-  agent: "codex" | "claude" | "unknown";
-  paneId: string;
-  requestPromptCompletions: (
-    paneId: string,
-    trigger: PromptCompletionTrigger,
-    query?: string,
-  ) => Promise<PromptCompletionResult>;
-  requestRepoFileSearch: (
-    paneId: string,
-    query: string,
-    options?: { limit?: number },
-  ) => Promise<RepoFileSearchPage>;
-};
-
-const MAX_FILE_OPTIONS = 5;
-const FILE_SEARCH_DEBOUNCE_MS = 150;
-
-const toAgentOptions = (
-  items: PromptCompletionItem[],
-  trigger: "at" | "dollar" | "slash",
-): PromptCompletionOption[] => items.map((item) => ({ ...item, trigger }));
-
-const toFileOptions = (page: RepoFileSearchPage): PromptCompletionOption[] =>
-  page.items.slice(0, MAX_FILE_OPTIONS).map((item) => ({
-    id: `file:${item.path}`,
-    label: item.path,
-    insertText: item.path,
-    description: item.kind === "directory" ? "Directory" : "Repository file",
-    argumentHint: "",
-    kind: "file",
-    scope: item.kind,
-    trigger: "at",
-  }));
+export type { PromptCompletionConfig, PromptCompletionOption } from "./prompt-completion-options";
 
 export const usePromptCompletion = ({
   config,
@@ -65,154 +23,27 @@ export const usePromptCompletion = ({
   enabled: boolean;
   onTextareaMutated: (textarea: HTMLTextAreaElement) => void;
 }) => {
-  const scopeKey = enabled && config ? `${config.paneId}:${config.agent}` : null;
-  const [previousScopeKey, setPreviousScopeKey] = useState(scopeKey);
-  const [token, setToken] = useState<PromptCompletionToken | null>(null);
-  const [options, setOptions] = useState<PromptCompletionOption[]>([]);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const isComposingRef = useRef(false);
-  const dismissedTokenRef = useRef<string | null>(null);
-  const requestIdRef = useRef(0);
-
-  if (previousScopeKey !== scopeKey) {
-    setPreviousScopeKey(scopeKey);
-    setToken(null);
-    setOptions([]);
-    setActiveIndex(0);
-    setLoading(false);
-    setError(null);
-  }
-
-  useLayoutEffect(() => {
-    isComposingRef.current = false;
-    dismissedTokenRef.current = null;
-  }, [scopeKey]);
-
-  const evaluate = useCallback(
-    (textarea: HTMLTextAreaElement) => {
-      if (!enabled || !config || isComposingRef.current) {
-        setToken(null);
-        return;
-      }
-      const next = findPromptCompletionToken({
-        value: textarea.value,
-        caret: textarea.selectionStart,
-        agent: config.agent,
-      });
-      const fingerprint = next ? `${next.trigger}:${next.start}:${next.end}:${next.query}` : null;
-      if (fingerprint && fingerprint === dismissedTokenRef.current) {
-        setToken(null);
-        return;
-      }
-      dismissedTokenRef.current = null;
-      setToken((current) =>
-        current?.trigger === next?.trigger &&
-        current?.query === next?.query &&
-        current?.start === next?.start &&
-        current?.end === next?.end
-          ? current
-          : next,
-      );
-    },
-    [config, enabled],
-  );
-
-  const close = useCallback(() => {
-    if (token) {
-      dismissedTokenRef.current = `${token.trigger}:${token.start}:${token.end}:${token.query}`;
-    }
-    setToken(null);
-  }, [token]);
-
-  const paneId = config?.paneId;
-  const agent = config?.agent;
-  const requestPromptCompletions = config?.requestPromptCompletions;
-  const requestRepoFileSearch = config?.requestRepoFileSearch;
-  const tokenTrigger = token?.trigger;
-  const tokenQuery = token?.query ?? "";
-
-  useEffect(() => {
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    // oxlint-disable-next-line react/set-state-in-effect -- A new async request clears stale choices before its response arrives.
-    setOptions([]);
-    setActiveIndex(0);
-    if (
-      !enabled ||
-      !paneId ||
-      !requestPromptCompletions ||
-      !requestRepoFileSearch ||
-      !tokenTrigger
-    ) {
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    if (tokenTrigger === "at" && tokenQuery.length === 0 && agent !== "codex") {
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    const load = async () => {
-      try {
-        let nextOptions: PromptCompletionOption[];
-        if (tokenTrigger === "at" && agent === "codex") {
-          const [pluginResult, fileResult] = await Promise.all([
-            requestPromptCompletions(paneId, "at", tokenQuery),
-            tokenQuery
-              ? requestRepoFileSearch(paneId, tokenQuery, { limit: MAX_FILE_OPTIONS })
-              : null,
-          ]);
-          nextOptions = [
-            ...toAgentOptions(pluginResult.items, "at"),
-            ...(fileResult ? toFileOptions(fileResult) : []),
-          ];
-        } else if (tokenTrigger === "at") {
-          nextOptions = toFileOptions(
-            await requestRepoFileSearch(paneId, tokenQuery, {
-              limit: MAX_FILE_OPTIONS,
-            }),
-          );
-        } else {
-          nextOptions = toAgentOptions(
-            (await requestPromptCompletions(paneId, tokenTrigger, tokenQuery)).items,
-            tokenTrigger,
-          );
-        }
-        if (requestIdRef.current === requestId) {
-          setOptions(nextOptions);
-          setActiveIndex(0);
-          setLoading(false);
-        }
-      } catch {
-        if (requestIdRef.current === requestId) {
-          setOptions([]);
-          setError("Failed to load suggestions.");
-          setLoading(false);
-        }
-      }
-    };
-    const timeout = setTimeout(
-      () => void load(),
-      tokenTrigger === "at" ? FILE_SEARCH_DEBOUNCE_MS : 0,
-    );
-    return () => {
-      clearTimeout(timeout);
-      requestIdRef.current += 1;
-    };
-  }, [
-    agent,
-    enabled,
-    paneId,
-    requestPromptCompletions,
-    requestRepoFileSearch,
-    tokenQuery,
-    tokenTrigger,
-  ]);
+  const scopeKey = enabled && config ? config.paneId + ":" + config.agent : null;
+  const {
+    token,
+    activeIndex,
+    evaluate,
+    evaluateTrigger,
+    clearToken,
+    dismiss,
+    moveSelection,
+    resetSelection,
+    isComposing,
+    handleCompositionStart,
+    handleCompositionEnd,
+  } = usePromptCompletionInput({ scopeKey, agent: config?.agent });
+  const { options, loading, error, clearOptions } = usePromptCompletionOptions({
+    scopeKey,
+    config,
+    trigger: token?.trigger,
+    query: token?.query ?? "",
+    resetSelection,
+  });
 
   const select = useCallback(
     (option: PromptCompletionOption) => {
@@ -220,45 +51,37 @@ export const usePromptCompletion = ({
       if (!textarea || !token || option.disabledReason) {
         return;
       }
-      const rawInsert =
-        option.kind === "file" ? quotePromptFilePath(option.insertText) : option.insertText;
-      const nextCharacter = textarea.value[token.end] ?? "";
-      const insertText = nextCharacter && /\s/.test(nextCharacter) ? rawInsert : `${rawInsert} `;
-      textarea.setRangeText(insertText, token.start, token.end, "end");
+      replacePromptCompletionToken(textarea, token, option);
       onTextareaMutated(textarea);
-      setToken(null);
-      setOptions([]);
+      clearToken();
+      clearOptions();
       textarea.focus();
     },
-    [onTextareaMutated, textInputRef, token],
+    [clearOptions, clearToken, onTextareaMutated, textInputRef, token],
   );
 
   const insertTrigger = useCallback(
     (trigger: PromptCompletionTokenTrigger) => {
       const textarea = textInputRef.current;
-      if (!textarea || !enabled || !config) {
+      if (!textarea || scopeKey == null) {
         return;
       }
-      const sigil = trigger === "dollar" ? "$" : trigger === "at" ? "@" : "/";
-      const start = textarea.selectionStart;
-      const prefix = start > 0 && !/\s/.test(textarea.value[start - 1] ?? "") ? " " : "";
-      textarea.setRangeText(`${prefix}${sigil}`, start, textarea.selectionEnd, "end");
+      insertPromptCompletionTrigger(textarea, trigger);
       onTextareaMutated(textarea);
       textarea.focus();
-      dismissedTokenRef.current = null;
-      evaluate(textarea);
+      evaluateTrigger(textarea);
     },
-    [config, enabled, evaluate, onTextareaMutated, textInputRef],
+    [evaluateTrigger, onTextareaMutated, scopeKey, textInputRef],
   );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (!token || isComposingRef.current || event.ctrlKey || event.metaKey || event.altKey) {
+      if (!token || isComposing() || event.ctrlKey || event.metaKey || event.altKey) {
         return false;
       }
       if (event.key === "Escape") {
         event.preventDefault();
-        close();
+        dismiss();
         return true;
       }
       if (options.length === 0) {
@@ -266,8 +89,7 @@ export const usePromptCompletion = ({
       }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
-        const direction = event.key === "ArrowDown" ? 1 : -1;
-        setActiveIndex((current) => (current + direction + options.length) % options.length);
+        moveSelection(event.key === "ArrowDown" ? 1 : -1, options.length);
         return true;
       }
       if (event.key === "Enter" || event.key === "Tab") {
@@ -280,35 +102,20 @@ export const usePromptCompletion = ({
       }
       return false;
     },
-    [activeIndex, close, options, select, token],
+    [activeIndex, dismiss, isComposing, moveSelection, options, select, token],
   );
-
-  const handleCompositionStart = useCallback(() => {
-    isComposingRef.current = true;
-    setToken(null);
-  }, []);
-
-  const handleCompositionEnd = useCallback(
-    (textarea: HTMLTextAreaElement) => {
-      isComposingRef.current = false;
-      evaluate(textarea);
-    },
-    [evaluate],
-  );
-
-  const activeOptionId =
-    token && options.length > 0 ? `prompt-completion-list-option-${activeIndex}` : undefined;
 
   return {
     visible: token != null,
     token,
     options,
     activeIndex,
-    activeOptionId,
+    activeOptionId:
+      token && options.length > 0 ? `prompt-completion-list-option-${activeIndex}` : undefined,
     loading,
     error,
     emptyMessage:
-      token?.trigger === "at" && token.query.length === 0 && agent !== "codex"
+      token?.trigger === "at" && token.query.length === 0 && config?.agent !== "codex"
         ? "Type a file name to search."
         : null,
     evaluate,

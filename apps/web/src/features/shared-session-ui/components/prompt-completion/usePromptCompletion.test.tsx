@@ -196,4 +196,112 @@ describe("usePromptCompletion lifecycle", () => {
     await act(async () => pending.reject(new Error("obsolete")));
     expect(view.result.current.error).toBeNull();
   });
+
+  it("debounces file queries and loads Codex plugins and bounded files together", async () => {
+    const plugins = deferred();
+    const requestPromptCompletions = vi.fn(() => plugins.promise);
+    const requestRepoFileSearch = vi.fn(async (_paneId: string, query: string) => ({
+      query,
+      items: Array.from({ length: 8 }, (_, index) => ({
+        path: `file-${index}.ts`,
+        name: `file-${index}.ts`,
+        kind: "file" as const,
+        score: 1,
+        highlights: [],
+      })),
+      truncated: false,
+      totalMatchedCount: 8,
+    }));
+    const view = setup(buildConfig({ requestPromptCompletions, requestRepoFileSearch }));
+    view.evaluate("@file");
+    await act(async () => vi.advanceTimersByTimeAsync(149));
+    expect(requestPromptCompletions).not.toHaveBeenCalled();
+    expect(requestRepoFileSearch).not.toHaveBeenCalled();
+
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(requestPromptCompletions).toHaveBeenCalledWith("pane-a", "at", "file");
+    expect(requestRepoFileSearch).toHaveBeenCalledWith("pane-a", "file", { limit: 5 });
+    expect(view.result.current.options).toEqual([]);
+    expect(view.result.current.loading).toBe(true);
+
+    await act(async () => plugins.resolve(completion("@plugin")));
+    expect(view.result.current.options.map((option) => option.label)).toEqual([
+      "@plugin",
+      "file-0.ts",
+      "file-1.ts",
+      "file-2.ts",
+      "file-3.ts",
+      "file-4.ts",
+    ]);
+    expect(view.result.current.loading).toBe(false);
+  });
+
+  it("clears a current failure and loads suggestions for a new query", async () => {
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Unavailable"))
+      .mockResolvedValueOnce(completion("$recovered"));
+    const view = setup(buildConfig({ requestPromptCompletions: request }));
+    view.evaluate("$first");
+    await view.flush();
+    expect(view.result.current.error).toBe("Failed to load suggestions.");
+    expect(view.result.current.options).toEqual([]);
+
+    view.evaluate("$next");
+    expect(view.result.current.error).toBeNull();
+    expect(view.result.current.loading).toBe(true);
+    await view.flush();
+    expect(view.result.current.options[0]?.label).toBe("$recovered");
+  });
+
+  it("wraps selection, refuses disabled options, and preserves following whitespace", async () => {
+    const items = [
+      { ...completion("$disabled").items[0]!, disabledReason: "Unavailable" },
+      completion("$selected").items[0]!,
+    ];
+    const view = setup(
+      buildConfig({
+        requestPromptCompletions: vi.fn(async () => ({ items })),
+      }),
+    );
+    view.evaluate("$one");
+    await view.flush();
+    view.key("Enter");
+    expect(view.textInputRef.current!.value).toBe("$one");
+    expect(view.onTextareaMutated).not.toHaveBeenCalled();
+    expect(view.result.current.visible).toBe(true);
+
+    view.key("ArrowUp");
+    expect(view.result.current.activeIndex).toBe(1);
+    const textarea = view.textInputRef.current!;
+    act(() => {
+      textarea.value = "$one suffix";
+      textarea.setSelectionRange(4, 4);
+      view.result.current.evaluate(textarea);
+    });
+    view.key("Tab");
+    expect(textarea.value).toBe("$selected suffix");
+    expect(view.onTextareaMutated).toHaveBeenCalledWith(textarea);
+    expect(view.result.current.visible).toBe(false);
+    expect(view.result.current.options).toEqual([]);
+  });
+
+  it.each(["ctrlKey", "metaKey", "altKey"] as const)(
+    "leaves modified selection keys to the caller for %s",
+    async (modifier) => {
+      const view = setup();
+      view.evaluate("$one");
+      await view.flush();
+      const preventDefault = vi.fn();
+      const handled = view.result.current.handleKeyDown({
+        key: "Enter",
+        [modifier]: true,
+        preventDefault,
+      } as unknown as KeyboardEvent<HTMLTextAreaElement>);
+      expect(handled).toBe(false);
+      expect(preventDefault).not.toHaveBeenCalled();
+      expect(view.onTextareaMutated).not.toHaveBeenCalled();
+      expect(view.result.current.visible).toBe(true);
+    },
+  );
 });
