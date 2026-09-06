@@ -1,12 +1,4 @@
-import {
-  type MutableRefObject,
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useLayoutEffect,
-  useReducer,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useReducer, useRef } from "react";
 
 import type { VirtualizedViewportHandle } from "@/features/shared-session-ui/components/AnsiVirtualizedViewport";
 import type { ScreenMode } from "@/lib/screen-loading";
@@ -15,7 +7,6 @@ type UseScreenScrollParams = {
   paneId: string;
   mode: ScreenMode;
   screenLinesLength: number;
-  isUserScrollingRef: MutableRefObject<boolean>;
   onFlushPending: () => void;
   onClearPending: () => void;
 };
@@ -59,10 +50,11 @@ export const useScreenScroll = ({
   paneId,
   mode,
   screenLinesLength,
-  isUserScrollingRef,
   onFlushPending,
   onClearPending,
 }: UseScreenScrollParams) => {
+  const isUserScrollingRef = useRef(false);
+  const isUserScrolling = useCallback(() => isUserScrollingRef.current, []);
   const [{ isAtBottom, shouldFollowOutput }, dispatchScrollState] = useReducer(
     reduceScreenScrollState,
     initialScreenScrollState,
@@ -163,6 +155,7 @@ export const useScreenScroll = ({
 
   return {
     isAtBottom,
+    isUserScrolling,
     shouldFollowOutput,
     scrollToBottom,
     handleAtBottomChange,

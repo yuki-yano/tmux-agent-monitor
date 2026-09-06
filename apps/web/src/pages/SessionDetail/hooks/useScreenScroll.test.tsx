@@ -13,7 +13,6 @@ describe("useScreenScroll", () => {
   });
 
   it("flushes pending updates when user stops scrolling", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -22,7 +21,6 @@ describe("useScreenScroll", () => {
         paneId: "pane-1",
         mode: "text",
         screenLinesLength: 1,
-        isUserScrollingRef,
         onFlushPending,
         onClearPending,
       }),
@@ -32,7 +30,7 @@ describe("useScreenScroll", () => {
       result.current.handleUserScrollStateChange(true);
     });
 
-    expect(isUserScrollingRef.current).toBe(true);
+    expect(result.current.isUserScrolling()).toBe(true);
     expect(result.current.isAtBottom).toBe(true);
     expect(result.current.shouldFollowOutput).toBe(false);
 
@@ -44,7 +42,6 @@ describe("useScreenScroll", () => {
   });
 
   it("does not flush pending output from a bottom measurement during user scrolling", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
     const { result } = renderHook(() =>
@@ -52,7 +49,6 @@ describe("useScreenScroll", () => {
         paneId: "pane-1",
         mode: "text",
         screenLinesLength: 1,
-        isUserScrollingRef,
         onFlushPending,
         onClearPending,
       }),
@@ -71,7 +67,6 @@ describe("useScreenScroll", () => {
   });
 
   it("keeps force follow after reaching the current bottom until user input", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -80,7 +75,6 @@ describe("useScreenScroll", () => {
         paneId: "pane-1",
         mode: "text",
         screenLinesLength: 2,
-        isUserScrollingRef,
         onFlushPending,
         onClearPending,
       }),
@@ -117,7 +111,6 @@ describe("useScreenScroll", () => {
   });
 
   it("enables force follow at the current bottom for subsequent output", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -126,7 +119,6 @@ describe("useScreenScroll", () => {
         paneId: "pane-1",
         mode: "text",
         screenLinesLength: 2,
-        isUserScrollingRef,
         onFlushPending,
         onClearPending,
       }),
@@ -153,7 +145,6 @@ describe("useScreenScroll", () => {
       return 0;
     });
 
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
     const scrollToEnd = vi.fn();
@@ -165,7 +156,6 @@ describe("useScreenScroll", () => {
           paneId: "pane-1",
           mode,
           screenLinesLength,
-          isUserScrollingRef,
           onFlushPending,
           onClearPending,
         }),
@@ -203,7 +193,6 @@ describe("useScreenScroll", () => {
       return 0;
     });
 
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
     const scrollToEnd = vi.fn();
@@ -215,7 +204,6 @@ describe("useScreenScroll", () => {
           paneId,
           mode: "text",
           screenLinesLength,
-          isUserScrollingRef,
           onFlushPending,
           onClearPending,
         }),
@@ -245,7 +233,6 @@ describe("useScreenScroll", () => {
       return 0;
     });
     const scrollTo = vi.spyOn(HTMLElement.prototype, "scrollTo").mockImplementation(() => {});
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -254,7 +241,6 @@ describe("useScreenScroll", () => {
         paneId: "pane-1",
         mode: "text",
         screenLinesLength: 3,
-        isUserScrollingRef,
         onFlushPending,
         onClearPending,
       });
@@ -270,7 +256,6 @@ describe("useScreenScroll", () => {
   });
 
   it("resets at-bottom state when pane changes", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -280,7 +265,6 @@ describe("useScreenScroll", () => {
           paneId,
           mode: "text",
           screenLinesLength: 0,
-          isUserScrollingRef,
           onFlushPending,
           onClearPending,
         }),
@@ -301,7 +285,6 @@ describe("useScreenScroll", () => {
   });
 
   it("clears transient scrolling state and pending output on pane change", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -311,7 +294,6 @@ describe("useScreenScroll", () => {
           paneId,
           mode: "text",
           screenLinesLength: 2,
-          isUserScrollingRef,
           onFlushPending,
           onClearPending,
         }),
@@ -323,20 +305,19 @@ describe("useScreenScroll", () => {
         scrollTo: vi.fn(),
         scrollHeight: 200,
       } as unknown as HTMLDivElement;
+      result.current.handleUserScrollStateChange(true);
       result.current.scrollToBottom("auto");
-      isUserScrollingRef.current = true;
     });
     expect(result.current.shouldFollowOutput).toBe(true);
 
     rerender({ paneId: "pane-2" });
 
-    expect(isUserScrollingRef.current).toBe(false);
+    expect(result.current.isUserScrolling()).toBe(false);
     expect(result.current.shouldFollowOutput).toBe(false);
     expect(onClearPending).toHaveBeenCalledTimes(2);
   });
 
   it("clears transient scrolling state and follow intent on mode change", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -346,7 +327,6 @@ describe("useScreenScroll", () => {
           paneId: "pane-1",
           mode,
           screenLinesLength: 2,
-          isUserScrollingRef,
           onFlushPending,
           onClearPending,
         }),
@@ -357,20 +337,19 @@ describe("useScreenScroll", () => {
       result.current.viewportRef.current = {
         scrollToEnd: vi.fn(),
       } as unknown as typeof result.current.viewportRef.current;
+      result.current.handleUserScrollStateChange(true);
       result.current.scrollToBottom("auto");
-      isUserScrollingRef.current = true;
     });
     expect(result.current.shouldFollowOutput).toBe(true);
 
     rerender({ mode: "image" as ScreenMode });
 
-    expect(isUserScrollingRef.current).toBe(false);
+    expect(result.current.isUserScrolling()).toBe(false);
     expect(result.current.shouldFollowOutput).toBe(false);
     expect(onClearPending).toHaveBeenCalledTimes(2);
   });
 
   it("clears transient state on unmount", () => {
-    const isUserScrollingRef = { current: false };
     const onFlushPending = vi.fn();
     const onClearPending = vi.fn();
 
@@ -379,7 +358,6 @@ describe("useScreenScroll", () => {
         paneId: "pane-1",
         mode: "text",
         screenLinesLength: 2,
-        isUserScrollingRef,
         onFlushPending,
         onClearPending,
       }),
@@ -390,18 +368,17 @@ describe("useScreenScroll", () => {
         scrollTo: vi.fn(),
         scrollHeight: 200,
       } as unknown as HTMLDivElement;
+      result.current.handleUserScrollStateChange(true);
       result.current.scrollToBottom("auto");
-      isUserScrollingRef.current = true;
     });
 
     unmount();
 
-    expect(isUserScrollingRef.current).toBe(false);
+    expect(result.current.isUserScrolling()).toBe(false);
     expect(onClearPending).toHaveBeenCalledTimes(2);
   });
 
   it("uses the latest clear callback on unmount without resetting the same context", () => {
-    const isUserScrollingRef = { current: false };
     const firstOnClearPending = vi.fn();
     const latestOnClearPending = vi.fn();
 
@@ -411,7 +388,6 @@ describe("useScreenScroll", () => {
           paneId: "pane-1",
           mode: "text",
           screenLinesLength: 0,
-          isUserScrollingRef,
           onFlushPending: vi.fn(),
           onClearPending,
         }),
@@ -430,16 +406,14 @@ describe("useScreenScroll", () => {
   });
 
   it("runs each transient cleanup once during StrictMode replay and final unmount", () => {
-    const isUserScrollingRef = { current: false };
     const onClearPending = vi.fn();
 
-    const { unmount } = renderHook(
+    const { result, unmount } = renderHook(
       () =>
         useScreenScroll({
           paneId: "pane-1",
           mode: "text",
           screenLinesLength: 0,
-          isUserScrollingRef,
           onFlushPending: vi.fn(),
           onClearPending,
         }),
@@ -447,11 +421,11 @@ describe("useScreenScroll", () => {
     );
 
     expect(onClearPending).toHaveBeenCalledTimes(2);
-    isUserScrollingRef.current = true;
+    act(() => result.current.handleUserScrollStateChange(true));
 
     unmount();
 
-    expect(isUserScrollingRef.current).toBe(false);
+    expect(result.current.isUserScrolling()).toBe(false);
     expect(onClearPending).toHaveBeenCalledTimes(3);
   });
 });

@@ -16,11 +16,10 @@ describe("useScreenMode", () => {
     );
   };
 
-  it("starts loading and updates refs when switching modes while connected", () => {
+  it("starts loading and clears the delta base when switching modes while connected", () => {
     const dispatchScreenLoading = vi.fn();
     const modeSwitchRef = { current: null as "text" | "image" | null };
-    const cursorRef = { current: "cursor-1" as string | null };
-    const screenLinesRef = { current: ["line-1"] };
+    const resetDeltaBase = vi.fn();
 
     const wrapper = createWrapper();
     const { result } = renderHook(
@@ -30,8 +29,7 @@ describe("useScreenMode", () => {
           paneId: "pane-1",
           dispatchScreenLoading,
           modeSwitchRef,
-          cursorRef,
-          screenLinesRef,
+          resetDeltaBase,
         }),
       { wrapper },
     );
@@ -42,16 +40,14 @@ describe("useScreenMode", () => {
 
     expect(result.current.mode).toBe("image");
     expect(modeSwitchRef.current).toBe("image");
-    expect(cursorRef.current).toBeNull();
-    expect(screenLinesRef.current).toEqual([]);
+    expect(resetDeltaBase).toHaveBeenCalledTimes(1);
     expect(dispatchScreenLoading).toHaveBeenCalledWith({ type: "start", mode: "image" });
   });
 
   it("resets loading when disconnected", () => {
     const dispatchScreenLoading = vi.fn();
     const modeSwitchRef = { current: "text" as "text" | "image" | null };
-    const cursorRef = { current: "cursor-1" as string | null };
-    const screenLinesRef = { current: ["line-1"] };
+    const resetDeltaBase = vi.fn();
 
     const wrapper = createWrapper();
     const { result } = renderHook(
@@ -61,8 +57,7 @@ describe("useScreenMode", () => {
           paneId: "pane-1",
           dispatchScreenLoading,
           modeSwitchRef,
-          cursorRef,
-          screenLinesRef,
+          resetDeltaBase,
         }),
       { wrapper },
     );
@@ -73,16 +68,14 @@ describe("useScreenMode", () => {
 
     expect(result.current.mode).toBe("image");
     expect(modeSwitchRef.current).toBeNull();
-    expect(cursorRef.current).toBe("cursor-1");
-    expect(screenLinesRef.current).toEqual(["line-1"]);
+    expect(resetDeltaBase).not.toHaveBeenCalled();
     expect(dispatchScreenLoading).toHaveBeenCalledWith({ type: "reset" });
   });
 
   it("updates mode loaded state and its imperative ref in the same action", () => {
     const dispatchScreenLoading = vi.fn();
     const modeSwitchRef = { current: null as "text" | "image" | null };
-    const cursorRef = { current: null as string | null };
-    const screenLinesRef = { current: [] as string[] };
+    const resetDeltaBase = vi.fn();
 
     const wrapper = createWrapper();
     const { result } = renderHook(
@@ -92,8 +85,7 @@ describe("useScreenMode", () => {
           paneId: "pane-1",
           dispatchScreenLoading,
           modeSwitchRef,
-          cursorRef,
-          screenLinesRef,
+          resetDeltaBase,
         }),
       { wrapper },
     );
@@ -118,8 +110,7 @@ describe("useScreenMode", () => {
   it("resets mode to text when pane changes", () => {
     const dispatchScreenLoading = vi.fn();
     const modeSwitchRef = { current: null as "text" | "image" | null };
-    const cursorRef = { current: null as string | null };
-    const screenLinesRef = { current: [] as string[] };
+    const resetDeltaBase = vi.fn();
 
     const wrapper = createWrapper();
     const { result, rerender } = renderHook(
@@ -129,8 +120,7 @@ describe("useScreenMode", () => {
           paneId,
           dispatchScreenLoading,
           modeSwitchRef,
-          cursorRef,
-          screenLinesRef,
+          resetDeltaBase,
         }),
       {
         wrapper,

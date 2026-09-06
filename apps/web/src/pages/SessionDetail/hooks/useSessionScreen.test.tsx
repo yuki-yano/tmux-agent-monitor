@@ -368,4 +368,101 @@ describe("useSessionScreen", () => {
       expect(result.current.screenLines).toEqual(["first", "second", "third"]);
     });
   });
+
+  it("advances the delta base and cursor for every buffered response before displaying the latest text", async () => {
+    const base = {
+      ok: true,
+      paneId: "pane-1",
+      mode: "text",
+      capturedAt: new Date(0).toISOString(),
+    };
+    const requestScreen = vi
+      .fn()
+      .mockResolvedValueOnce({ ...base, full: true, screen: "a\nb", cursor: "cursor-1" })
+      .mockResolvedValueOnce({
+        ...base,
+        full: false,
+        deltas: [{ start: 2, deleteCount: 0, insertLines: ["c"] }],
+        cursor: "cursor-2",
+      })
+      .mockResolvedValueOnce({
+        ...base,
+        full: false,
+        deltas: [{ start: 2, deleteCount: 1, insertLines: ["C", "D"] }],
+        cursor: "cursor-3",
+      })
+      .mockResolvedValueOnce({ ...base, full: false, deltas: [], cursor: "cursor-4" });
+    const { result } = renderHook(() => useSessionScreen(buildArgs({ requestScreen })), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.screenLines).toEqual(["a", "b"]));
+    act(() => result.current.handleUserScrollStateChange(true));
+    await act(async () => result.current.refreshScreen());
+    expect(requestScreen).toHaveBeenLastCalledWith("pane-1", { mode: "text", cursor: "cursor-1" });
+    expect(result.current.screenLines).toEqual(["a", "b"]);
+    await act(async () => result.current.refreshScreen());
+    expect(requestScreen).toHaveBeenLastCalledWith("pane-1", { mode: "text", cursor: "cursor-2" });
+    await act(async () => result.current.refreshScreen());
+    expect(requestScreen).toHaveBeenLastCalledWith("pane-1", { mode: "text", cursor: "cursor-3" });
+    expect(result.current.screenLines).toEqual(["a", "b"]);
+    act(() => result.current.handleUserScrollStateChange(false));
+    await waitFor(() => expect(result.current.screenLines).toEqual(["a", "b", "C", "D"]));
+    expect(result.current.isScreenLoading).toBe(false);
+  });
+
+  it("updates images during user scrolling without buffering the image", async () => {
+    let imageCount = 0;
+    const requestScreen = vi.fn<Parameters<typeof useSessionScreen>[0]["requestScreen"]>(
+      async (_pane, options) => ({
+        ok: true,
+        paneId: "pane-1",
+        mode: options.mode === "image" ? "image" : "text",
+        capturedAt: new Date(0).toISOString(),
+        ...(options.mode === "image"
+          ? { imageBase64: `image-${++imageCount}` }
+          : { screen: "text", cursor: "text-cursor" }),
+      }),
+    );
+    const { result } = renderHook(() => useSessionScreen(buildArgs({ requestScreen })), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.screenLines).toEqual(["text"]));
+    act(() => result.current.handleModeChange("image"));
+    await waitFor(() => expect(result.current.imageBase64).toBe("image-1"));
+    act(() => result.current.handleUserScrollStateChange(true));
+    await act(async () => result.current.refreshScreen());
+    expect(requestScreen).toHaveBeenLastCalledWith("pane-1", { mode: "image" });
+    expect(result.current.imageBase64).toBe("image-2");
+    expect(result.current.screenLines).toEqual([]);
+    act(() => result.current.handleUserScrollStateChange(false));
+    expect(result.current.imageBase64).toBe("image-2");
+  });
+
+  it("requests a full screen after an invalid delta while retaining the displayed text", async () => {
+    const base = {
+      ok: true,
+      paneId: "pane-1",
+      mode: "text",
+      capturedAt: new Date(0).toISOString(),
+    };
+    const requestScreen = vi
+      .fn()
+      .mockResolvedValueOnce({ ...base, full: true, screen: "original", cursor: "cursor-1" })
+      .mockResolvedValueOnce({
+        ...base,
+        full: false,
+        deltas: [{ start: 9, deleteCount: 1, insertLines: ["invalid"] }],
+        cursor: "invalid-cursor",
+      })
+      .mockResolvedValueOnce({ ...base, full: true, screen: "recovered", cursor: "cursor-2" });
+    const { result } = renderHook(() => useSessionScreen(buildArgs({ requestScreen })), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.screenLines).toEqual(["original"]));
+    await act(async () => result.current.refreshScreen());
+    expect(result.current.screenLines).toEqual(["original"]);
+    await act(async () => result.current.refreshScreen());
+    expect(requestScreen).toHaveBeenLastCalledWith("pane-1", { mode: "text" });
+    expect(result.current.screenLines).toEqual(["recovered"]);
+  });
 });

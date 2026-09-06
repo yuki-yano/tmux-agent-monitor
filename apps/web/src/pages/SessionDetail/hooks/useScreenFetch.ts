@@ -3,8 +3,6 @@ import { useAtom } from "jotai";
 import {
   type Dispatch,
   type MutableRefObject,
-  type SetStateAction,
-  startTransition,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -13,13 +11,13 @@ import {
 
 import { API_ERROR_MESSAGES } from "@/lib/api-messages";
 import { resolveUnknownErrorMessage } from "@/lib/api-utils";
-import { applyScreenDeltas } from "@/lib/screen-delta";
 import type { ScreenLoadingEvent, ScreenMode } from "@/lib/screen-loading";
 import { resolveScreenPollIntervalMs } from "@/lib/screen-polling";
 import { useVisibilityPolling } from "@/lib/use-visibility-polling";
 
 import { screenErrorAtom, screenFallbackReasonAtom } from "../atoms/screenAtoms";
 import { DISCONNECTED_MESSAGE } from "../sessionDetailUtils";
+import type { ScreenContent } from "./screen-content";
 import {
   type ScreenFetchLifecycleAction,
   type ScreenFetchLifecycleAttempt,
@@ -35,11 +33,6 @@ import {
 import { useScreenPollingPauseReason } from "./useScreenPollingPauseReason";
 import { type ScreenStreamTransport, useScreenStream } from "./useScreenStream";
 
-const normalizeScreenText = (text: string) => text.replace(/\r\n/g, "\n");
-
-const shouldUseFullResponse = (response: ScreenResponse) =>
-  response.full || response.screen != null || !response.deltas;
-
 const buildScreenOptions = (mode: ScreenMode, cursor: string | null) => {
   const options: { mode: ScreenMode; cursor?: string } = { mode };
   if (mode === "text" && cursor) {
@@ -47,13 +40,6 @@ const buildScreenOptions = (mode: ScreenMode, cursor: string | null) => {
   }
   return options;
 };
-
-// Suppress renders while the user is actively scrolling (any axis, even at the
-// bottom): committing screen updates mid-gesture triggers stick-to-bottom
-// scrolls that cancel scroll momentum and clamp horizontal position.
-// Pending screens are flushed when the user-scroll state ends.
-const shouldSuppressTextRender = (mode: ScreenMode, isUserScrolling: boolean) =>
-  mode === "text" && isUserScrolling;
 
 type UseScreenFetchParams = {
   paneId: string;
@@ -64,17 +50,10 @@ type UseScreenFetchParams = {
     options: { lines?: number; mode?: "text" | "image"; cursor?: string },
   ) => Promise<ScreenResponse>;
   mode: ScreenMode;
-  isUserScrollingRef: MutableRefObject<boolean>;
+  isUserScrolling: () => boolean;
+  content: ScreenContent;
   modeLoadedRef: MutableRefObject<{ text: boolean; image: boolean }>;
   modeSwitchRef: MutableRefObject<ScreenMode | null>;
-  screenRef: MutableRefObject<string>;
-  imageRef: MutableRefObject<string | null>;
-  cursorRef: MutableRefObject<string | null>;
-  screenLinesRef: MutableRefObject<string[]>;
-  pendingScreenRef: MutableRefObject<string | null>;
-  setScreen: Dispatch<SetStateAction<string>>;
-  setImageBase64: Dispatch<SetStateAction<string | null>>;
-  setScreenContentContextKey: Dispatch<SetStateAction<string | null>>;
   dispatchScreenLoading: Dispatch<ScreenLoadingEvent>;
   onModeLoaded: (mode: ScreenMode) => void;
   /** Base path for API calls (e.g. "/api" or "https://host/api"). Defaults to "/api". */
@@ -85,55 +64,16 @@ type UseScreenFetchParams = {
   streamFallbackDelayMs?: number;
 };
 
-type CommitTextScreenRefsParams = {
-  nextScreen: string;
-  nextLines: string[];
-  nextCursor: string | null;
-  pendingScreen: string | null;
-  screenLinesRef: MutableRefObject<string[]>;
-  cursorRef: MutableRefObject<string | null>;
-  screenRef: MutableRefObject<string>;
-  imageRef: MutableRefObject<string | null>;
-  pendingScreenRef: MutableRefObject<string | null>;
-};
-
-const commitTextScreenRefs = ({
-  nextScreen,
-  nextLines,
-  nextCursor,
-  pendingScreen,
-  screenLinesRef,
-  cursorRef,
-  screenRef,
-  imageRef,
-  pendingScreenRef,
-}: CommitTextScreenRefsParams) => {
-  screenLinesRef.current = nextLines;
-  cursorRef.current = nextCursor;
-  pendingScreenRef.current = pendingScreen;
-  if (pendingScreen == null) {
-    screenRef.current = nextScreen;
-    imageRef.current = null;
-  }
-};
-
 export const useScreenFetch = ({
   paneId,
   connected,
   connectionIssue,
   requestScreen,
   mode,
-  isUserScrollingRef,
+  isUserScrolling,
+  content,
   modeLoadedRef,
   modeSwitchRef,
-  screenRef,
-  imageRef,
-  cursorRef,
-  screenLinesRef,
-  pendingScreenRef,
-  setScreen,
-  setImageBase64,
-  setScreenContentContextKey,
   dispatchScreenLoading,
   onModeLoaded,
   apiBasePath = "/api",
@@ -192,119 +132,6 @@ export const useScreenFetch = ({
     return true;
   }, []);
 
-  const updateImageScreen = useCallback(
-    (nextImage: string | null, immediateCommit: boolean) => {
-      const shouldCommitImage = imageRef.current !== nextImage || screenRef.current !== "";
-      const commitImageState = () => {
-        if (shouldCommitImage) {
-          setImageBase64(nextImage);
-          setScreen("");
-        }
-        setScreenContentContextKey(screenContextKey);
-      };
-      if (immediateCommit) {
-        commitImageState();
-      } else {
-        startTransition(commitImageState);
-      }
-      if (shouldCommitImage) {
-        imageRef.current = nextImage;
-        screenRef.current = "";
-        pendingScreenRef.current = null;
-      }
-    },
-    [
-      imageRef,
-      pendingScreenRef,
-      screenContextKey,
-      screenRef,
-      setImageBase64,
-      setScreen,
-      setScreenContentContextKey,
-    ],
-  );
-
-  const updateTextScreen = useCallback(
-    (
-      nextScreen: string,
-      nextLines: string[],
-      nextCursor: string | null,
-      suppressRender: boolean,
-      immediateCommit: boolean,
-    ) => {
-      if (suppressRender) {
-        commitTextScreenRefs({
-          nextScreen,
-          nextLines,
-          nextCursor,
-          pendingScreen: nextScreen,
-          screenLinesRef,
-          cursorRef,
-          screenRef,
-          imageRef,
-          pendingScreenRef,
-        });
-        return;
-      }
-      const shouldCommitScreen = screenRef.current !== nextScreen || imageRef.current != null;
-      commitTextScreenRefs({
-        nextScreen,
-        nextLines,
-        nextCursor,
-        pendingScreen: null,
-        screenLinesRef,
-        cursorRef,
-        screenRef,
-        imageRef,
-        pendingScreenRef,
-      });
-      const commitScreenState = () => {
-        if (shouldCommitScreen) {
-          setScreen(nextScreen);
-          setImageBase64(null);
-        }
-        setScreenContentContextKey(screenContextKey);
-      };
-      if (immediateCommit) {
-        commitScreenState();
-      } else {
-        startTransition(commitScreenState);
-      }
-    },
-    [
-      cursorRef,
-      imageRef,
-      pendingScreenRef,
-      screenContextKey,
-      screenLinesRef,
-      screenRef,
-      setImageBase64,
-      setScreen,
-      setScreenContentContextKey,
-    ],
-  );
-
-  const applyTextResponse = useCallback(
-    (response: ScreenResponse, suppressRender: boolean, immediateCommit: boolean) => {
-      const nextCursor = response.cursor ?? null;
-      if (shouldUseFullResponse(response)) {
-        const nextScreen = response.screen ?? "";
-        const nextLines = normalizeScreenText(nextScreen).split("\n");
-        updateTextScreen(nextScreen, nextLines, nextCursor, suppressRender, immediateCommit);
-        return;
-      }
-      const applied = applyScreenDeltas(screenLinesRef.current, response.deltas ?? []);
-      if (!applied.ok) {
-        cursorRef.current = null;
-        return;
-      }
-      const nextLines = applied.lines;
-      const nextScreen = nextLines.join("\n");
-      updateTextScreen(nextScreen, nextLines, nextCursor, suppressRender, immediateCommit);
-    },
-    [cursorRef, screenLinesRef, updateTextScreen],
-  );
-
   const markCurrentModeLoaded = useCallback(() => {
     // Advance the shared ref before scheduling parent state so a fallback
     // refresh cannot reopen loading in the render-to-effect synchronization gap.
@@ -335,8 +162,7 @@ export const useScreenFetch = ({
   );
 
   const beginRefreshAttempt = useCallback((): ScreenFetchLifecycleAttempt | null => {
-    const hasCurrentData =
-      mode === "image" ? imageRef.current != null : screenRef.current.length > 0;
+    const hasCurrentData = content.hasContent(mode);
     const nextLifecycle = applyRefreshLifecycleAction({
       type: "request",
       contextKey: screenContextKey,
@@ -357,17 +183,16 @@ export const useScreenFetch = ({
   }, [
     applyRefreshLifecycleAction,
     dispatchScreenLoading,
-    imageRef,
+    content,
     mode,
     modeLoadedRef,
     modeSwitchRef,
-    screenRef,
     screenContextKey,
     setError,
   ]);
 
   const applyRefreshResponse = useCallback(
-    (response: ScreenResponse, suppressRender: boolean, immediateCommit: boolean) => {
+    (response: ScreenResponse, immediateCommit: boolean) => {
       if (!acceptCurrentResponse(response)) {
         return;
       }
@@ -376,20 +201,19 @@ export const useScreenFetch = ({
         return;
       }
       setFallbackReason(response.fallbackReason ?? null);
-      if (response.mode === "image") {
-        updateImageScreen(response.imageBase64 ?? null, immediateCommit);
-      } else {
-        applyTextResponse(response, suppressRender, immediateCommit);
-      }
+      content.applyResponse(response, {
+        isUserScrolling: isUserScrolling(),
+        immediate: immediateCommit,
+      });
       markCurrentModeLoaded();
     },
     [
       acceptCurrentResponse,
-      applyTextResponse,
+      content,
+      isUserScrolling,
       markCurrentModeLoaded,
       setError,
       setFallbackReason,
-      updateImageScreen,
     ],
   );
 
@@ -423,22 +247,21 @@ export const useScreenFetch = ({
       requestId: attempt.requestId,
       contextKey: attempt.contextKey,
       sseGeneration: sseGenerationRef.current,
-      cursor: cursorRef.current,
+      cursor: content.getCursor(),
     };
     const isCurrentAttempt = () =>
       isCurrentScreenRequest(requestBasis, {
         requestId: refreshLifecycleRef.current.inFlight?.id ?? null,
         contextKey: currentContextRef.current.key,
         sseGeneration: sseGenerationRef.current,
-        cursor: cursorRef.current,
+        cursor: content.getCursor(),
       });
     try {
       const response = await requestScreen(paneId, buildScreenOptions(mode, requestBasis.cursor));
       if (!isCurrentAttempt()) {
         return;
       }
-      const suppressRender = shouldSuppressTextRender(mode, isUserScrollingRef.current);
-      applyRefreshResponse(response, suppressRender, attempt.shouldShowLoading);
+      applyRefreshResponse(response, attempt.shouldShowLoading);
     } catch (err) {
       if (isCurrentAttempt()) {
         setError(resolveUnknownErrorMessage(err, API_ERROR_MESSAGES.screenRequestFailed));
@@ -450,9 +273,8 @@ export const useScreenFetch = ({
     applyRefreshResponse,
     beginRefreshAttempt,
     connected,
-    cursorRef,
+    content,
     finishRefreshAttempt,
-    isUserScrollingRef,
     mode,
     paneId,
     requestScreen,
@@ -485,20 +307,22 @@ export const useScreenFetch = ({
       setError(null);
       setFallbackReason(response.fallbackReason ?? null);
       const isInitialScreen = !modeLoadedRef.current[mode];
-      const suppressRender = shouldSuppressTextRender(mode, isUserScrollingRef.current);
       // The first stream frame replaces the blocking loading state and must not
       // be deferred behind later screen events. Subsequent updates stay in a
       // transition so continuous output does not interrupt interaction.
-      applyTextResponse(response, suppressRender, isInitialScreen);
+      content.applyResponse(response, {
+        isUserScrolling: isUserScrolling(),
+        immediate: isInitialScreen,
+      });
       markCurrentModeLoaded();
       dispatchScreenLoading({ type: "finish", mode });
     },
     [
       acceptCurrentResponse,
       applyRefreshLifecycleAction,
-      applyTextResponse,
+      content,
       dispatchScreenLoading,
-      isUserScrollingRef,
+      isUserScrolling,
       markCurrentModeLoaded,
       mode,
       modeLoadedRef,
@@ -524,9 +348,9 @@ export const useScreenFetch = ({
     const prev = prevTransportRef.current;
     prevTransportRef.current = transport;
     if (prev === "sse" && transport !== "sse") {
-      cursorRef.current = null;
+      content.invalidateCursor();
     }
-  }, [cursorRef, transport]);
+  }, [content, transport]);
 
   // False positive: initial and parameter-change screen loads are lifecycle IO,
   // not render-time data flowing back to the parent.

@@ -10,8 +10,7 @@ type UseScreenModeParams = {
   paneId: string;
   dispatchScreenLoading: Dispatch<ScreenLoadingEvent>;
   modeSwitchRef: MutableRefObject<ScreenMode | null>;
-  cursorRef: MutableRefObject<string | null>;
-  screenLinesRef: MutableRefObject<string[]>;
+  resetDeltaBase: () => void;
 };
 
 const initialModeLoaded = { text: false, image: false };
@@ -21,8 +20,7 @@ export const useScreenMode = ({
   paneId,
   dispatchScreenLoading,
   modeSwitchRef,
-  cursorRef,
-  screenLinesRef,
+  resetDeltaBase,
 }: UseScreenModeParams) => {
   const [mode, setMode] = useAtom(screenModeAtom);
   const [modeLoaded, setModeLoaded] = useAtom(screenModeLoadedAtom);
@@ -66,13 +64,12 @@ export const useScreenMode = ({
         setMode(value);
         return;
       }
-      cursorRef.current = null;
-      screenLinesRef.current = [];
+      resetDeltaBase();
       modeSwitchRef.current = value;
       dispatchScreenLoading({ type: "start", mode: value });
       setMode(value);
     },
-    [connected, dispatchScreenLoading, mode, modeSwitchRef, cursorRef, screenLinesRef, setMode],
+    [connected, dispatchScreenLoading, mode, modeSwitchRef, resetDeltaBase, setMode],
   );
 
   return {

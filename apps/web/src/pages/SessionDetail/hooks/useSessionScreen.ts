@@ -1,6 +1,6 @@
 import type { HighlightCorrectionConfig, ScreenResponse } from "@vde-monitor/shared";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { renderAnsiLines } from "@/lib/ansi";
 import {
@@ -20,6 +20,7 @@ import {
   screenTextAtom,
 } from "../atoms/screenAtoms";
 import { DISCONNECTED_MESSAGE } from "../sessionDetailUtils";
+import { createScreenContent } from "./screen-content";
 import { useScreenFetch } from "./useScreenFetch";
 import { useScreenMode } from "./useScreenMode";
 import { useScreenScroll } from "./useScreenScroll";
@@ -64,13 +65,10 @@ export const useSessionScreen = ({
   const mode = useAtomValue(screenModeAtom);
   const { wrapMode, toggleWrapMode } = useScreenWrapMode();
 
-  const isUserScrollingRef = useRef(false);
-  const pendingScreenRef = useRef<string | null>(null);
-  const screenRef = useRef<string>("");
-  const imageRef = useRef<string | null>(null);
+  const [content] = useState(() =>
+    createScreenContent({ setScreen, setImageBase64, setScreenContentContextKey }),
+  );
   const modeSwitchRef = useRef<ScreenMode | null>(null);
-  const cursorRef = useRef<string | null>(null);
-  const screenLinesRef = useRef<string[]>([]);
   const currentScreenContextKey = `${paneId}\0${mode}`;
   const hasCurrentScreenContent = screenContentContextKey === currentScreenContextKey;
 
@@ -86,26 +84,8 @@ export const useSessionScreen = ({
     paneId,
     dispatchScreenLoading,
     modeSwitchRef,
-    cursorRef,
-    screenLinesRef,
+    resetDeltaBase: content.resetDeltaBase,
   });
-
-  const flushPendingScreen = useCallback(() => {
-    const pending = pendingScreenRef.current;
-    if (pending == null) return;
-    pendingScreenRef.current = null;
-    startTransition(() => {
-      setScreen(pending);
-      setImageBase64(null);
-      setScreenContentContextKey(currentScreenContextKey);
-    });
-    screenRef.current = pending;
-    imageRef.current = null;
-  }, [currentScreenContextKey, setImageBase64, setScreen, setScreenContentContextKey]);
-
-  const clearPendingScreen = useCallback(() => {
-    pendingScreenRef.current = null;
-  }, []);
 
   const screenLines = useMemo(() => {
     if (mode !== "text" || !hasCurrentScreenContent) {
@@ -134,6 +114,7 @@ export const useSessionScreen = ({
 
   const {
     isAtBottom,
+    isUserScrolling,
     shouldFollowOutput,
     scrollToBottom,
     handleAtBottomChange,
@@ -144,9 +125,8 @@ export const useSessionScreen = ({
     paneId,
     mode,
     screenLinesLength: screenLines.length,
-    isUserScrollingRef,
-    onFlushPending: flushPendingScreen,
-    onClearPending: clearPendingScreen,
+    onFlushPending: content.flushPending,
+    onClearPending: content.clearPending,
   });
 
   const apiBasePath = useMemo(() => {
@@ -161,17 +141,10 @@ export const useSessionScreen = ({
       connectionIssue,
       requestScreen,
       mode,
-      isUserScrollingRef,
+      isUserScrolling,
+      content,
       modeLoadedRef,
       modeSwitchRef,
-      screenRef,
-      imageRef,
-      cursorRef,
-      screenLinesRef,
-      pendingScreenRef,
-      setScreen,
-      setImageBase64,
-      setScreenContentContextKey,
       dispatchScreenLoading,
       onModeLoaded: markModeLoaded,
       apiBasePath,
@@ -187,30 +160,15 @@ export const useSessionScreen = ({
   const isScreenLoading =
     (screenLoadingState.loading && screenLoadingState.mode === mode) || isInitialModeLoading;
 
-  // Reset pane-scoped refs before useScreenFetch starts its passive initial request.
+  // Reset pane content before useScreenFetch starts its passive initial request.
   // Otherwise a tab switch can send the previous pane's cursor and discard the response.
   useLayoutEffect(() => {
     setScreenLoadingState(initialScreenLoadingState);
     modeSwitchRef.current = null;
-    screenRef.current = "";
-    imageRef.current = null;
-    cursorRef.current = null;
-    screenLinesRef.current = [];
-    pendingScreenRef.current = null;
-    setScreen("");
-    setImageBase64(null);
-    setScreenContentContextKey(null);
+    content.reset();
     setScreenFallbackReason(null);
     setScreenError(null);
-  }, [
-    paneId,
-    setImageBase64,
-    setScreen,
-    setScreenContentContextKey,
-    setScreenError,
-    setScreenFallbackReason,
-    setScreenLoadingState,
-  ]);
+  }, [paneId, content, setScreenError, setScreenFallbackReason, setScreenLoadingState]);
 
   useEffect(() => {
     if (connected) {

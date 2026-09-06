@@ -23,6 +23,7 @@ import {
   screenTextAtom,
 } from "../atoms/screenAtoms";
 import { DISCONNECTED_MESSAGE } from "../sessionDetailUtils";
+import { createScreenContent } from "./screen-content";
 import { useScreenFetch } from "./useScreenFetch";
 
 describe("useScreenFetch", () => {
@@ -31,7 +32,12 @@ describe("useScreenFetch", () => {
     vi.unstubAllGlobals();
   });
 
-  const setup = (overrides?: Partial<Parameters<typeof useScreenFetch>[0]>) => {
+  type SetupOverrides = Partial<Parameters<typeof useScreenFetch>[0]> &
+    Partial<Parameters<typeof createScreenContent>[0]> & {
+      initialScreen?: string;
+      initialCursor?: string;
+    };
+  const setup = (overrides?: SetupOverrides) => {
     const requestScreen = vi.fn().mockResolvedValue({
       ok: true,
       paneId: "pane-1",
@@ -40,23 +46,36 @@ describe("useScreenFetch", () => {
       screen: "hello",
     });
 
+    const setScreen = overrides?.setScreen ?? vi.fn();
+    const setImageBase64 = overrides?.setImageBase64 ?? vi.fn();
+    const setScreenContentContextKey = overrides?.setScreenContentContextKey ?? vi.fn();
+    const content = createScreenContent({ setScreen, setImageBase64, setScreenContentContextKey });
+    if (overrides?.initialScreen != null || overrides?.initialCursor != null) {
+      content.applyResponse(
+        {
+          ok: true,
+          paneId: "pane-1",
+          mode: "text",
+          capturedAt: new Date(0).toISOString(),
+          screen: overrides.initialScreen ?? "",
+          cursor: overrides.initialCursor,
+        },
+        { isUserScrolling: false, immediate: true },
+      );
+    }
     const params = {
       paneId: "pane-1",
       connected: true,
       connectionIssue: null,
       requestScreen,
       mode: "text" as const,
-      isUserScrollingRef: { current: false },
+      isUserScrolling: () => false,
       modeLoadedRef: { current: { text: false, image: false } },
       modeSwitchRef: { current: null as "text" | "image" | null },
-      screenRef: { current: "" },
-      imageRef: { current: null as string | null },
-      cursorRef: { current: null as string | null },
-      screenLinesRef: { current: [] as string[] },
-      pendingScreenRef: { current: null as string | null },
-      setScreen: vi.fn(),
-      setImageBase64: vi.fn(),
-      setScreenContentContextKey: vi.fn(),
+      content,
+      setScreen,
+      setImageBase64,
+      setScreenContentContextKey,
       dispatchScreenLoading: vi.fn(),
       onModeLoaded: vi.fn(),
       ...overrides,
@@ -74,7 +93,7 @@ describe("useScreenFetch", () => {
 
   it("requests screen with cursor and marks mode loaded", async () => {
     const { result, params, requestScreen } = setup({
-      cursorRef: { current: "cursor-1" },
+      initialCursor: "cursor-1",
     });
 
     await waitFor(() => {
@@ -116,9 +135,9 @@ describe("useScreenFetch", () => {
           complete = resolve;
         }),
     );
-    const { params } = setup({ requestScreen, cursorRef: { current: "old-base" } });
+    const { params } = setup({ requestScreen, initialCursor: "old-base" });
     await waitFor(() => expect(requestScreen).toHaveBeenCalledTimes(1));
-    params.cursorRef.current = "new-base";
+    params.content.resetDeltaBase();
     await act(async () =>
       complete({
         ok: true,
@@ -130,7 +149,7 @@ describe("useScreenFetch", () => {
       }),
     );
     expect(params.setScreen).not.toHaveBeenCalled();
-    expect(params.cursorRef.current).toBe("new-base");
+    expect(params.content.getCursor()).toBeNull();
   });
 
   it("does not advance the accepted timestamp for a failed capture", async () => {
@@ -170,7 +189,7 @@ describe("useScreenFetch", () => {
     setup({
       requestScreen,
       modeLoadedRef: { current: { text: true, image: true } },
-      screenRef: { current: "" },
+      initialScreen: "",
       dispatchScreenLoading,
     });
 
@@ -188,7 +207,7 @@ describe("useScreenFetch", () => {
     setup({
       requestScreen,
       modeLoadedRef: { current: { text: true, image: true } },
-      screenRef: { current: "existing-screen" },
+      initialScreen: "existing-screen",
       dispatchScreenLoading,
     });
 
@@ -217,6 +236,11 @@ describe("useScreenFetch", () => {
 
     const setScreen = vi.fn();
     const setImageBase64 = vi.fn();
+    const content = createScreenContent({
+      setScreen,
+      setImageBase64,
+      setScreenContentContextKey: vi.fn(),
+    });
 
     const { result, rerender } = renderHook(
       (mode: ScreenMode) =>
@@ -226,17 +250,10 @@ describe("useScreenFetch", () => {
           connectionIssue: null,
           requestScreen,
           mode,
-          isUserScrollingRef: { current: false },
+          isUserScrolling: () => false,
           modeLoadedRef: { current: { text: false, image: false } },
           modeSwitchRef: { current: null },
-          screenRef: { current: "" },
-          imageRef: { current: null },
-          cursorRef: { current: null },
-          screenLinesRef: { current: [] },
-          pendingScreenRef: { current: null },
-          setScreen,
-          setImageBase64,
-          setScreenContentContextKey: vi.fn(),
+          content,
           dispatchScreenLoading: vi.fn(),
           onModeLoaded: vi.fn(),
         }),
@@ -294,23 +311,20 @@ describe("useScreenFetch", () => {
         }),
       );
     const setScreen = vi.fn();
-    const screenRef = { current: "" };
+    const content = createScreenContent({
+      setScreen,
+      setImageBase64: vi.fn(),
+      setScreenContentContextKey: vi.fn(),
+    });
     const sharedParams = {
       connected: true,
       connectionIssue: null,
       requestScreen,
       mode: "text" as const,
-      isUserScrollingRef: { current: false },
+      isUserScrolling: () => false,
       modeLoadedRef: { current: { text: false, image: false } },
       modeSwitchRef: { current: null },
-      screenRef,
-      imageRef: { current: null },
-      cursorRef: { current: null },
-      screenLinesRef: { current: [] as string[] },
-      pendingScreenRef: { current: null as string | null },
-      setScreen,
-      setImageBase64: vi.fn(),
-      setScreenContentContextKey: vi.fn(),
+      content,
       dispatchScreenLoading: vi.fn(),
       onModeLoaded: vi.fn(),
     };
@@ -347,7 +361,6 @@ describe("useScreenFetch", () => {
         screen: "new-pane",
       });
     });
-    expect(screenRef.current).toBe("new-pane");
     expect(setScreen).toHaveBeenCalledWith("new-pane");
   });
 
@@ -384,23 +397,20 @@ describe("useScreenFetch", () => {
       connectionIssue: null,
       requestScreen,
       mode: "text" as const,
-      isUserScrollingRef: { current: false },
+      isUserScrolling: () => false,
       modeLoadedRef: { current: { text: false, image: false } },
       modeSwitchRef: { current: null as ScreenMode | null },
-      screenRef: { current: "" },
-      imageRef: { current: null as string | null },
-      cursorRef: { current: null as string | null },
-      screenLinesRef: { current: [] as string[] },
-      pendingScreenRef: { current: null as string | null },
-      setScreen: (screen: SetStateAction<string>) => {
-        store.set(screenTextAtom, screen);
-      },
-      setImageBase64: (image: SetStateAction<string | null>) => {
-        store.set(screenImageAtom, image);
-      },
-      setScreenContentContextKey: (contextKey: SetStateAction<string | null>) => {
-        store.set(screenContentContextKeyAtom, contextKey);
-      },
+      content: createScreenContent({
+        setScreen: (screen: SetStateAction<string>) => {
+          store.set(screenTextAtom, screen);
+        },
+        setImageBase64: (image: SetStateAction<string | null>) => {
+          store.set(screenImageAtom, image);
+        },
+        setScreenContentContextKey: (contextKey: SetStateAction<string | null>) => {
+          store.set(screenContentContextKeyAtom, contextKey);
+        },
+      }),
       dispatchScreenLoading,
       onModeLoaded: (mode: ScreenMode) => {
         store.set(screenModeLoadedAtom, (loaded) => ({ ...loaded, [mode]: true }));
@@ -560,13 +570,11 @@ describe("useScreenFetch", () => {
   });
 
   it("defers text render while user is scrolling, even at the bottom", async () => {
-    const pendingScreenRef = { current: null as string | null };
     const setScreen = vi.fn();
     const setImageBase64 = vi.fn();
 
     const { params } = setup({
-      isUserScrollingRef: { current: true },
-      pendingScreenRef,
+      isUserScrolling: () => true,
       setScreen,
       setImageBase64,
     });
@@ -575,9 +583,10 @@ describe("useScreenFetch", () => {
       expect(params.onModeLoaded).toHaveBeenCalledWith("text");
     });
 
-    expect(pendingScreenRef.current).toBe("hello");
     expect(setScreen).not.toHaveBeenCalledWith("hello");
     expect(setImageBase64).not.toHaveBeenCalledWith(null);
+    act(() => params.content.flushPending());
+    expect(setScreen).toHaveBeenCalledWith("hello");
   });
 
   // ---------------------------------------------------------------------------
@@ -635,17 +644,14 @@ describe("useScreenFetch", () => {
       connectionIssue: null,
       requestScreen,
       mode: "text" as const,
-      isUserScrollingRef: { current: false },
+      isUserScrolling: () => false,
       modeLoadedRef: { current: { text: false, image: false } },
       modeSwitchRef: { current: null as "text" | "image" | null },
-      screenRef: { current: "" },
-      imageRef: { current: null as string | null },
-      cursorRef: { current: null as string | null },
-      screenLinesRef: { current: [] as string[] },
-      pendingScreenRef: { current: null as string | null },
-      setScreen: vi.fn(),
-      setImageBase64: vi.fn(),
-      setScreenContentContextKey: vi.fn(),
+      content: createScreenContent({
+        setScreen: vi.fn(),
+        setImageBase64: vi.fn(),
+        setScreenContentContextKey: vi.fn(),
+      }),
       dispatchScreenLoading: vi.fn(),
       onModeLoaded: vi.fn(),
       apiBasePath: "/api",
@@ -782,16 +788,16 @@ describe("useScreenFetch", () => {
         }),
     );
     const dispatchScreenLoading = vi.fn();
-    const isUserScrollingRef = { current: false };
     const modeLoadedRef = { current: { text: false, image: false } };
     const modeSwitchRef = { current: "text" as "text" | "image" | null };
-    const screenRef = { current: "" };
-    const imageRef = { current: null as string | null };
-    const cursorRef = { current: null as string | null };
-    const screenLinesRef = { current: [] as string[] };
-    const pendingScreenRef = { current: null as string | null };
     const setScreen = vi.fn().mockImplementation(() => {
       resolveFirstEvent();
+    });
+
+    const content = createScreenContent({
+      setScreen,
+      setImageBase64: vi.fn(),
+      setScreenContentContextKey: vi.fn(),
     });
 
     const store = createStore();
@@ -809,17 +815,10 @@ describe("useScreenFetch", () => {
           connectionIssue: null,
           requestScreen,
           mode: "text",
-          isUserScrollingRef,
+          isUserScrolling: () => false,
           modeLoadedRef,
           modeSwitchRef,
-          screenRef,
-          imageRef,
-          cursorRef,
-          screenLinesRef,
-          pendingScreenRef,
-          setScreen,
-          setImageBase64: vi.fn(),
-          setScreenContentContextKey: vi.fn(),
+          content,
           dispatchScreenLoading,
           onModeLoaded: vi.fn(),
           apiBasePath: "/api",
@@ -904,11 +903,9 @@ describe("useScreenFetch", () => {
         resolveRest = resolve;
       });
     });
-    const screenRef = { current: "" };
     const setScreen = vi.fn();
     const { result, params } = setup({
       requestScreen,
-      screenRef,
       setScreen,
       apiBasePath: "/api",
       token: "test-token",
@@ -936,7 +933,7 @@ describe("useScreenFetch", () => {
       });
     });
 
-    expect(screenRef.current).toBe("newer-sse");
+    expect(setScreen).toHaveBeenLastCalledWith("newer-sse");
     expect(setScreen).not.toHaveBeenCalledWith("older-rest");
     expect(params.onModeLoaded).toHaveBeenCalledTimes(1);
   });
@@ -980,15 +977,11 @@ describe("useScreenFetch", () => {
         resolveRest = resolve;
       });
     });
-    const cursorRef = { current: "rest-base" as string | null };
-    const screenRef = { current: "rest-a\nrest-b" };
-    const screenLinesRef = { current: ["rest-a", "rest-b"] };
     const setScreen = vi.fn();
-    const { result } = setup({
+    const { result, params } = setup({
       requestScreen,
-      cursorRef,
-      screenRef,
-      screenLinesRef,
+      initialCursor: "rest-base",
+      initialScreen: "rest-a\nrest-b",
       setScreen,
       apiBasePath: "/api",
       token: "test-token",
@@ -1004,7 +997,7 @@ describe("useScreenFetch", () => {
     await waitFor(() => {
       expect(setScreen).toHaveBeenCalledWith("sse-a\nsse-b");
     });
-    expect(cursorRef.current).toBe("sse-cursor");
+    expect(params.content.getCursor()).toBe("sse-cursor");
 
     await act(async () => {
       resolveRest({
@@ -1018,10 +1011,9 @@ describe("useScreenFetch", () => {
       });
     });
 
-    expect(screenRef.current).toBe("sse-a\nsse-b");
-    expect(screenLinesRef.current).toEqual(["sse-a", "sse-b"]);
+    expect(setScreen).toHaveBeenLastCalledWith("sse-a\nsse-b");
     expect(setScreen).not.toHaveBeenCalledWith("corrupt\nsse-b");
-    expect(cursorRef.current).toBe("sse-cursor");
+    expect(params.content.getCursor()).toBe("sse-cursor");
   });
 
   it("ignores SSE screen events for another pane", async () => {
