@@ -238,6 +238,45 @@ describe("useSessionFiles Query resources", () => {
     expect(requestRepoFileSearch).toHaveBeenCalledTimes(1);
   });
 
+  it.each([{ paneId: "pane-2" }, { repoRoot: "/other-repo" }, { worktreePath: "/other-worktree" }])(
+    "cancels a pending search debounce when scope changes: %o",
+    async (nextScope) => {
+      vi.useFakeTimers();
+      const rendered = renderFiles({ strict: true });
+      act(() => rendered.result.current.onSearchQueryChange("old"));
+      await act(async () => vi.advanceTimersByTimeAsync(119));
+      rendered.rerender({
+        paneId: "pane-1",
+        repoRoot: "/repo",
+        worktreePath: null,
+        connected: true,
+        ...nextScope,
+      });
+      await act(async () => vi.advanceTimersByTimeAsync(120));
+      expect(rendered.requestRepoFileSearch).not.toHaveBeenCalled();
+      expect(rendered.result.current.searchQuery).toBe("");
+      expect(rendered.result.current.searchResult).toBeNull();
+      act(() => rendered.result.current.onSearchQueryChange("new"));
+      await act(async () => vi.advanceTimersByTimeAsync(120));
+      expect(rendered.requestRepoFileSearch).toHaveBeenCalledTimes(1);
+      expect(rendered.requestRepoFileSearch).toHaveBeenLastCalledWith(
+        nextScope.paneId ?? "pane-1",
+        "new",
+        expect.objectContaining({ worktreePath: nextScope.repoRoot ?? "/repo" }),
+        expect.any(AbortSignal),
+      );
+    },
+  );
+
+  it("cancels a pending search debounce on unmount", async () => {
+    vi.useFakeTimers();
+    const rendered = renderFiles();
+    act(() => rendered.result.current.onSearchQueryChange("old"));
+    rendered.unmount();
+    await act(async () => vi.advanceTimersByTimeAsync(120));
+    expect(rendered.requestRepoFileSearch).not.toHaveBeenCalled();
+  });
+
   it("keeps displayed A while desired B is pending and switches only after B succeeds", async () => {
     vi.useFakeTimers();
     const pendingB = deferred<RepoFileSearchPage>();
