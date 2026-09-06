@@ -1042,6 +1042,39 @@ describe("useSessionFiles Query resources", () => {
     expect(rendered.requestRepoFileSearch).toHaveBeenCalledTimes(3);
   });
 
+  it("preserves search and selection while modal display and copy state change", async () => {
+    vi.useFakeTimers();
+    const copied = deferred<boolean>();
+    vi.mocked(copyToClipboard).mockImplementationOnce(() => copied.promise);
+    const rendered = renderFiles();
+    act(() => {
+      rendered.result.current.onSearchQueryChange("readme");
+      rendered.result.current.onOpenFileModal("README.md");
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(120));
+    act(() => {
+      rendered.result.current.onSetFileModalMarkdownViewMode("code");
+      rendered.result.current.onToggleFileModalLineNumbers();
+    });
+    const copying = rendered.result.current.onCopyFileModalPath();
+    act(() => rendered.result.current.onSearchQueryChange("package"));
+    copied.resolve(true);
+    await act(async () => copying);
+    expect(rendered.result.current.searchQuery).toBe("package");
+    expect(rendered.result.current.searchResult?.query).toBe("readme");
+    expect(rendered.result.current.selectedFilePath).toBe("README.md");
+    expect(rendered.result.current.fileModalMarkdownViewMode).toBe("code");
+    expect(rendered.result.current.fileModalShowLineNumbers).toBe(false);
+    expect(rendered.result.current.fileModalCopiedPath).toBe(true);
+    act(() => rendered.result.current.onCloseFileModal());
+    await act(async () => vi.advanceTimersByTimeAsync(120));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    expect(rendered.result.current.searchResult?.query).toBe("package");
+    expect(rendered.result.current.selectedFilePath).toBe("README.md");
+    expect(rendered.result.current.fileModalOpen).toBe(false);
+    expect(rendered.result.current.fileModalCopiedPath).toBe(false);
+  });
+
   it("clears only the matching latest copy indicator and ignores a prior scope result", async () => {
     vi.useFakeTimers();
     const first = deferred<boolean>();

@@ -1,11 +1,11 @@
 import type { QueryKey } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RepoFileContent } from "@vde-monitor/shared";
-import { type Dispatch, type SetStateAction, useCallback } from "react";
+import { useCallback } from "react";
 
 import { copyToClipboard } from "@/lib/copy-to-clipboard";
 
-import type { FilesLocalState } from "./session-files-local-state";
+import type { SessionFilesModalState } from "./useSessionFiles-modal-state";
 import {
   type ContentQueryCleanupCoordinator,
   type ContentTarget,
@@ -59,39 +59,29 @@ const deleteCopyTimer = (controller: FileModalCopyController, timer: number) => 
   controller.timers.delete(timer);
 };
 
-const contentTargetEquals = (left: ContentTarget | null, right: ContentTarget | null) =>
-  left === right ||
-  (left != null &&
-    right != null &&
-    left.targetPaneId === right.targetPaneId &&
-    left.targetRoot === right.targetRoot &&
-    left.targetWorktreePath === right.targetWorktreePath &&
-    left.path === right.path &&
-    left.origin === right.origin &&
-    left.highlightLine === right.highlightLine);
-
 export const useSessionFilesModalActions = ({
   contentCleanup,
   copyController,
-  currentState,
+  modal,
   getContentQueryKey,
   paneId,
   previewLeases,
-  revealFilePath,
+  selectNavigatorFile,
+  reportResolveError,
   scope,
-  setState,
 }: {
   contentCleanup: ContentQueryCleanupCoordinator;
   copyController: FileModalCopyController;
-  currentState: FilesLocalState;
+  modal: SessionFilesModalState;
   getContentQueryKey: (target: ContentTarget) => QueryKey;
   paneId: string;
   previewLeases: PreviewLeaseController;
-  revealFilePath: (path: string) => void;
+  selectNavigatorFile: (path: string) => void;
+  reportResolveError: (message: string) => void;
   scope: FilesScopeIdentity;
-  setState: Dispatch<SetStateAction<FilesLocalState>>;
 }) => {
   const queryClient = useQueryClient();
+  const { contentTarget, open, close, beginCopy, finishCopy, clearCopiedPath } = modal;
   const cleanupContentTarget = useCallback(
     (target: ContentTarget) => {
       const key = getContentQueryKey(target);
@@ -120,7 +110,7 @@ export const useSessionFilesModalActions = ({
           ? normalizeAbsoluteLogFilePath(rawPath)
           : normalizeRepoFilePath(rawPath);
       if (path == null) {
-        setState((previous) => ({ ...previous, fileResolveError: "File not found." }));
+        reportResolveError("File not found.");
         return;
       }
       const target: ContentTarget = {
@@ -139,18 +129,8 @@ export const useSessionFilesModalActions = ({
           cleanupContentTarget(previousTarget);
         }
         syncActiveContentTarget(copyController, target);
-        if (options.origin === "navigator") revealFilePath(path);
-        const copyOperationId = nextCopyOperation(copyController);
-        setState((previous) => ({
-          ...previous,
-          selectedFilePath: options.origin === "navigator" ? path : previous.selectedFilePath,
-          contentTarget: target,
-          fileModalMarkdownViewMode: options.highlightLine != null ? "code" : null,
-          fileModalShowLineNumbers: true,
-          fileModalCopyError: null,
-          fileModalCopiedPath: false,
-          copyOperationId,
-        }));
+        if (options.origin === "navigator") selectNavigatorFile(path);
+        open(target, nextCopyOperation(copyController));
       };
       if (contentCleanup.reopenAfterCleanup(queryClient, targetKey, commitOpen)) return;
       commitOpen();
@@ -161,8 +141,9 @@ export const useSessionFilesModalActions = ({
       copyController,
       getContentQueryKey,
       queryClient,
-      revealFilePath,
-      setState,
+      selectNavigatorFile,
+      reportResolveError,
+      open,
     ],
   );
   const onOpenFileModal = useCallback(
@@ -184,68 +165,29 @@ export const useSessionFilesModalActions = ({
     syncActiveContentTarget(copyController, null);
     if (target != null) cleanupContentTarget(target);
     clearFileModalCopyTimers(copyController);
-    const copyOperationId = nextCopyOperation(copyController);
-    setState((previous) => ({
-      ...previous,
-      contentTarget: null,
-      fileModalMarkdownViewMode: null,
-      fileModalShowLineNumbers: true,
-      fileModalCopiedPath: false,
-      fileModalCopyError: null,
-      copyOperationId,
-    }));
-  }, [cleanupContentTarget, contentCleanup, copyController, setState]);
+    close(nextCopyOperation(copyController));
+  }, [cleanupContentTarget, contentCleanup, copyController, close]);
   const onCopyFileModalPath = useCallback(async () => {
-    const target = currentState.contentTarget;
-    if (target == null) return;
-    const operationId = nextCopyOperation(copyController);
-    const scopeGeneration = currentState.scopeGeneration;
-    setState((previous) => ({
-      ...previous,
-      copyOperationId: operationId,
-      fileModalCopyError: null,
-    }));
-    const copied = await copyToClipboard(target.path);
-    setState((previous) => {
-      if (
-        previous.copyOperationId !== operationId ||
-        previous.scopeGeneration !== scopeGeneration ||
-        !contentTargetEquals(previous.contentTarget, target)
-      ) {
-        return previous;
-      }
-      return {
-        ...previous,
-        fileModalCopiedPath: copied,
-        fileModalCopyError: copied ? null : "Failed to copy the file path.",
-      };
-    });
+    if (contentTarget == null) return;
+    const request = beginCopy(nextCopyOperation(copyController));
+    if (request == null) return;
+    const copied = await copyToClipboard(request.target.path);
+    finishCopy(request, copied);
     if (copied) {
       const timer = window.setTimeout(() => {
         deleteCopyTimer(copyController, timer);
-        setState((previous) =>
-          previous.copyOperationId === operationId &&
-          previous.scopeGeneration === scopeGeneration &&
-          contentTargetEquals(previous.contentTarget, target)
-            ? { ...previous, fileModalCopiedPath: false }
-            : previous,
-        );
+        clearCopiedPath(request);
       }, FILE_MODAL_COPY_INDICATOR_MS);
       addCopyTimer(copyController, timer);
     }
-  }, [copyController, currentState.contentTarget, currentState.scopeGeneration, setState]);
+  }, [copyController, contentTarget, beginCopy, finishCopy, clearCopiedPath]);
 
   return {
     openFileModalByPath,
     onOpenFileModal,
     onCloseFileModal,
     onCopyFileModalPath,
-    onSetFileModalMarkdownViewMode: (mode: "code" | "preview" | "diff") =>
-      setState((previous) => ({ ...previous, fileModalMarkdownViewMode: mode })),
-    onToggleFileModalLineNumbers: () =>
-      setState((previous) => ({
-        ...previous,
-        fileModalShowLineNumbers: !previous.fileModalShowLineNumbers,
-      })),
+    onSetFileModalMarkdownViewMode: modal.setViewMode,
+    onToggleFileModalLineNumbers: modal.toggleLineNumbers,
   };
 };

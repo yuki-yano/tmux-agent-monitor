@@ -63,6 +63,7 @@ import {
   syncActiveContentTarget,
   useSessionFilesModalActions,
 } from "./useSessionFiles-modal-actions";
+import { useSessionFilesModalState } from "./useSessionFiles-modal-state";
 
 export type { LogFileCandidateItem } from "./useSessionFiles-lookup-actions";
 
@@ -140,6 +141,7 @@ export const useSessionFiles = ({
     [paneId, repoRoot, worktreePath],
   );
   const [state, setState] = useState(() => createFilesLocalState(scope));
+  const modal = useSessionFilesModalState(scope);
   const [committedLifetimeRef] = useState(createCommittedFilesLifetimeRef);
   const [previewLeases] = useState(() => createPreviewLeaseController(revokeRepoFilePreview));
   const [contentCleanup] = useState(createContentQueryCleanupCoordinator);
@@ -151,9 +153,7 @@ export const useSessionFiles = ({
   const previousContentTargetRef = useRef<ContentTarget | null>(null);
 
   const scopeChanged = !sameFilesScope(state.scope, scope);
-  const currentState = scopeChanged
-    ? createFilesLocalState(scope, state.scopeGeneration + 1)
-    : state;
+  const currentState = scopeChanged ? createFilesLocalState(scope) : state;
 
   const filesRootKey = useMemo(() => sessionDetailQueryKeys.filesRoot(paneId), [paneId]);
   const filesRootHash = JSON.stringify(filesRootKey);
@@ -179,9 +179,9 @@ export const useSessionFiles = ({
 
   useLayoutEffect(() => {
     const previousScope = previousScopeRef.current;
-    const lifetime = { scope, connected, contentTarget: currentState.contentTarget };
+    const lifetime = { scope, connected, contentTarget: modal.contentTarget };
     committedLifetimeRef.commit(lifetime);
-    syncActiveContentTarget(copyController, currentState.contentTarget);
+    syncActiveContentTarget(copyController, modal.contentTarget);
     if (!sameFilesScope(previousScope, scope)) {
       resetFilesLookupController(lookupController);
       contentCleanup.cancelReopens();
@@ -217,23 +217,23 @@ export const useSessionFiles = ({
       advanceFilesLookupGeneration(lookupController);
       void queryClient.cancelQueries({ queryKey: filesScopeKey });
       void queryClient.cancelQueries({ queryKey: lookupRootKey });
-      if (currentState.contentTarget != null) {
+      if (modal.contentTarget != null) {
         void queryClient.cancelQueries({
-          queryKey: getContentQueryKey(currentState.contentTarget),
+          queryKey: getContentQueryKey(modal.contentTarget),
           exact: true,
         });
       }
     }
     previousScopeRef.current = scope;
     previousConnectedRef.current = connected;
-    previousContentTargetRef.current = currentState.contentTarget;
+    previousContentTargetRef.current = modal.contentTarget;
     return () => committedLifetimeRef.clear(lifetime);
   }, [
     committedLifetimeRef,
     connected,
     contentCleanup,
     copyController,
-    currentState.contentTarget,
+    modal.contentTarget,
     filesScopeKey,
     getContentQueryKey,
     lookupController,
@@ -448,7 +448,7 @@ export const useSessionFiles = ({
     setState(() => reconciledState);
   }
 
-  const contentTarget = currentState.contentTarget;
+  const contentTarget = modal.contentTarget;
   const contentQueryKey = contentTarget == null ? null : getContentQueryKey(contentTarget);
   const contentQuery = useSessionFilesContentQuery({
     connected,
@@ -537,6 +537,17 @@ export const useSessionFiles = ({
     [connected, getTreeQueryOptions, queryClient, retryOrAddTreeDescriptor, scope],
   );
 
+  const selectNavigatorFile = useCallback(
+    (path: string) => {
+      setState((previous) => ({ ...previous, selectedFilePath: path }));
+      revealFilePath(path);
+    },
+    [revealFilePath],
+  );
+  const reportResolveError = useCallback((message: string) => {
+    setState((previous) => ({ ...previous, fileResolveError: message }));
+  }, []);
+
   const {
     openFileModalByPath,
     onOpenFileModal,
@@ -547,13 +558,13 @@ export const useSessionFiles = ({
   } = useSessionFilesModalActions({
     contentCleanup,
     copyController,
-    currentState,
+    modal,
     getContentQueryKey,
     paneId,
     previewLeases,
-    revealFilePath,
+    selectNavigatorFile,
+    reportResolveError,
     scope,
-    setState,
   });
 
   const onSearchQueryChange = useCallback(
@@ -746,7 +757,7 @@ export const useSessionFiles = ({
       : null;
   const fileModalFile = contentQuery?.data ?? null;
   const inferredViewMode =
-    currentState.fileModalMarkdownViewMode ??
+    modal.viewMode ??
     (fileModalFile != null && (isHtmlContent(fileModalFile) || isMarkdownContent(fileModalFile))
       ? "preview"
       : "code");
@@ -789,9 +800,9 @@ export const useSessionFiles = ({
           : null,
     fileModalFile,
     fileModalMarkdownViewMode: inferredViewMode,
-    fileModalShowLineNumbers: currentState.fileModalShowLineNumbers,
-    fileModalCopiedPath: currentState.fileModalCopiedPath,
-    fileModalCopyError: currentState.fileModalCopyError,
+    fileModalShowLineNumbers: modal.showLineNumbers,
+    fileModalCopiedPath: modal.copiedPath,
+    fileModalCopyError: modal.copyError,
     fileModalHighlightLine: contentTarget?.highlightLine ?? null,
     fileResolveError: currentState.fileResolveError,
     logFileCandidateModalOpen: currentState.logCandidate != null,
