@@ -118,7 +118,6 @@ export const useRawInputHandlers = ({
   }, [allowDangerKeys]);
 
   useEffect(() => {
-    // react-doctor-disable-next-line no-event-handler
     if (!rawMode) {
       rawQueueRef.current = [];
       if (rawFlushTimerRef.current != null) {

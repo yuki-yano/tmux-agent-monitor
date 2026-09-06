@@ -1,7 +1,7 @@
 import type { SessionSummary } from "@vde-monitor/shared";
 import { useAtomValue } from "jotai";
 import { ArrowRight, ExternalLink, X } from "lucide-react";
-import { useCallback, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import {
   Button,
@@ -43,130 +43,69 @@ type LogModalProps = {
   actions: LogModalActions;
 };
 
-type LogSnapshot = {
-  paneId: string;
-  snapVersion: number;
-  lines: string[];
-};
-
-type LogScrollState = {
+type LogViewportState = {
+  observedLines: string[];
+  displayLines: string[];
+  isUserScrolling: boolean;
   isAtBottom: boolean;
   followIntent: boolean;
+  pendingInitialSnap: boolean;
 };
 
-type LogScrollAction =
-  | { type: "measure-bottom"; value: boolean }
-  | { type: "pause-following" }
-  | { type: "resume-following" }
-  | { type: "reset" };
-
-const initialLogScrollState: LogScrollState = {
-  isAtBottom: true,
-  followIntent: true,
-};
-
-const reduceLogScrollState = (state: LogScrollState, action: LogScrollAction): LogScrollState => {
-  switch (action.type) {
-    case "measure-bottom":
-      return {
-        isAtBottom: action.value,
-        followIntent: action.value ? true : state.followIntent,
-      };
-    case "pause-following":
-      return { ...state, followIntent: false };
-    case "resume-following":
-      return { ...state, followIntent: true };
-    case "reset":
-      return initialLogScrollState;
-  }
-};
-
-const matchesContext = (
-  snapshot: Pick<LogSnapshot, "paneId" | "snapVersion"> | null,
-  paneId: string | null,
-  snapVersion: number,
-) => snapshot?.paneId === paneId && snapshot.snapVersion === snapVersion;
-
-export const LogModal = ({ state, actions }: LogModalProps) => {
-  const { open, session, logLines, loading, error } = state;
-  const { onClose, onOpenHere, onOpenNewTab } = actions;
-  const { enabled: pwaTabsEnabled } = useWorkspaceTabs();
-  const snapRequest = useAtomValue(logModalSnapRequestAtom);
+const LogModalViewport = ({
+  open,
+  logLines,
+  loading,
+  contextKey,
+  shouldSnap,
+}: Pick<LogModalState, "open" | "logLines" | "loading"> & {
+  contextKey: string;
+  shouldSnap: boolean;
+}) => {
   const viewportRef = useRef<VirtualizedViewportHandle | null>(null);
-  const [{ isAtBottom, followIntent }, dispatchScrollState] = useReducer(
-    reduceLogScrollState,
-    initialLogScrollState,
-  );
-  const [displaySnapshot, setDisplaySnapshot] = useState<LogSnapshot | null>(null);
-  const activeContextRef = useRef<Pick<LogSnapshot, "paneId" | "snapVersion"> | null>(null);
-  const pendingSnapshotRef = useRef<LogSnapshot | null>(null);
-  const pendingSnapRef = useRef<Pick<LogSnapshot, "paneId" | "snapVersion"> | null>(null);
-  const isUserScrollingRef = useRef(false);
-  const paneId = open && session ? session.paneId : null;
-  const snapVersion = snapRequest.paneId === paneId ? snapRequest.version : -1;
-  const displayLines = matchesContext(displaySnapshot, paneId, snapVersion)
-    ? (displaySnapshot?.lines ?? [])
-    : [];
+  const didSnapRef = useRef(false);
+  const [scrollState, setScrollState] = useState<LogViewportState>(() => ({
+    observedLines: logLines,
+    displayLines: open ? logLines : [],
+    isUserScrolling: false,
+    isAtBottom: true,
+    followIntent: true,
+    pendingInitialSnap: shouldSnap,
+  }));
+  let current = scrollState;
+  if (current.observedLines !== logLines) {
+    current = {
+      ...current,
+      observedLines: logLines,
+      displayLines: open && !current.isUserScrolling ? logLines : current.displayLines,
+    };
+  }
+  if (current.pendingInitialSnap && current.displayLines.length > 0) {
+    current = { ...current, pendingInitialSnap: false, followIntent: true };
+  }
+  if (current !== scrollState) {
+    setScrollState(current);
+  }
+  const { displayLines, isAtBottom, followIntent } = current;
   const effectiveIsAtBottom = displayLines.length === 0 ? true : isAtBottom;
 
-  const handleUserScrollStateChange = useCallback(
-    (value: boolean) => {
-      if (!matchesContext(activeContextRef.current, paneId, snapVersion)) {
-        return;
-      }
-      isUserScrollingRef.current = value;
-      if (value) {
-        dispatchScrollState({ type: "pause-following" });
-      }
-      if (!value && matchesContext(pendingSnapshotRef.current, paneId, snapVersion)) {
-        setDisplaySnapshot(pendingSnapshotRef.current);
-        pendingSnapshotRef.current = null;
-      }
-    },
-    [paneId, snapVersion],
-  );
+  const handleUserScrollStateChange = useCallback((value: boolean) => {
+    setScrollState((previous) => ({
+      ...previous,
+      isUserScrolling: value,
+      followIntent: value ? false : previous.followIntent,
+      displayLines: value ? previous.displayLines : previous.observedLines,
+    }));
+  }, []);
   const { scrollerRef } = useUserScrollState({
     enabled: open,
     onUserScrollStateChange: handleUserScrollStateChange,
   });
 
-  useLayoutEffect(() => {
-    if (!open || !paneId) {
-      activeContextRef.current = null;
-      pendingSnapshotRef.current = null;
-      pendingSnapRef.current = null;
-      isUserScrollingRef.current = false;
-      // oxlint-disable-next-line react/set-state-in-effect -- Closing resets buffered output and follow state atomically.
-      setDisplaySnapshot(null);
-      dispatchScrollState({ type: "reset" });
-      return;
-    }
-
-    const snapshot = { paneId, snapVersion, lines: logLines };
-    const contextChanged = !matchesContext(activeContextRef.current, paneId, snapVersion);
-    if (contextChanged) {
-      activeContextRef.current = { paneId, snapVersion };
-      pendingSnapshotRef.current = null;
-      pendingSnapRef.current = snapRequest.paneId === paneId ? { paneId, snapVersion } : null;
-      isUserScrollingRef.current = false;
-      dispatchScrollState({ type: "reset" });
-    }
-
-    if (isUserScrollingRef.current) {
-      pendingSnapshotRef.current = snapshot;
-      return;
-    }
-
-    setDisplaySnapshot(snapshot);
-    pendingSnapshotRef.current = null;
-  }, [logLines, open, paneId, snapRequest.paneId, snapVersion]);
-
   const scrollToBottom = useCallback(
     (behavior: "auto" | "smooth" = "smooth") => {
-      if (displayLines.length === 0) {
-        return;
-      }
-      dispatchScrollState({ type: "resume-following" });
+      if (displayLines.length === 0) return;
+      setScrollState((previous) => ({ ...previous, followIntent: true }));
       viewportRef.current?.scrollToEnd({ behavior });
     },
     [displayLines.length],
@@ -175,18 +114,56 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
   useLayoutEffect(() => {
     if (
       !open ||
+      !shouldSnap ||
       displayLines.length === 0 ||
-      !matchesContext(pendingSnapRef.current, paneId, snapVersion)
-    ) {
+      didSnapRef.current ||
+      !viewportRef.current
+    )
       return;
-    }
-    scrollToBottom("auto");
-    pendingSnapRef.current = null;
-  }, [displayLines.length, open, paneId, scrollToBottom, snapVersion]);
+    viewportRef.current.scrollToEnd({ behavior: "auto" });
+    didSnapRef.current = true;
+  }, [displayLines.length, open, shouldSnap]);
 
   const handleAtBottomChange = useCallback((value: boolean) => {
-    dispatchScrollState({ type: "measure-bottom", value });
+    setScrollState((previous) => ({
+      ...previous,
+      isAtBottom: value,
+      followIntent: value || previous.followIntent,
+    }));
   }, []);
+
+  return (
+    <AnsiVirtualizedViewport
+      lines={displayLines}
+      scrollContextKey={contextKey}
+      loading={loading}
+      loadingLabel="Loading log..."
+      isAtBottom={effectiveIsAtBottom}
+      shouldFollowOutput={effectiveIsAtBottom || followIntent}
+      onAtBottomChange={handleAtBottomChange}
+      viewportRef={viewportRef}
+      scrollerRef={scrollerRef}
+      scrollerClassName="overscroll-contain"
+      onScrollToBottom={scrollToBottom}
+      className="border-latte-surface2/50 bg-latte-crust/60 shadow-inner-soft relative mt-2.5 flex min-h-0 w-full flex-1 rounded-xl border sm:mt-3"
+      viewportClassName="h-full w-full min-w-0 max-w-full px-2 py-1.5 sm:px-3 sm:py-2"
+      listClassName="text-latte-text w-max min-w-full font-mono text-[12px] leading-[16px]"
+      lineClassName="min-h-4 whitespace-pre leading-5"
+      height="100%"
+      estimatedLineHeight={20}
+      sanitizeCopyText={sanitizeLogCopyText}
+    />
+  );
+};
+
+export const LogModal = ({ state, actions }: LogModalProps) => {
+  const { open, session, logLines, loading, error } = state;
+  const { onClose, onOpenHere, onOpenNewTab } = actions;
+  const { enabled: pwaTabsEnabled } = useWorkspaceTabs();
+  const snapRequest = useAtomValue(logModalSnapRequestAtom);
+  const paneId = session?.paneId ?? null;
+  const snapVersion = snapRequest.paneId === paneId ? snapRequest.version : -1;
+  const contextKey = `${open}:${paneId}:${snapVersion}`;
 
   if (!session) return null;
 
@@ -268,25 +245,13 @@ export const LogModal = ({ state, actions }: LogModalProps) => {
               {error}
             </Callout>
           )}
-          <AnsiVirtualizedViewport
-            lines={displayLines}
-            scrollContextKey={`${paneId ?? "closed"}:${snapVersion}`}
+          <LogModalViewport
+            key={contextKey}
+            open={open}
+            logLines={logLines}
             loading={loading}
-            loadingLabel="Loading log..."
-            isAtBottom={effectiveIsAtBottom}
-            shouldFollowOutput={effectiveIsAtBottom || followIntent}
-            onAtBottomChange={handleAtBottomChange}
-            viewportRef={viewportRef}
-            scrollerRef={scrollerRef}
-            scrollerClassName="overscroll-contain"
-            onScrollToBottom={scrollToBottom}
-            className="border-latte-surface2/50 bg-latte-crust/60 shadow-inner-soft relative mt-2.5 flex min-h-0 w-full flex-1 rounded-xl border sm:mt-3"
-            viewportClassName="h-full w-full min-w-0 max-w-full px-2 py-1.5 sm:px-3 sm:py-2"
-            listClassName="text-latte-text w-max min-w-full font-mono text-[12px] leading-[16px]"
-            lineClassName="min-h-4 whitespace-pre leading-5"
-            height="100%"
-            estimatedLineHeight={20}
-            sanitizeCopyText={sanitizeLogCopyText}
+            contextKey={contextKey}
+            shouldSnap={snapRequest.paneId === paneId}
           />
         </Card>
       </DialogContent>

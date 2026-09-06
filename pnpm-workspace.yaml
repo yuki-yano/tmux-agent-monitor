@@ -14,5 +14,6 @@ catalog:
   zod: ^4.4.3
 
 onlyBuiltDependencies:
+  - "@swc/core"
   - esbuild
   - msw

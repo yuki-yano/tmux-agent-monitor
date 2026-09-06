@@ -349,7 +349,6 @@ export const FileContentModal = ({ state, actions }: FileContentModalProps) => {
     copyError,
     highlightLine,
     theme,
-    // react-doctor-disable-next-line no-event-handler
   } = state;
   const { onClose, onToggleLineNumbers, onCopyPath, onMarkdownViewModeChange, onLoadDiff } =
     actions;

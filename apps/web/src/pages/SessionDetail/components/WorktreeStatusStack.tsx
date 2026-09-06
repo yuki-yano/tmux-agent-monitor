@@ -6,13 +6,13 @@ type WorktreeStatusStackProps = {
   emptyMessage?: string;
 };
 
-export const WorktreeStatusStack = function WorktreeStatusStack({
+export const WorktreeStatusStack = ({
   loading,
   error,
   entriesCount,
   loadingMessage = "Loading worktrees...",
   emptyMessage = "No worktrees available.",
-}: WorktreeStatusStackProps) {
+}: WorktreeStatusStackProps) => {
   const showBlockingLoading = loading && entriesCount === 0;
 
   return (

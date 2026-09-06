@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { configDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
@@ -30,7 +30,6 @@ export default defineConfig({
           environment: "happy-dom",
           setupFiles: ["./vitest.setup.ts"],
           include: ["apps/web/**/*.test.{ts,tsx}"],
-          exclude: [...configDefaults.exclude, "apps/web/test/compiler-contract/**"],
         },
       },
     ],

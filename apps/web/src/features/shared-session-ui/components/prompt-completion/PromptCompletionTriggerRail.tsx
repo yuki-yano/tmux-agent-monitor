@@ -5,7 +5,7 @@ import type { PromptCompletionTokenTrigger } from "./prompt-completion-token";
 
 const TRIGGER_BUTTON_CLASS = "h-7 w-7 p-0 font-mono text-sm sm:h-8 sm:w-8";
 
-export const PromptCompletionTriggerRail = function PromptCompletionTriggerRail({
+export const PromptCompletionTriggerRail = ({
   agent,
   activeTrigger,
   onTrigger,
@@ -13,7 +13,7 @@ export const PromptCompletionTriggerRail = function PromptCompletionTriggerRail(
   agent: "codex" | "claude";
   activeTrigger: PromptCompletionTokenTrigger | null;
   onTrigger: (trigger: PromptCompletionTokenTrigger) => void;
-}) {
+}) => {
   const triggerButtonClass = (trigger: PromptCompletionTokenTrigger) =>
     cn(
       TRIGGER_BUTTON_CLASS,

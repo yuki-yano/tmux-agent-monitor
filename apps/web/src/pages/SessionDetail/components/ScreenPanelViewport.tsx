@@ -34,7 +34,7 @@ type ScreenPanelViewportProps = {
   onResolveFileReferenceKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
 };
 
-export const ScreenPanelViewport = function ScreenPanelViewport({
+export const ScreenPanelViewport = ({
   mode,
   effectiveWrapMode,
   scrollContextKey,
@@ -52,7 +52,7 @@ export const ScreenPanelViewport = function ScreenPanelViewport({
   onUserScrollStateChange,
   onResolveFileReference,
   onResolveFileReferenceKeyDown,
-}: ScreenPanelViewportProps) {
+}: ScreenPanelViewportProps) => {
   const showImage = mode === "image" && Boolean(imageBase64);
 
   if (showImage) {

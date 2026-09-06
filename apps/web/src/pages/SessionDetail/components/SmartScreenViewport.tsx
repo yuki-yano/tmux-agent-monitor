@@ -118,7 +118,6 @@ export const SmartScreenViewport = ({
     if (!node) {
       return;
     }
-    // react-doctor-disable-next-line no-pass-data-to-parent, no-prop-callback-in-effect
     onAtBottomChange(resolveIsAtBottom(node));
   }, [decoratedLines, onAtBottomChange, scrollerRef]);
 

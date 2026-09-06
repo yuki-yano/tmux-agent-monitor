@@ -1,5 +1,6 @@
 import type { CommitDetail, CommitFileDiff, CommitLog } from "@vde-monitor/shared";
 import { GitCommitHorizontal, RefreshCw, X } from "lucide-react";
+import { memo, useMemo } from "react";
 
 import { Button, Callout, EmptyState, IconButton, LoadingOverlay } from "@/components/ui";
 import { PaneSectionShell } from "@/features/shared-session-ui/components/PaneSectionShell";
@@ -50,11 +51,7 @@ type CommitSectionProps = {
   actions: CommitSectionActions;
 };
 
-const CommitReasonCallout = function CommitReasonCallout({
-  reason,
-}: {
-  reason: CommitLog["reason"] | undefined;
-}) {
+const CommitReasonCallout = memo(({ reason }: { reason: CommitLog["reason"] | undefined }) => {
   switch (reason) {
     case "cwd_unknown":
       return (
@@ -77,56 +74,54 @@ const CommitReasonCallout = function CommitReasonCallout({
     default:
       return null;
   }
-};
+});
 
-const CommitVirtualBranchNotice = function CommitVirtualBranchNotice({
-  virtualBranch,
-  onClear,
-}: {
-  virtualBranch: string | null;
-  onClear: () => void;
-}) {
-  if (virtualBranch == null) {
-    return null;
-  }
-  return (
-    <div
-      className="-mt-1 flex items-center justify-between gap-2"
-      data-testid="commit-virtual-branch-notice"
-    >
-      <span
-        className="text-latte-subtext0 min-w-0 truncate font-mono text-xs"
-        title={virtualBranch}
-      >
-        Virtual active · {virtualBranch}
-      </span>
-      <IconButton
-        type="button"
-        size="xs"
-        variant="dangerOutline"
-        aria-label="Clear virtual branch"
-        title="Clear virtual branch"
-        className="shrink-0"
-        onClick={onClear}
-      >
-        <X className="h-3 w-3" />
-      </IconButton>
-    </div>
-  );
-};
+CommitReasonCallout.displayName = "CommitReasonCallout";
 
-const CommitRepoRoot = function CommitRepoRoot({ repoRoot }: { repoRoot?: string | null }) {
+const CommitVirtualBranchNotice = memo(
+  ({ virtualBranch, onClear }: { virtualBranch: string | null; onClear: () => void }) => {
+    if (virtualBranch == null) {
+      return null;
+    }
+    return (
+      <div
+        className="-mt-1 flex items-center justify-between gap-2"
+        data-testid="commit-virtual-branch-notice"
+      >
+        <span
+          className="text-latte-subtext0 min-w-0 truncate font-mono text-xs"
+          title={virtualBranch}
+        >
+          Virtual active · {virtualBranch}
+        </span>
+        <IconButton
+          type="button"
+          size="xs"
+          variant="dangerOutline"
+          aria-label="Clear virtual branch"
+          title="Clear virtual branch"
+          className="shrink-0"
+          onClick={onClear}
+        >
+          <X className="h-3 w-3" />
+        </IconButton>
+      </div>
+    );
+  },
+);
+
+CommitVirtualBranchNotice.displayName = "CommitVirtualBranchNotice";
+
+const CommitRepoRoot = memo(({ repoRoot }: { repoRoot?: string | null }) => {
   if (!repoRoot) {
     return null;
   }
   return <p className="text-latte-subtext0 text-xs">Repo: {formatPath(repoRoot)}</p>;
-};
+});
 
-const CommitErrorCallout = function CommitErrorCallout({
-  commitError,
-}: {
-  commitError: string | null;
-}) {
+CommitRepoRoot.displayName = "CommitRepoRoot";
+
+const CommitErrorCallout = memo(({ commitError }: { commitError: string | null }) => {
   if (!commitError) {
     return null;
   }
@@ -135,24 +130,20 @@ const CommitErrorCallout = function CommitErrorCallout({
       {commitError}
     </Callout>
   );
-};
+});
 
-const CommitLoadingOverlay = function CommitLoadingOverlay({
-  commitLoading,
-}: {
-  commitLoading: boolean;
-}) {
+CommitErrorCallout.displayName = "CommitErrorCallout";
+
+const CommitLoadingOverlay = memo(({ commitLoading }: { commitLoading: boolean }) => {
   if (!commitLoading) {
     return null;
   }
   return <LoadingOverlay label="Loading commits..." blocking={false} />;
-};
+});
 
-const CommitEmptyStateNotice = function CommitEmptyStateNotice({
-  showEmptyState,
-}: {
-  showEmptyState: boolean;
-}) {
+CommitLoadingOverlay.displayName = "CommitLoadingOverlay";
+
+const CommitEmptyStateNotice = memo(({ showEmptyState }: { showEmptyState: boolean }) => {
   if (!showEmptyState) {
     return null;
   }
@@ -163,9 +154,11 @@ const CommitEmptyStateNotice = function CommitEmptyStateNotice({
       iconWrapperClassName="bg-latte-surface1/50"
     />
   );
-};
+});
 
-export const CommitSection = function CommitSection({ state, actions }: CommitSectionProps) {
+CommitEmptyStateNotice.displayName = "CommitEmptyStateNotice";
+
+export const CommitSection = memo(({ state, actions }: CommitSectionProps) => {
   const {
     commitLog,
     commitBranch,
@@ -192,7 +185,10 @@ export const CommitSection = function CommitSection({ state, actions }: CommitSe
     onResolveFileReference,
     onResolveFileReferenceCandidates,
   } = actions;
-  const renderedPatches = buildRenderedPatches(commitFileOpen, commitFileDetails);
+  const renderedPatches = useMemo(
+    () => buildRenderedPatches(commitFileOpen, commitFileDetails),
+    [commitFileDetails, commitFileOpen],
+  );
   const commitCountDescription = formatCommitCountDescription(commitLog);
   const commitHeaderDescription = (
     <span className="inline-flex items-center gap-1.5">
@@ -208,26 +204,32 @@ export const CommitSection = function CommitSection({ state, actions }: CommitSe
   const commits = getCommits(commitLog);
   const showEmptyState = isCommitListEmpty(commitLog);
   const canLoadMore = shouldShowLoadMore(commitLog, commitHasMore);
-  const sectionAction = (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="text-latte-subtext0 hover:text-latte-text relative h-[30px] w-[30px] shrink-0 self-start p-0 after:absolute after:-inset-[7px] after:content-['']"
-      onClick={onRefresh}
-      disabled={commitLoading}
-      aria-label="Refresh commit log"
-    >
-      <RefreshCw className="h-4 w-4" />
-      <span className="sr-only">Refresh</span>
-    </Button>
+  const sectionAction = useMemo(
+    () => (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-latte-subtext0 hover:text-latte-text relative h-[30px] w-[30px] shrink-0 self-start p-0 after:absolute after:-inset-[7px] after:content-['']"
+        onClick={onRefresh}
+        disabled={commitLoading}
+        aria-label="Refresh commit log"
+      >
+        <RefreshCw className="h-4 w-4" />
+        <span className="sr-only">Refresh</span>
+      </Button>
+    ),
+    [commitLoading, onRefresh],
   );
-  const sectionStatus = (
-    <>
-      <CommitVirtualBranchNotice virtualBranch={virtualBranch} onClear={onClearVirtualBranch} />
-      <CommitRepoRoot repoRoot={commitLog?.repoRoot} />
-      <CommitReasonCallout reason={commitLog?.reason} />
-      <CommitErrorCallout commitError={commitError} />
-    </>
+  const sectionStatus = useMemo(
+    () => (
+      <>
+        <CommitVirtualBranchNotice virtualBranch={virtualBranch} onClear={onClearVirtualBranch} />
+        <CommitRepoRoot repoRoot={commitLog?.repoRoot} />
+        <CommitReasonCallout reason={commitLog?.reason} />
+        <CommitErrorCallout commitError={commitError} />
+      </>
+    ),
+    [commitError, commitLog?.reason, commitLog?.repoRoot, onClearVirtualBranch, virtualBranch],
   );
 
   return (
@@ -264,4 +266,6 @@ export const CommitSection = function CommitSection({ state, actions }: CommitSe
       />
     </PaneSectionShell>
   );
-};
+});
+
+CommitSection.displayName = "CommitSection";

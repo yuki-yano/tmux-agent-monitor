@@ -167,7 +167,7 @@ export const useSidebarPreviewHoverController = ({
       return;
     }
     // The hook publishes geometry to the owning overlay after the hovered DOM node commits.
-    // react-doctor-disable-next-line no-pass-data-to-parent, no-pass-live-state-to-parent
+    // react-doctor-disable-next-line no-pass-live-state-to-parent
     updatePreviewPosition(hoveredPaneId);
   }, [hoveredPaneId, setPreviewFrame, updatePreviewPosition]);
 

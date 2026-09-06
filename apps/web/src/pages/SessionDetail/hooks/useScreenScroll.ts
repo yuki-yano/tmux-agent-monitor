@@ -71,7 +71,6 @@ export const useScreenScroll = ({
   const viewportRef = useRef<VirtualizedViewportHandle | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const clearPending = useEffectEvent(onClearPending);
-  // react-doctor-disable-next-line no-event-handler
   const prevModeRef = useRef<ScreenMode>(mode);
   const prevPaneIdRef = useRef<string>(paneId);
   const didInitializeContextRef = useRef(false);

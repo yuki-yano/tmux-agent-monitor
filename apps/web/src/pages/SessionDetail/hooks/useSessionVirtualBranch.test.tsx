@@ -250,4 +250,87 @@ describe("useSessionVirtualBranch", () => {
       expect(result.current.virtualBranch).toBe("feature/b");
     });
   });
+  it("does not expose persisted selection until its pane's branch list is validated", () => {
+    window.localStorage.setItem(
+      buildStorageKey("loading-pane"),
+      JSON.stringify({ repoRoot: "/tmp/repo-a", branch: "feature/a" }),
+    );
+    const view = renderHook(
+      ({ branchList }: { branchList: BranchList | null }) =>
+        useSessionVirtualBranch({ paneId: "loading-pane", branchList }),
+      { initialProps: { branchList: null as BranchList | null } },
+    );
+    expect(view.result.current.virtualBranch).toBeNull();
+    expect(window.localStorage.getItem(buildStorageKey("loading-pane"))).toContain("feature/a");
+    view.rerender({ branchList: createBranchList() });
+    expect(view.result.current.virtualBranch).toBe("feature/a");
+  });
+
+  it("keeps an explicit selection made while loading and validates it when data arrives", () => {
+    const view = renderHook(
+      ({ branchList }: { branchList: BranchList | null }) =>
+        useSessionVirtualBranch({ paneId: "explicit-pane", branchList }),
+      { initialProps: { branchList: null as BranchList | null } },
+    );
+    act(() => view.result.current.selectVirtualBranch("feature/a"));
+    expect(view.result.current.virtualBranch).toBe("feature/a");
+    view.rerender({ branchList: createBranchList() });
+    expect(view.result.current.virtualBranch).toBe("feature/a");
+    expect(window.localStorage.getItem(buildStorageKey("explicit-pane"))).toContain("feature/a");
+  });
+
+  it("revalidates persisted selections after A to B to A pane changes", () => {
+    const view = renderHook(
+      ({ paneId, branchList }: { paneId: string; branchList: BranchList | null }) =>
+        useSessionVirtualBranch({ paneId, branchList }),
+      {
+        initialProps: { paneId: "first-pane", branchList: createBranchList() as BranchList | null },
+      },
+    );
+    act(() => view.result.current.selectVirtualBranch("feature/a"));
+    view.rerender({ paneId: "second-pane", branchList: null });
+    expect(view.result.current.virtualBranch).toBeNull();
+    view.rerender({ paneId: "first-pane", branchList: null });
+    expect(view.result.current.virtualBranch).toBeNull();
+    view.rerender({ paneId: "first-pane", branchList: createBranchList() });
+    expect(view.result.current.virtualBranch).toBe("feature/a");
+  });
+
+  it("preserves an active same-named selection when the pane changes repositories", () => {
+    const view = renderHook(
+      ({ branchList }) => useSessionVirtualBranch({ paneId: "repo-pane", branchList }),
+      { initialProps: { branchList: createBranchList() } },
+    );
+    act(() => view.result.current.selectVirtualBranch("feature/a"));
+    view.rerender({ branchList: createBranchList({ repoRoot: "/tmp/repo-b" }) });
+    expect(view.result.current.virtualBranch).toBe("feature/a");
+    expect(
+      JSON.parse(window.localStorage.getItem(buildStorageKey("repo-pane")) ?? "null").repoRoot,
+    ).toBe("/tmp/repo-b");
+  });
+
+  it("keeps in-memory selection usable when persistence is unavailable", () => {
+    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    const remove = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    try {
+      const view = renderHook(() =>
+        useSessionVirtualBranch({ paneId: "denied-pane", branchList: createBranchList() }),
+      );
+      act(() => view.result.current.selectVirtualBranch("feature/a"));
+      expect(view.result.current.virtualBranch).toBe("feature/a");
+      act(() => view.result.current.clearVirtualBranch());
+      expect(view.result.current.virtualBranch).toBeNull();
+    } finally {
+      get.mockRestore();
+      set.mockRestore();
+      remove.mockRestore();
+    }
+  });
 });

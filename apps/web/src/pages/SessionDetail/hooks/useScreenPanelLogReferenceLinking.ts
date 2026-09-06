@@ -92,15 +92,12 @@ export const useScreenPanelLogReferenceLinking = ({
     [lineTokenCacheRef],
   );
 
-  // react-doctor-disable-next-line no-event-handler
   const visibleRangeForMemo = effectiveWrapMode === "smart" ? null : visibleRange;
 
   const referenceCandidateTokens = useMemo(() => {
-    // react-doctor-disable-next-line no-event-handler
     if (mode !== "text") {
       return [];
     }
-    // react-doctor-disable-next-line no-event-handler
     if (screenLines.length === 0) {
       return [];
     }

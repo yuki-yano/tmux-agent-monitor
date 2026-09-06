@@ -5,7 +5,7 @@ import type {
   RepoFileSearchPage,
 } from "@vde-monitor/shared";
 import type { KeyboardEvent, RefObject } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
   type PromptCompletionToken,
@@ -65,6 +65,8 @@ export const usePromptCompletion = ({
   enabled: boolean;
   onTextareaMutated: (textarea: HTMLTextAreaElement) => void;
 }) => {
+  const scopeKey = enabled && config ? `${config.paneId}:${config.agent}` : null;
+  const [previousScopeKey, setPreviousScopeKey] = useState(scopeKey);
   const [token, setToken] = useState<PromptCompletionToken | null>(null);
   const [options, setOptions] = useState<PromptCompletionOption[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -73,6 +75,20 @@ export const usePromptCompletion = ({
   const isComposingRef = useRef(false);
   const dismissedTokenRef = useRef<string | null>(null);
   const requestIdRef = useRef(0);
+
+  if (previousScopeKey !== scopeKey) {
+    setPreviousScopeKey(scopeKey);
+    setToken(null);
+    setOptions([]);
+    setActiveIndex(0);
+    setLoading(false);
+    setError(null);
+  }
+
+  useLayoutEffect(() => {
+    isComposingRef.current = false;
+    dismissedTokenRef.current = null;
+  }, [scopeKey]);
 
   const evaluate = useCallback(
     (textarea: HTMLTextAreaElement) => {
@@ -120,6 +136,9 @@ export const usePromptCompletion = ({
   useEffect(() => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
+    // oxlint-disable-next-line react/set-state-in-effect -- A new async request clears stale choices before its response arrives.
+    setOptions([]);
+    setActiveIndex(0);
     if (
       !enabled ||
       !paneId ||
@@ -127,14 +146,11 @@ export const usePromptCompletion = ({
       !requestRepoFileSearch ||
       !tokenTrigger
     ) {
-      // oxlint-disable-next-line react/set-state-in-effect -- Invalid tokens must clear stale suggestions immediately.
-      setOptions([]);
       setLoading(false);
       setError(null);
       return;
     }
     if (tokenTrigger === "at" && tokenQuery.length === 0 && agent !== "codex") {
-      setOptions([]);
       setLoading(false);
       setError(null);
       return;
@@ -184,7 +200,10 @@ export const usePromptCompletion = ({
       () => void load(),
       tokenTrigger === "at" ? FILE_SEARCH_DEBOUNCE_MS : 0,
     );
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      requestIdRef.current += 1;
+    };
   }, [
     agent,
     enabled,

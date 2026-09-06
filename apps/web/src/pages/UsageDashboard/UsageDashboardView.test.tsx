@@ -203,8 +203,7 @@ describe("UsageDashboardView", () => {
     expect(screen.queryByLabelText("Go forward")).toBeNull();
 
     usePwaDisplayModeSpy.mockReturnValue(true);
-    // Change a QuickPanel prop so Compiler does not reuse the child element while the hook mock changes.
-    rerender(<UsageDashboardView {...viewModel} nowMs={viewModel.nowMs + 1} />);
+    rerender(<UsageDashboardView {...viewModel} />);
 
     expect(screen.getByLabelText("Go back")).toBeTruthy();
     expect(screen.getByLabelText("Go forward")).toBeTruthy();

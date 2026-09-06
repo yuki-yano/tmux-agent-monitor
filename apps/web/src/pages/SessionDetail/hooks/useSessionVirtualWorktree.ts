@@ -138,7 +138,6 @@ export const useSessionVirtualWorktree = ({
           : resolveUnknownErrorMessage(queryError, "Failed to load worktrees");
 
   const actualWorktreePath = useMemo(
-    // react-doctor-disable-next-line no-event-handler
     () => normalizePath(session?.worktreePath ?? null),
     [session?.worktreePath],
   );
@@ -188,7 +187,6 @@ export const useSessionVirtualWorktree = ({
       }
       return;
     }
-    // react-doctor-disable-next-line no-event-handler
     const stored = readStoredSelection(paneId);
     if (!stored) {
       return;

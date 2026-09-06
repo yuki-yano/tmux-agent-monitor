@@ -19,7 +19,7 @@ type ScreenPanelWorktreeSelectorPanelProps = {
   onSelectVirtualWorktree?: (path: string) => void;
 };
 
-export const ScreenPanelWorktreeSelectorPanel = function ScreenPanelWorktreeSelectorPanel({
+export const ScreenPanelWorktreeSelectorPanel = ({
   entries,
   worktreeRepoRoot,
   worktreeBaseBranch,
@@ -30,7 +30,7 @@ export const ScreenPanelWorktreeSelectorPanel = function ScreenPanelWorktreeSele
   onRefresh,
   onClose,
   onSelectVirtualWorktree,
-}: ScreenPanelWorktreeSelectorPanelProps) {
+}: ScreenPanelWorktreeSelectorPanelProps) => {
   const showBlockingWorktreeLoading = worktreeSelectorLoading && entries.length === 0;
 
   return (

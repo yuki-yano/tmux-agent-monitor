@@ -256,15 +256,10 @@ export const useScreenFetch = ({
           nextLines,
           nextCursor,
           pendingScreen: nextScreen,
-          // react-doctor-disable-next-line no-event-handler
           screenLinesRef,
-          // react-doctor-disable-next-line no-event-handler
           cursorRef,
-          // react-doctor-disable-next-line no-event-handler
           screenRef,
-          // react-doctor-disable-next-line no-event-handler
           imageRef,
-          // react-doctor-disable-next-line no-event-handler
           pendingScreenRef,
         });
         return;
@@ -283,9 +278,7 @@ export const useScreenFetch = ({
       });
       const commitScreenState = () => {
         if (shouldCommitScreen) {
-          // react-doctor-disable-next-line no-event-handler
           setScreen(nextScreen);
-          // react-doctor-disable-next-line no-event-handler
           setImageBase64(null);
         }
         setScreenContentContextKey(screenContextKey);
@@ -504,13 +497,11 @@ export const useScreenFetch = ({
       setError(null);
       setFallbackReason(response.fallbackReason ?? null);
       const isInitialScreen = !modeLoadedRef.current[mode];
-      // react-doctor-disable-next-line no-event-handler
       const suppressRender = shouldSuppressTextRender(mode, isUserScrollingRef.current);
       // The first stream frame replaces the blocking loading state and must not
       // be deferred behind later screen events. Subsequent updates stay in a
       // transition so continuous output does not interrupt interaction.
       applyTextResponse(response, suppressRender, isInitialScreen);
-      // react-doctor-disable-next-line no-event-handler
       markCurrentModeLoaded();
       dispatchScreenLoading({ type: "finish", mode });
     },
@@ -530,13 +521,9 @@ export const useScreenFetch = ({
   );
 
   const { transport } = useScreenStream({
-    // react-doctor-disable-next-line no-event-handler
     enabled: mode === "text" && connected,
-    // react-doctor-disable-next-line no-event-handler
     paneId,
-    // react-doctor-disable-next-line no-event-handler
     apiBasePath,
-    // react-doctor-disable-next-line no-event-handler
     token,
     fallbackDelayMs: streamFallbackDelayMs,
     onScreenEvent: handleSseScreenEvent,
@@ -561,14 +548,13 @@ export const useScreenFetch = ({
     if (transport !== "polling") {
       return;
     }
-    // react-doctor-disable-next-line no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent
+    // react-doctor-disable-next-line no-pass-live-state-to-parent
     void refreshScreen();
   }, [refreshScreen, transport]);
 
   // False positive: this reconciles connection lifecycle state owned by the
   // screen hook when the shared connection status changes.
   useEffect(() => {
-    // react-doctor-disable-next-line no-event-handler, no-pass-data-to-parent
     if (!connected) {
       // react-doctor-disable-next-line no-pass-data-to-parent
       resetDisconnectedState(true);

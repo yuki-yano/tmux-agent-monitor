@@ -56,7 +56,6 @@ const fetchPaneIdsInBatches = async ({
   for (let start = 0; start < paneIds.length; start += concurrency) {
     const batch = paneIds.slice(start, start + concurrency);
     // False positive: batches are intentionally sequential to enforce concurrency.
-    // react-doctor-disable-next-line async-await-in-loop
     await Promise.all(batch.map((paneId) => fetchPane(paneId)));
   }
 };

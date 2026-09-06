@@ -160,11 +160,7 @@ export const useOverflowTruncate = (text: string) => {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (!text) {
-      // oxlint-disable-next-line react/set-state-in-effect -- Layout measurement state must reset before paint.
-      setTruncate(false);
-      return;
-    }
+    if (!text) return;
     const measure = () => {
       const isOverflow = el.scrollWidth > el.clientWidth;
       setTruncate(isOverflow);
@@ -176,7 +172,7 @@ export const useOverflowTruncate = (text: string) => {
     return () => observer.disconnect();
   }, [text]);
 
-  return { ref, truncate };
+  return { ref, truncate: text.length > 0 && truncate };
 };
 
 export const useSegmentTruncate = ({

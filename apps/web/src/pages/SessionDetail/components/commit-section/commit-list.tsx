@@ -1,4 +1,5 @@
 import type { CommitDetail, CommitFileDiff, CommitLog } from "@vde-monitor/shared";
+import { memo } from "react";
 
 import { CommitItem } from "./commit-item";
 
@@ -19,23 +20,23 @@ type CommitListProps = {
   onResolveFileReferenceCandidates?: (rawTokens: string[]) => Promise<string[]>;
 };
 
-export const CommitList = function CommitList({
-  commits,
-  commitDetails,
-  commitLoadingDetails,
-  commitOpen,
-  copiedHash,
-  commitFileOpen,
-  commitFileDetails,
-  commitFileLoading,
-  renderedPatches,
-  onToggleCommit,
-  onToggleCommitFile,
-  onCopyHash,
-  onResolveFileReference,
-  onResolveFileReferenceCandidates,
-}: CommitListProps) {
-  return (
+export const CommitList = memo(
+  ({
+    commits,
+    commitDetails,
+    commitLoadingDetails,
+    commitOpen,
+    copiedHash,
+    commitFileOpen,
+    commitFileDetails,
+    commitFileLoading,
+    renderedPatches,
+    onToggleCommit,
+    onToggleCommitFile,
+    onCopyHash,
+    onResolveFileReference,
+    onResolveFileReferenceCandidates,
+  }: CommitListProps) => (
     <div className="flex flex-col gap-1.5 sm:gap-2">
       {commits.map((commit) => (
         <CommitItem
@@ -57,5 +58,7 @@ export const CommitList = function CommitList({
         />
       ))}
     </div>
-  );
-};
+  ),
+);
+
+CommitList.displayName = "CommitList";

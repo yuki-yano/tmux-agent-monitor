@@ -74,19 +74,19 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
     paneId: string;
     branch: string | null;
     invalidatedBranch: string | null;
-    // react-doctor-disable-next-line no-event-handler
   }>(() => ({ paneId, branch: null, invalidatedBranch: null }));
 
+  if (virtualBranchState.paneId !== paneId) {
+    setVirtualBranchState({ paneId, branch: null, invalidatedBranch: null });
+  }
+
   const branchNames = useMemo(
-    // react-doctor-disable-next-line no-event-handler
     () => new Set((branchList?.entries ?? []).map((entry) => entry.name)),
     [branchList],
   );
   const defaultBranch = branchList?.defaultBranch ?? null;
-  // react-doctor-disable-next-line no-event-handler
   const repoRoot = branchList?.repoRoot ?? null;
   const storedVirtualBranch =
-    // react-doctor-disable-next-line no-event-handler
     virtualBranchState.paneId === paneId &&
     virtualBranchState.invalidatedBranch !== virtualBranchState.branch
       ? virtualBranchState.branch
@@ -127,7 +127,6 @@ export const useSessionVirtualBranch = ({ paneId, branchList }: UseSessionVirtua
       }
       return;
     }
-    // react-doctor-disable-next-line no-event-handler
     const stored = readStoredSelection(paneId);
     if (!stored) {
       return;

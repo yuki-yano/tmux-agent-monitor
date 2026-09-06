@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Provider as JotaiProvider, createStore } from "jotai";
-import type { ReactNode } from "react";
+import { type ReactNode, StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logModalSnapRequestAtom } from "@/features/shared-session-ui/atoms/logAtoms";
@@ -338,5 +338,63 @@ describe("LogModal", () => {
     render(<LogModal state={state} actions={actions} />, { wrapper });
 
     expect(screen.getByLabelText("Open in workspace tab")).toBeTruthy();
+  });
+  it("flushes only the latest buffered lines and rejects callbacks from prior pane mounts", () => {
+    const actions = buildActions();
+    const wrapper = createWrapper();
+    const sessionA = createSessionDetail({ paneId: "pane-a" });
+    const sessionB = createSessionDetail({ paneId: "pane-b" });
+    const view = render(
+      <LogModal state={buildState({ session: sessionA, logLines: ["A1"] })} actions={actions} />,
+      { wrapper },
+    );
+    const oldCallback = latestOnUserScrollStateChange;
+    act(() => oldCallback?.(true));
+    view.rerender(
+      <LogModal state={buildState({ session: sessionA, logLines: ["A2"] })} actions={actions} />,
+    );
+    view.rerender(
+      <LogModal state={buildState({ session: sessionA, logLines: ["A3"] })} actions={actions} />,
+    );
+    expect(screen.getByText("A1")).toBeTruthy();
+    act(() => latestOnUserScrollStateChange?.(false));
+    expect(screen.getByText("A3")).toBeTruthy();
+    expect(screen.queryByText("A2")).toBeNull();
+    view.rerender(
+      <LogModal state={buildState({ session: sessionB, logLines: ["B1"] })} actions={actions} />,
+    );
+    view.rerender(
+      <LogModal
+        state={buildState({ session: sessionA, logLines: ["fresh A"] })}
+        actions={actions}
+      />,
+    );
+    act(() => {
+      oldCallback?.(true);
+      oldCallback?.(false);
+    });
+    view.rerender(
+      <LogModal
+        state={buildState({ session: sessionA, logLines: ["latest A"] })}
+        actions={actions}
+      />,
+    );
+    expect(screen.getByText("latest A")).toBeTruthy();
+    expect(screen.queryByText("A3")).toBeNull();
+  });
+
+  it("snaps once in StrictMode and once more for an explicit new snap request", () => {
+    const store = createStore();
+    const wrapper = createWrapper(store);
+    const state = buildState({ logLines: ["line1"] });
+    render(
+      <StrictMode>
+        <LogModal state={state} actions={buildActions()} />
+      </StrictMode>,
+      { wrapper },
+    );
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+    act(() => store.set(logModalSnapRequestAtom, { paneId: "pane-1", version: 2 }));
+    expect(scrollToEnd).toHaveBeenCalledTimes(2);
   });
 });
