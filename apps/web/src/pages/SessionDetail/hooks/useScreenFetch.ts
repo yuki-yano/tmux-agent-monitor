@@ -26,6 +26,12 @@ import {
   initialScreenFetchLifecycleState,
   screenFetchLifecycleReducer,
 } from "./screen-fetch-lifecycle";
+import {
+  type AppliedScreenResponse,
+  type ScreenResponseContext,
+  canAcceptScreenResponse,
+  isCurrentScreenRequest,
+} from "./screen-response-policy";
 import { useScreenPollingPauseReason } from "./useScreenPollingPauseReason";
 import { type ScreenStreamTransport, useScreenStream } from "./useScreenStream";
 
@@ -40,17 +46,6 @@ const buildScreenOptions = (mode: ScreenMode, cursor: string | null) => {
     options.cursor = cursor;
   }
   return options;
-};
-
-type AppliedScreenResponse = {
-  contextKey: string;
-  capturedAtMs: number;
-};
-
-type ScreenFetchContext = {
-  key: string;
-  paneId: string;
-  mode: ScreenMode;
 };
 
 // Suppress renders while the user is actively scrolling (any axis, even at the
@@ -148,7 +143,7 @@ export const useScreenFetch = ({
   const [fallbackReason, setFallbackReason] = useAtom(screenFallbackReasonAtom);
   const [error, setError] = useAtom(screenErrorAtom);
   const screenContextKey = `${paneId}\0${mode}`;
-  const currentContextRef = useRef<ScreenFetchContext>({
+  const currentContextRef = useRef<ScreenResponseContext>({
     key: screenContextKey,
     paneId,
     mode,
@@ -184,27 +179,14 @@ export const useScreenFetch = ({
 
   const acceptCurrentResponse = useCallback((response: ScreenResponse) => {
     const currentContext = currentContextRef.current;
-    if (response.paneId !== currentContext.paneId || response.mode !== currentContext.mode) {
-      return false;
-    }
-
-    const capturedAtMs = Date.parse(response.capturedAt);
-    if (!Number.isFinite(capturedAtMs)) {
-      return false;
-    }
-
-    const latestApplied = latestAppliedResponseRef.current;
-    if (
-      latestApplied.contextKey === currentContext.key &&
-      capturedAtMs < latestApplied.capturedAtMs
-    ) {
+    if (!canAcceptScreenResponse(response, currentContext, latestAppliedResponseRef.current)) {
       return false;
     }
 
     if (response.ok) {
       latestAppliedResponseRef.current = {
         contextKey: currentContext.key,
-        capturedAtMs,
+        capturedAtMs: Date.parse(response.capturedAt),
       };
     }
     return true;
@@ -437,15 +419,21 @@ export const useScreenFetch = ({
     if (!attempt) {
       return;
     }
-    const requestCursor = cursorRef.current;
-    const requestSseGeneration = sseGenerationRef.current;
+    const requestBasis = {
+      requestId: attempt.requestId,
+      contextKey: attempt.contextKey,
+      sseGeneration: sseGenerationRef.current,
+      cursor: cursorRef.current,
+    };
     const isCurrentAttempt = () =>
-      refreshLifecycleRef.current.inFlight?.id === attempt.requestId &&
-      currentContextRef.current.key === attempt.contextKey &&
-      sseGenerationRef.current === requestSseGeneration &&
-      cursorRef.current === requestCursor;
+      isCurrentScreenRequest(requestBasis, {
+        requestId: refreshLifecycleRef.current.inFlight?.id ?? null,
+        contextKey: currentContextRef.current.key,
+        sseGeneration: sseGenerationRef.current,
+        cursor: cursorRef.current,
+      });
     try {
-      const response = await requestScreen(paneId, buildScreenOptions(mode, requestCursor));
+      const response = await requestScreen(paneId, buildScreenOptions(mode, requestBasis.cursor));
       if (!isCurrentAttempt()) {
         return;
       }

@@ -87,6 +87,82 @@ describe("useScreenFetch", () => {
     });
   });
 
+  it.each([
+    { paneId: "another-pane" },
+    { mode: "image" as const },
+    { capturedAt: "invalid timestamp" },
+  ])("rejects a REST response outside the current screen context: %o", async (responseOverride) => {
+    const requestScreen = vi.fn().mockResolvedValue({
+      ok: true,
+      paneId: "pane-1",
+      mode: "text",
+      capturedAt: new Date(0).toISOString(),
+      screen: "wrong-context",
+      ...responseOverride,
+    });
+    const { params } = setup({ requestScreen });
+    await waitFor(() =>
+      expect(params.dispatchScreenLoading).toHaveBeenCalledWith({ type: "finish", mode: "text" }),
+    );
+    expect(params.setScreen).not.toHaveBeenCalled();
+    expect(params.onModeLoaded).not.toHaveBeenCalled();
+  });
+
+  it("rejects a REST response when its cursor base changes without an SSE event", async () => {
+    let complete!: (response: ScreenResponse) => void;
+    const requestScreen = vi.fn(
+      () =>
+        new Promise<ScreenResponse>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const { params } = setup({ requestScreen, cursorRef: { current: "old-base" } });
+    await waitFor(() => expect(requestScreen).toHaveBeenCalledTimes(1));
+    params.cursorRef.current = "new-base";
+    await act(async () =>
+      complete({
+        ok: true,
+        paneId: "pane-1",
+        mode: "text",
+        capturedAt: new Date(1000).toISOString(),
+        screen: "stale-base",
+        cursor: "stale-cursor",
+      }),
+    );
+    expect(params.setScreen).not.toHaveBeenCalled();
+    expect(params.cursorRef.current).toBe("new-base");
+  });
+
+  it("does not advance the accepted timestamp for a failed capture", async () => {
+    const response = {
+      ok: true,
+      paneId: "pane-1",
+      mode: "text",
+      capturedAt: new Date(1000).toISOString(),
+      screen: "first",
+    };
+    const requestScreen = vi
+      .fn()
+      .mockResolvedValueOnce(response)
+      .mockResolvedValueOnce({
+        ...response,
+        ok: false,
+        capturedAt: new Date(5000).toISOString(),
+        error: { message: "capture failed" },
+      })
+      .mockResolvedValue({
+        ...response,
+        capturedAt: new Date(3000).toISOString(),
+        screen: "recovered",
+      });
+    const { result, params } = setup({ requestScreen });
+    await waitFor(() => expect(params.setScreen).toHaveBeenCalledWith("first"));
+    await act(async () => result.current.refreshScreen());
+    await waitFor(() => expect(params.setScreen).toHaveBeenCalledWith("recovered"));
+    expect(requestScreen).toHaveBeenCalledTimes(3);
+    expect(result.current.error).toBeNull();
+  });
+
   it("starts loading when mode is loaded but current text is empty", async () => {
     const dispatchScreenLoading = vi.fn();
     const requestScreen = vi.fn(() => new Promise<ScreenResponse>(() => {}));
